@@ -1,0 +1,48 @@
+.managerContainer {
+  padding: 20px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.button {
+  padding: 8px 12px;
+  margin: 0 5px 10px 0;
+  cursor: pointer;
+  border: 1px solid #007bff;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+}
+
+.editButton {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: black;
+}
+
+.deleteButton {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.itemList {
+  list-style: none;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 5px;
+}
+
+.itemDetails {
+  flex-grow: 1;
+}
+
+.actions {
+  white-space: nowrap;
+}

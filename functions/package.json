@@ -1,0 +1,38 @@
+{
+  "name": "functions",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint . --fix",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "@sparticuz/chromium": "^123.0.1",
+    "firebase-admin": "^12.2.0",
+    "firebase-functions": "^6.3.2",
+    "handlebars": "^4.7.8",
+    "puppeteer-core": "^22.8.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.2.0",
+    "@types/lodash": "^4.17.0",
+    "@types/semver": "^7.5.8",
+    "@types/yargs": "^17.0.32",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.29.1",
+    "firebase-functions-test": "^3.2.0",
+    "globals": "^15.2.0",
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^7.8.0"
+  },
+  "private": true
+}

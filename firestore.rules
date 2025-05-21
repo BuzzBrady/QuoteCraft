@@ -1,0 +1,114 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+    // Checks if the user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    // Checks if the requesting user is the owner specified by userId
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    // Checks if the userId field in the data being written matches the requesting user
+    function incomingDataIsOwnedByRequestor() {
+      return request.resource.data.userId == request.auth.uid;
+    }
+
+    // --- Global Read-Only Collections ---
+    // Areas, Tasks, Materials, Global Kit Templates are readable by any signed-in user, but not writable.
+    match /areas/{areaId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Prevent client-side writes
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /materials/{materialId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+
+      // Global Material Options (Subcollection)
+      match /options/{optionId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+
+    match /kitTemplates/{kitId} {
+      // Allow reading only templates marked as global
+      // Note: Assumes global templates have isGlobal == true
+      allow get: if isSignedIn() && resource.data.isGlobal == true;
+      // Allow listing/querying only global templates
+      allow list: if isSignedIn() && request.query.limit <= 100; // Add constraint if needed, check isGlobal in queries
+      // Prevent client-side writes to global templates
+      allow write: if false;
+    }
+
+    // --- User Data ---
+    match /users/{userId} {
+      // User can read their own profile document
+      allow get: if isOwner(userId);
+      // Allow user to create their own profile document IF it doesn't exist yet
+      allow create: if isOwner(userId) && incomingDataIsOwnedByRequestor();
+      // Allow user to update their own profile (consider restricting fields later)
+      allow update: if isOwner(userId);
+      // Disallow listing all users, deleting profiles via client
+      allow list, delete: if false;
+
+      // --- User Subcollections ---
+      // Generic rule for user's own subcollections (RateTemplates, CustomTasks, etc.)
+      // User can read/write documents only within their own user space.
+      match /{subcollection}/{docId} {
+          // Allow read/write if the path's {userId} matches the authenticated user's uid
+          allow read, delete: if isOwner(userId);
+          // Allow create if owner and incoming data has correct userId
+          allow create: if isOwner(userId) && incomingDataIsOwnedByRequestor();
+          // Allow update if owner (prevent changing userId field if needed)
+          allow update: if isOwner(userId); // Add: && request.resource.data.userId == resource.data.userId; ?
+
+          // Special rule for options under custom materials
+          match /options/{optionId} {
+             // Inherits ownership check from parent customMaterial match
+             allow read, write: if isOwner(userId);
+             // Add granular checks if needed, e.g., check incoming userId for option
+             // allow create: if isOwner(userId) && incomingDataIsOwnedByRequestor();
+             // allow update: if isOwner(userId);
+          }
+      }
+    } // End /users/{userId}
+
+
+    // --- Quotes Data ---
+    match /quotes/{quoteId} {
+      // Allow create if user is signed in and the quote's userId matches their uid
+      // Also validate required fields on create for robustness
+      allow create: if isSignedIn() && incomingDataIsOwnedByRequestor()
+                     && request.resource.data.jobTitle is string
+                     && request.resource.data.jobTitle.size() > 0
+                     && request.resource.data.status == 'Draft' // Enforce initial status
+                     && request.resource.data.totalAmount == 0; // Enforce initial total
+
+      // Allow read, update, delete only if the user owns the quote (check existing doc's userId)
+      allow get, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // Prevent listing all quotes from all users
+      allow list: if false; // Or allow if query is constrained by userId: if isSignedIn() && request.query.userId == request.auth.uid;
+
+      // --- Quote Lines Subcollection ---
+      match /quoteLines/{lineId} {
+        // Allow full access (read/write) if the user owns the parent quote document.
+        // Uses get() which costs 1 read operation per line operation.
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/quotes/$(quoteId)).data.userId == request.auth.uid;
+        // TODO: Add validation for incoming quoteLine data fields on create/update
+        // e.g., allow create: if ... ownership check ... && request.resource.data.displayName is string && ...etc
+      }
+    } // End /quotes/{quoteId}
+
+  } // End /databases/{database}/documents
+} // End service cloud.firestore

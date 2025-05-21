@@ -1,0 +1,169 @@
+/* src/components/Header.css */
+
+/* --- Existing Base Styles --- */
+.app-header {
+    background-color: #333;
+    color: #fff;
+    padding: 0 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky; /* Make header sticky */
+    top: 0;
+    z-index: 1000; /* Ensure it's above content */
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: 60px;
+}
+
+.header-brand {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #fff;
+    text-decoration: none;
+    margin-right: auto; /* Push other items to the right */
+}
+.header-brand:hover { color: #ddd; }
+
+/* --- Desktop Navigation Styles --- */
+.header-nav--desktop {
+    display: flex; /* Visible on desktop by default */
+    gap: 20px;
+    margin: 0 20px; /* Add some margin */
+}
+
+.nav-link {
+    color: #ccc;
+    text-decoration: none;
+    padding: 8px 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+}
+.nav-link:hover { color: #fff; }
+.nav-link.active {
+    color: #fff;
+    font-weight: 500;
+    border-bottom-color: #007bff;
+}
+
+/* --- User Info Styles --- */
+.header-user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.user-email { font-size: 0.9em; color: #ccc; }
+.logout-button {
+    background-color: #dc3545; color: white; border: none;
+    padding: 6px 12px; border-radius: 4px; cursor: pointer;
+    font-size: 0.9em; transition: background-color 0.2s ease;
+}
+.logout-button:hover { background-color: #c82333; }
+
+/* --- Hamburger Button Styles (Hidden by default) --- */
+.hamburger-button {
+    display: none; /* Hidden on desktop */
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    margin-left: 15px; /* Space from user info */
+    z-index: 1061; /* Above overlay but below menu potentially */
+}
+.hamburger-button span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: #fff;
+    margin: 5px 0;
+    transition: background-color 0.3s ease;
+}
+.hamburger-button:hover span {
+    background-color: #ccc;
+}
+
+/* --- Mobile Menu Styles (Hidden by default) --- */
+.mobile-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px; /* Width of the slide-in menu */
+    height: 100%;
+    background-color: #444; /* Slightly lighter than header */
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+    padding: 60px 20px 20px 20px; /* Padding top to avoid header overlap */
+    transform: translateX(-100%); /* Start off-screen */
+    transition: transform 0.3s ease-in-out;
+    z-index: 1060; /* Above header, potentially below hamburger */
+    overflow-y: auto;
+}
+.mobile-menu.open {
+    transform: translateX(0); /* Slide in */
+}
+
+.mobile-menu__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+/* Style links inside mobile menu differently */
+.mobile-menu__nav .nav-link {
+    color: #eee;
+    font-size: 1.1em;
+    padding: 10px 0;
+    border-bottom: none;
+}
+.mobile-menu__nav .nav-link.active {
+    color: #fff;
+    font-weight: bold;
+}
+
+.mobile-menu__close-button {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2.5em;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+}
+
+.mobile-menu__overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1059; /* Below menu */
+    display: none; /* Hidden by default */
+}
+.mobile-menu.open + .mobile-menu__overlay {
+    display: block; /* Show overlay when menu is open */
+}
+
+
+/* --- Media Query for Mobile --- */
+/* Adjust breakpoint as needed, e.g., 768px for tablets */
+@media (max-width: 850px) {
+    .header-nav--desktop {
+        display: none; /* Hide desktop nav */
+    }
+    .hamburger-button {
+        display: block; /* Show hamburger */
+    }
+    .header-brand {
+        /* Optionally reduce size or adjust margin if needed */
+    }
+    .user-email {
+        /* Optionally hide email on very small screens */
+        /* display: none; */
+    }
+}

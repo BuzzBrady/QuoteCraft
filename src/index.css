@@ -1,0 +1,116 @@
+/* Example CSS for QuoteBuilder Layout - Add to App.css or index.css */
+
+/* Basic page container */
+.page-container {
+  padding: 1rem 2rem; /* Example padding */
+  max-width: 1400px; /* Example max width */
+  margin: 0 auto; /* Center page content */
+}
+
+.quote-builder-container h2,
+.quote-builder-container h3 {
+  /* Add spacing or styling for headings */
+  margin-bottom: 0.75rem;
+}
+
+/* --- Top Section --- */
+.quote-builder-top-section {
+  margin-bottom: 1.5rem;
+  /* Add styles for quote name input, area selector alignment if needed */
+  display: flex;
+  flex-wrap: wrap; /* Allow items to wrap */
+  align-items: center;
+  gap: 1rem;
+}
+.quote-builder-top-section label {
+  margin-right: 0.5rem;
+}
+.quote-builder-top-section input[type="text"] {
+    padding: 0.5rem;
+    min-width: 250px; /* Example width */
+}
+
+
+/* --- Main Content Layout --- */
+.quote-builder-main-content {
+  display: flex;
+  flex-direction: row; /* Columns side-by-side */
+  gap: 1.5rem; /* Space between columns */
+  margin-bottom: 1.5rem;
+  /* Adjust alignment if needed, e.g., align-items: flex-start; */
+}
+
+.quote-builder-column {
+  /* Basic column styling */
+  padding: 1rem;
+  border: 1px solid #444; /* Example border - remove later */
+  border-radius: 4px;
+  min-height: 200px; /* Example minimum height */
+}
+
+/* Specific column widths (adjust as needed) */
+.category-column,
+.task-column {
+  flex: 0 0 200px; /* Don't grow, don't shrink, base width 200px */
+}
+
+.material-column {
+  flex: 1; /* Allow material column to grow */
+  /* This will later hold the material list + details */
+}
+
+
+/* --- Vertical Button Lists (Used inside Selectors) --- */
+.button-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* Space between buttons vertically */
+  align-items: stretch; /* Make buttons fill width */
+}
+
+/* --- General Button Styling --- */
+.selector-button {
+  padding: 0.6rem 1rem;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #eee;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.selector-button:hover {
+  background-color: #444;
+}
+
+.selector-button.selected {
+  background-color: #5a5aee; /* Example selected color */
+  border-color: #7a7aff;
+  color: white;
+  font-weight: bold;
+}
+
+/* Placeholder Text */
+.selector-placeholder {
+  color: #888;
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
+}
+
+
+/* --- Bottom Section --- */
+.quote-builder-bottom-section {
+  margin-top: 2rem;
+  border-top: 1px solid #444;
+  padding-top: 1.5rem;
+}
+.quote-builder-bottom-section button {
+    /* Style save button */
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* Add more specific styles, responsive adjustments etc. as needed */

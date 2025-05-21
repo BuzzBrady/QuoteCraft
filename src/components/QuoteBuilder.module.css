@@ -1,0 +1,278 @@
+/* src/components/QuoteBuilder.module.css */
+
+.quoteBuilderContainer {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .loadingMessage {
+    padding: 20px;
+    text-align: center;
+    font-size: 1.2em;
+  }
+  
+  .errorMessage {
+    color: red;
+    padding: 10px;
+    border: 1px solid red;
+    border-radius: 4px;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  
+  .mainHeading {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .headerSection {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+  
+  .headerInputGroup {
+    /* Styles for divs containing label + input in header */
+  }
+  
+  .headerLabel {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .headerInput {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .headerTextarea {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    min-height: 60px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .headerFullSpan {
+    grid-column: 1 / -1;
+  }
+  
+  .activeSectionContainer {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid lightblue;
+    background-color: #f0f8ff;
+    border-radius: 4px;
+  }
+  
+  .activeSectionLabel {
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .activeSectionNote {
+    margin-left: 10px;
+    font-style: italic;
+    font-size: 0.9em;
+  }
+  
+  .itemSelector {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 4px;
+    background-color: #fdfdfd;
+  }
+  
+  .itemSelectorHeading {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+  }
+  
+  .selectorsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .selectedItemsDetails {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 3px;
+  }
+  
+  .selectedItemsDetails p {
+    margin: 2px 0;
+  }
+  
+  .calculatedRate {
+    font-style: italic;
+    color: #333;
+    margin-top: 8px;
+    border-top: 1px dashed #ccc;
+    padding-top: 8px;
+    font-weight: 500;
+  }
+  
+  .inputsGrid {
+    margin-top: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px 15px;
+  }
+  
+  .inputColumn {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .inputLabel {
+    margin-bottom: 3px;
+    font-size: 0.9em;
+  }
+  
+  .formInput {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .formTextarea {
+    width: 100%;
+    padding: 8px;
+    min-height: 50px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  
+  .rateUnitSpan {
+    font-size: 0.8em;
+    color: #555;
+  }
+  
+  .descriptionInputGroup {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .addLineItemButton {
+    margin-top: 15px;
+    padding: 10px 15px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .addLineItemButton:disabled {
+    background-color: #94d3a2;
+    cursor: not-allowed;
+  }
+  
+  
+  .lineItemsSectionHeading {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .quoteSection {
+    margin-bottom: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden; /* To contain border-radius with background */
+  }
+  
+  .sectionToggleHeader {
+    padding: 10px 15px;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f8f8;
+    font-weight: bold;
+    border-bottom: 1px solid #eee; /* Default border for open state */
+  }
+  .sectionToggleHeader.collapsed {
+    border-bottom: none;
+  }
+  
+  
+  .sectionSubtotal {
+    font-weight: normal;
+    font-size: 0.95em;
+  }
+  
+  .sectionContent {
+    padding: 0; /* Let UL handle padding if needed */
+  }
+  
+  .sectionLineItemsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .addItemToSectionButton {
+    margin: 10px 15px;
+    font-size: 0.9em;
+    padding: 6px 10px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+  .addItemToSectionButton:hover {
+    background-color: #e0e0e0;
+  }
+  
+  
+  .actionsContainer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #ccc;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .saveButton {
+    padding: 12px 20px;
+    font-size: 1.1em;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .saveButtonDisabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .saveDisabledMessage {
+    color: #e67e22;
+    font-size: 0.9em;
+    font-style: italic;
+  }
+  

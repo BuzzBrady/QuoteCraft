@@ -1,0 +1,7 @@
+.areaSelector .control {
+  border-color: #ccc;
+}
+
+.areaSelector .control[aria-disabled="true"] {
+    background-color: #e9ecef;
+}
