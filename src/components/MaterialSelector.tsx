@@ -6,8 +6,8 @@ import { useState, useEffect, useMemo } from 'react'; // Added React import
 import CreatableSelect from 'react-select/creatable';
 import { ActionMeta, OnChangeValue } from 'react-select';
 import { collection, query, getDocs, orderBy, QueryDocumentSnapshot } from 'firebase/firestore';
-import { db } from '../config/firebaseConfig'; // Adjust path if needed
-import { Material, CustomMaterial } from '../types'; // Adjust path if needed
+import { db } from '../config/firebaseConfig';
+import { Material, CustomMaterial, CombinedMaterial, MaterialOption, Task, CustomTask } from '../types'; // Adjust path if needed
 
 // Option structure for react-select
 interface MaterialSelectOptionType { // Renamed for clarity within this component
@@ -17,16 +17,15 @@ interface MaterialSelectOptionType { // Renamed for clarity within this componen
     originalMaterial: CombinedMaterial | null; // Store the full material object
 }
 
-// Combine Material types with a flag
-type CombinedMaterial = (Material | CustomMaterial) & { isCustom?: boolean };
-
 interface MaterialSelectorProps {
     userId: string | null | undefined;
     onSelect: (material: CombinedMaterial | null) => void; // Allow null for clearing selection
     onCreateCustomMaterial: (materialName: string) => Promise<CombinedMaterial | null>; 
     isLoading?: boolean; 
+    allMaterials: CombinedMaterial[]; // Add the allMaterials prop
     // currentMaterialId?: string | null; // Optional: For controlled selection from parent
 }
+
 
 function MaterialSelector({ 
     userId, 
@@ -70,7 +69,7 @@ function MaterialSelector({
                 customSnapshot.forEach((doc: QueryDocumentSnapshot) => {
                     fetchedMaterials.push({ id: doc.id, ...doc.data(), isCustom: true } as CombinedMaterial);
                 });
-
+                
                 fetchedMaterials.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
                 setAllMaterials(fetchedMaterials);
 

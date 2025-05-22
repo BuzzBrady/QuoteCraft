@@ -1,10 +1,12 @@
 // src/components/QuoteBuilder.tsx
 // -------------
 // Main component for building/editing a quote.
-// Using CSS Modules, shared utility functions, and client selection.
-// Corrected typos in function calls.
+// Enhanced to use full TaskFormModal and MaterialFormModal for creating custom items.
+// TypeScript errors addressed.
+// Added "Create & Edit Kits" button.
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import {
     collection, query, getDocs, doc, addDoc, setDoc,
     Timestamp,
@@ -17,13 +19,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../config/firebaseConfig';
 import {
-    UserProfile, UserRateTemplate, Quote, QuoteLine, Task, CustomTask,
+    UserProfile, UserRateTemplate, Quote, QuoteLine, CombinedTask, CombinedMaterial, Task, CustomTask,
     Material, CustomMaterial, MaterialOption, KitTemplate, Area, KitLineItemTemplate,
-    Client 
+    Client
 } from '../types';
 
 // --- IMPORT SHARED UTILITY FUNCTIONS ---
-import { formatCurrency, findMatchingRate, groupLinesBySection } from '../utils/utils'; 
+import { formatCurrency, findMatchingRate, groupLinesBySection } from '../utils/utils';
 
 // Child Components
 import TaskSelector from './TaskSelector';
@@ -31,40 +33,38 @@ import MaterialSelector from './MaterialSelector';
 import MaterialOptionSelector from './MaterialOptionSelector';
 import KitSelector from './KitSelector';
 import QuoteLineItemDisplay from './QuoteLineItemDisplay';
-// import QuoteSummary from './QuoteSummary'; 
 import AreaSelector from './AreaSelector';
-import QuickAddMaterialModal from './QuickAddMaterialModal';
+import TaskFormModal from './TaskFormModal';
+import MaterialFormModal from './MaterialFormModal';
 
-import styles from './QuoteBuilder.module.css'; 
 
-type CombinedTask = (Task | CustomTask) & { isCustom?: boolean };
-type CombinedMaterial = (Material | CustomMaterial) & { isCustom?: boolean; options?: MaterialOption[] };
-
+import styles from './QuoteBuilder.module.css';
 
 interface QuoteBuilderProps {
     existingQuoteId?: string;
-    onSaveSuccess?: (quoteId: string) => void; 
+    onSaveSuccess?: (quoteId: string) => void;
 }
 
 function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const itemSelectorRef = useRef<HTMLDivElement>(null);
     const { currentUser } = useAuth();
     const userId = currentUser?.uid;
+    const navigate = useNavigate(); // Initialize navigate
 
     // --- State ---
     const [userProfile, setUserProfile] = useState<Partial<UserProfile>>({});
     const [userRates, setUserRates] = useState<UserRateTemplate[]>([]);
-    const [isLoadingRates, setIsLoadingRates] = useState(false); // Keep if used by selectors
+    const [isLoadingRates, setIsLoadingRates] = useState(false);
     const [errorRates, setErrorRates] = useState<string | null>(null);
-    
+
     const [quoteData, setQuoteData] = useState<Partial<Quote>>({});
     const [jobTitle, setJobTitle] = useState('');
     const [clientName, setClientName] = useState('');
-    const [clientAddress, setClientAddress] = useState(''); 
-    const [clientEmail, setClientEmail] = useState('');     
-    const [clientPhone, setClientPhone] = useState('');     
+    const [clientAddress, setClientAddress] = useState('');
+    const [clientEmail, setClientEmail] = useState('');
+    const [clientPhone, setClientPhone] = useState('');
     const [terms, setTerms] = useState('');
-    
+
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoadingClients, setIsLoadingClients] = useState(false);
     const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -82,12 +82,20 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const [globalAreas, setGlobalAreas] = useState<Area[]>([]);
     const [isLoadingAreas, setIsLoadingAreas] = useState(false);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-    const [isQuickAddMaterialModalOpen, setIsQuickAddMaterialModalOpen] = useState(false);
-    const [quickAddMaterialInitialName, setQuickAddMaterialInitialName] = useState('');
-    const createMaterialPromiseRef = useRef<{ resolve: (value: CombinedMaterial | null) => void; reject: (reason?: any) => void; } | null>(null);
-    const [allTasks, setAllTasks] = useState<(Task | CustomTask)[]>([]);
-    const [allMaterials, setAllMaterials] = useState<(Material | CustomMaterial)[]>([]);
+
+    const [allTasks, setAllTasks] = useState<CombinedTask[]>([]);
+    const [allMaterials, setAllMaterials] = useState<CombinedMaterial[]>([]);
     const [isLoadingGlobals, setIsLoadingGlobals] = useState(false);
+
+    // --- Modal States ---
+    const [isTaskFormModalOpen, setIsTaskFormModalOpen] = useState(false);
+    const [taskFormInitialData, setTaskFormInitialData] = useState<CustomTask | null>(null); // Changed to CustomTask | null
+    const createTaskPromiseRef = useRef<{ resolve: (value: CombinedTask | null) => void; reject: (reason?: any) => void; } | null>(null);
+
+    const [isMaterialFormModalOpen, setIsMaterialFormModalOpen] = useState(false);
+    const [materialFormInitialData, setMaterialFormInitialData] = useState<CustomMaterial | null>(null); // Changed to CustomMaterial | null
+    const createMaterialPromiseRef = useRef<{ resolve: (value: CombinedMaterial | null) => void; reject: (reason?: any) => void; } | null>(null);
+
 
     const clearSelections = useCallback(() => {
         setSelectedTask(null); setSelectedMaterial(null); setSelectedOption(null);
@@ -98,7 +106,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         const taskId = selectedTask?.id ?? null;
         const materialId = selectedMaterial?.id ?? null;
         const optionId = selectedMaterial?.optionsAvailable ? (selectedOption?.id ?? null) : null;
-        const rateData = findMatchingRate(userRates, taskId, materialId, optionId); 
+        const rateData = findMatchingRate(userRates, taskId, materialId, optionId);
         let effectiveRate = rateData?.referenceRate ?? selectedMaterial?.defaultRate ?? 0;
         let effectiveUnit = rateData?.unit ?? selectedMaterial?.defaultUnit ?? selectedTask?.defaultUnit ?? 'item';
         let effectiveInputType: QuoteLine['inputType'] = rateData?.inputType ?? (selectedMaterial ? 'quantity' : (selectedTask?.defaultUnit?.toLowerCase() === 'hour' ? 'quantity' : 'price'));
@@ -119,6 +127,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
 
     useEffect(() => { setOverrideRateInput(currentItemDetails.rate.toString()); }, [currentItemDetails.rate]);
 
+    // --- Data Fetching useEffects ---
     useEffect(() => {
         if (!userId) { setUserProfile({}); return; }
         const profileRef = doc(db, `users/${userId}`);
@@ -152,7 +161,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                 if (!terms.trim() && client.defaultClientTerms) setTerms(client.defaultClientTerms);
             }
         } else {
-            if (!existingQuoteId) { 
+            if (!existingQuoteId) {
                 setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
                 setTerms(userProfile.defaultQuoteTerms || '');
             }
@@ -186,14 +195,14 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
 
      useEffect(() => {
         if (!existingQuoteId || !userId) {
-            setQuoteLines([]); setJobTitle(''); 
-            setClientName(quoteData?.clientName || ''); 
+            setQuoteLines([]); setJobTitle('');
+            setClientName(quoteData?.clientName || '');
             setClientAddress(quoteData?.clientAddress || '');
             setClientEmail(quoteData?.clientEmail || '');
             setClientPhone(quoteData?.clientPhone || '');
             setTerms(quoteData?.terms || userProfile.defaultQuoteTerms || '');
             setActiveSection(globalAreas.length > 0 ? globalAreas[0].name : 'Main Area');
-            clearSelections(); setSelectedClientId(''); 
+            clearSelections(); setSelectedClientId('');
             return;
         };
         const fetchQuote = async () => {
@@ -202,9 +211,9 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             const linesRef = collection(db, 'users', userId, 'quotes', existingQuoteId, 'quoteLines');
             try {
                 const quoteSnap = await getDoc(quoteRef);
-                if (quoteSnap.exists()) { 
+                if (quoteSnap.exists()) {
                     const data = quoteSnap.data() as Quote;
-                    setQuoteData(data); setJobTitle(data.jobTitle || ''); 
+                    setQuoteData(data); setJobTitle(data.jobTitle || '');
                     setClientName(data.clientName || ''); setClientAddress(data.clientAddress || '');
                     setClientEmail(data.clientEmail || ''); setClientPhone(data.clientPhone || '');
                     setTerms(data.terms || userProfile.defaultQuoteTerms || '');
@@ -221,27 +230,41 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             finally { setIsLoadingQuote(false); }
         };
         if (userId) fetchQuote();
-    }, [existingQuoteId, userId, globalAreas, clearSelections, userProfile.defaultQuoteTerms, quoteData]);
+    }, [existingQuoteId, userId, globalAreas, clearSelections, userProfile.defaultQuoteTerms]);
 
-    // Corrected typo: fetchAlIData -> fetchAllData
+
     useEffect(() => {
         if (!userId) return;
         setIsLoadingGlobals(true);
-        const fetchAllData = async () => { // Renamed from fetchData to avoid conflict if any
+        const fetchAllReferencedData = async () => {
             try {
                 const [tasksSnap, customTasksSnap, materialsSnap, customMaterialsSnap] = await Promise.all([
-                    getDocs(query(collection(db, 'tasks'))),
-                    getDocs(query(collection(db, `users/${userId}/customTasks`))),
-                    getDocs(query(collection(db, 'materials'))),
-                    getDocs(query(collection(db, `users/${userId}/customMaterials`)))
+                    getDocs(query(collection(db, 'tasks'), orderBy('name_lowercase', 'asc'))),
+                    getDocs(query(collection(db, `users/${userId}/customTasks`), orderBy('name_lowercase', 'asc'))),
+                    getDocs(query(collection(db, 'materials'), orderBy('name_lowercase', 'asc'))),
+                    getDocs(query(collection(db, `users/${userId}/customMaterials`), orderBy('name_lowercase', 'asc')))
                 ]);
-                const globalTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() } as Task));
-                const userCustomTasks = customTasksSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true } as CustomTask & { isCustom?: boolean }));
-                setAllTasks([...globalTasks, ...userCustomTasks].sort((a, b) => a.name.localeCompare(b.name)));
                 
-                const globalMaterialsData = materialsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Material));
-                const userCustomMaterialsData = customMaterialsSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true } as CustomMaterial & { isCustom?: boolean }));
-                setAllMaterials([...globalMaterialsData, ...userCustomMaterialsData].sort((a, b) => a.name.localeCompare(b.name)));
+                const globalTasks = tasksSnap.docs.map(d => {
+                    const data = d.data();
+                    return { id: d.id, ...data, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedTask;
+                });
+                const userCustomTasks = customTasksSnap.docs.map(d => {
+                    const data = d.data();
+                    return { id: d.id, ...data, isCustom: true, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedTask;
+                });
+                setAllTasks([...globalTasks, ...userCustomTasks].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
+
+                const globalMaterialsData = materialsSnap.docs.map(d => {
+                    const data = d.data();
+                    return { id: d.id, ...data, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedMaterial;
+                });
+                const userCustomMaterialsData = customMaterialsSnap.docs.map(d => {
+                    const data = d.data();
+                    return { id: d.id, ...data, isCustom: true, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedMaterial;
+                });
+                setAllMaterials([...globalMaterialsData, ...userCustomMaterialsData].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
+
             } catch (err) {
                 console.error("Error fetching all tasks/materials for QuoteBuilder", err);
                 setErrorQuote("Failed to load necessary task/material data.");
@@ -249,67 +272,135 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                 setIsLoadingGlobals(false);
             }
         };
-        fetchAllData(); // Corrected function call
+        fetchAllReferencedData();
     }, [userId]);
 
-    const handleCreateCustomTask = useCallback(async (taskName: string): Promise<CombinedTask | null> => {
-        if (!userId) { alert("Login required."); return null; }
-        if (!taskName?.trim()) { alert("Task name empty."); return null; }
-        const defaultUnit = prompt(`Default unit for new task "${taskName}":`, 'item') || 'item';
-        const newTaskData = { userId, name: taskName.trim(), name_lowercase: taskName.trim().toLowerCase(), defaultUnit, description: "", createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-        try {
-            const docRef = await addDoc(collection(db, `users/${userId}/customTasks`), newTaskData);
-            const createdTask: CombinedTask = { id: docRef.id, ...newTaskData, isCustom: true, createdAt: Timestamp.now(), updatedAt: Timestamp.now() } as CombinedTask;
-            setAllTasks(prev => [...prev, createdTask].sort((a,b) => a.name.localeCompare(b.name)));
-            return createdTask;
-        } catch (error) { console.error("Error saving custom task:", error); alert(`Failed to save task "${taskName}".`); return null; }
-    }, [userId]); 
-
-    const initiateCreateCustomMaterial = useCallback((materialName: string): Promise<CombinedMaterial | null> => {
-        return new Promise((resolve, reject) => {
+    // --- Modal Openers and Handlers ---
+    const handleOpenNewTaskModal = (initialName?: string) => {
+        return new Promise<CombinedTask | null>((resolve, reject) => {
             if (!userId) { alert("Login required."); reject(new Error("User not logged in")); return; }
-            setQuickAddMaterialInitialName(materialName.trim());
-            setIsQuickAddMaterialModalOpen(true);
+            if (initialName) {
+                const initialTaskData: CustomTask = {
+                    id: `temp-new-${Date.now()}`, 
+                    name: initialName,
+                    name_lowercase: initialName.toLowerCase(),
+                    defaultUnit: 'item',
+                    description: '',
+                    userId: userId, 
+                    createdAt: Timestamp.now(), 
+                    updatedAt: Timestamp.now()  
+                };
+                setTaskFormInitialData(initialTaskData);
+            } else {
+                setTaskFormInitialData(null); 
+            }
+            setIsTaskFormModalOpen(true);
+            createTaskPromiseRef.current = { resolve, reject };
+        });
+    };
+
+    const handleOpenNewMaterialModal = (initialName?: string) => {
+        return new Promise<CombinedMaterial | null>((resolve, reject) => {
+            if (!userId) { alert("Login required."); reject(new Error("User not logged in")); return; }
+            if (initialName) {
+                const initialMaterialData: CustomMaterial = {
+                    id: `temp-new-${Date.now()}`,
+                    name: initialName,
+                    name_lowercase: initialName.toLowerCase(),
+                    defaultUnit: 'item',
+                    description: '',
+                    optionsAvailable: false,
+                    userId: userId,
+                    createdAt: Timestamp.now(),
+                    updatedAt: Timestamp.now()
+                };
+                setMaterialFormInitialData(initialMaterialData);
+            } else {
+                setMaterialFormInitialData(null);
+            }
+            setIsMaterialFormModalOpen(true);
             createMaterialPromiseRef.current = { resolve, reject };
         });
-    }, [userId]);
+    };
 
-    const handleSaveQuickAddMaterial = async (modalData: { name: string; description: string; optionsAvailable: boolean; defaultRate?: number; defaultUnit?: string; }) => {
-        if (!userId || !createMaterialPromiseRef.current) {
-            if (createMaterialPromiseRef.current) createMaterialPromiseRef.current.reject(new Error("Save conditions unmet."));
-            createMaterialPromiseRef.current = null; setIsQuickAddMaterialModalOpen(false); return;
+    const handleSaveTaskFromModal = async (taskDataFromModal: { name: string; defaultUnit: string; description: string }) => {
+        if (!userId) {
+            alert("Login required to save task.");
+            if (createTaskPromiseRef.current) createTaskPromiseRef.current.reject(new Error("User not logged in"));
+            setIsTaskFormModalOpen(false);
+            createTaskPromiseRef.current = null;
+            return;
         }
-        const { resolve, reject } = createMaterialPromiseRef.current;
-        const newMatData = { userId, name: modalData.name, name_lowercase: modalData.name.toLowerCase(), description: modalData.description, optionsAvailable: modalData.optionsAvailable, defaultRate: modalData.defaultRate, defaultUnit: modalData.defaultUnit || 'item', searchKeywords: [modalData.name.toLowerCase()], createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+
+        const newTaskData = {
+            userId,
+            name: taskDataFromModal.name.trim(),
+            name_lowercase: taskDataFromModal.name.trim().toLowerCase(),
+            defaultUnit: taskDataFromModal.defaultUnit.trim() || 'item',
+            description: taskDataFromModal.description.trim(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
+
         try {
-            const docRef = await addDoc(collection(db, `users/${userId}/customMaterials`), newMatData);
-            const createdMat: CombinedMaterial = { id: docRef.id, ...newMatData, isCustom: true, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
-            setAllMaterials(prev => [...prev, createdMat].sort((a,b) => a.name.localeCompare(b.name)));
-            resolve(createdMat);
-        } catch (error) { console.error("Error saving quick-add material:", error); reject(error); }
-        finally { setIsQuickAddMaterialModalOpen(false); createMaterialPromiseRef.current = null; }
+            const docRef = await addDoc(collection(db, `users/${userId}/customTasks`), newTaskData);
+            const createdTask: CombinedTask = {
+                id: docRef.id, ...newTaskData, isCustom: true,
+                name: newTaskData.name, 
+                name_lowercase: newTaskData.name_lowercase, 
+                createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+            } as CombinedTask;
+
+            setAllTasks(prev => [...prev, createdTask].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
+            if (createTaskPromiseRef.current) createTaskPromiseRef.current.resolve(createdTask);
+            setSelectedTask(createdTask);
+            setIsTaskFormModalOpen(false);
+        } catch (error) {
+            console.error("Error saving custom task from modal:", error);
+            alert(`Failed to save task "${taskDataFromModal.name}".`);
+            if (createTaskPromiseRef.current) createTaskPromiseRef.current.reject(error);
+        } finally {
+            if (createTaskPromiseRef.current) createTaskPromiseRef.current = null;
+        }
     };
 
-    const handleCloseQuickAddMaterialModal = () => {
-        setIsQuickAddMaterialModalOpen(false);
-        if (createMaterialPromiseRef.current) { createMaterialPromiseRef.current.resolve(null); createMaterialPromiseRef.current = null; }
+    const handleMaterialSavedFromModal = async (savedMaterial: CustomMaterial | null) => {
+        setIsMaterialFormModalOpen(false);
+
+        if (savedMaterial && userId) {
+            const newCombinedMaterial: CombinedMaterial = {
+                ...savedMaterial,
+                isCustom: true,
+                name: savedMaterial.name || '', 
+                name_lowercase: (savedMaterial.name_lowercase || savedMaterial.name?.toLowerCase() || '') 
+            };
+            setAllMaterials(prev => [...prev, newCombinedMaterial].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
+
+            if (createMaterialPromiseRef.current) {
+                createMaterialPromiseRef.current.resolve(newCombinedMaterial);
+            }
+            setSelectedMaterial(newCombinedMaterial);
+        } else {
+            if (createMaterialPromiseRef.current) {
+                createMaterialPromiseRef.current.resolve(null);
+            }
+        }
+        createMaterialPromiseRef.current = null;
     };
 
-    // Corrected typo: handleTaskSelectForltemForm -> handleTaskSelectForItemForm
+
     const handleTaskSelectForItemForm = (task: CombinedTask | null) => {
-        setSelectedTask(task); 
+        setSelectedTask(task);
         if (task) { setSelectedMaterial(null); setSelectedOption(null); }
         setOverrideRateInput('');
     };
 
-    // Corrected typo: handleMaterialSelectForltemForm -> handleMaterialSelectForItemForm
     const handleMaterialSelectForItemForm = (material: CombinedMaterial | null) => {
-        setSelectedMaterial(material); 
-        setSelectedOption(null); 
+        setSelectedMaterial(material);
+        setSelectedOption(null);
         setOverrideRateInput('');
     };
-    
-    // Corrected typo: handleOptionSelectFortemForm -> handleOptionSelectForItemForm
+
     const handleOptionSelectForItemForm = (option: MaterialOption | null) => {
         setSelectedOption(option);
         setOverrideRateInput('');
@@ -324,7 +415,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         if (!taskId && !materialId) { alert("Please select a task or material."); return; }
         if (selectedMaterial?.optionsAvailable && !optionId) { alert(`Please select an option for ${selectedMaterial.name}.`); return; }
         if (!activeSection?.trim()) { alert("Please select or enter an active Section/Area first."); return; }
-        const { unit, rate: calculatedRate, inputType } = currentItemDetails; 
+        const { unit, rate: calculatedRate, inputType } = currentItemDetails;
         const overrideRateValue = parseFloat(overrideRateInput);
         const finalRate = overrideRateInput.trim() !== '' && !isNaN(overrideRateValue) ? overrideRateValue : calculatedRate;
         if (isNaN(finalRate)) { alert("Invalid rate."); return; }
@@ -348,7 +439,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         setCollapsedSections(prev => ({ ...prev, [activeSection.trim()]: false }));
         clearSelections();
     }, [activeSection, currentItemDetails, overrideRateInput, quoteLines, selectedDescription, selectedMaterial, selectedOption, selectedQuantity, selectedTask, clearSelections]);
-    
+
     const handleKitSelected = useCallback((kit: KitTemplate) => {
         if (!activeSection?.trim()) { alert("Please select or enter an active Section/Area before adding a kit."); return; }
         const linesToAdd: QuoteLine[] = [];
@@ -407,6 +498,10 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
 
     const handleSetActiveSection = useCallback((name: string) => { setActiveSection(name); itemSelectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, []);
 
+    const handleNavigateToKitCreator = () => {
+        navigate('/kit-creator'); // Assuming '/kit-creator' is the route for KitCreatorPage
+    };
+
     const handleSaveQuote = async () => {
         if (!userId || !jobTitle.trim() || (quoteLines.length === 0 && !existingQuoteId)) {
             alert("User, Job Title, and at least one line item (for new quotes) are required."); return;
@@ -416,16 +511,16 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         let quoteIdToUse = existingQuoteId;
         let finalQuoteNumber = quoteData?.quoteNumber;
         try {
-            const mainQuotePayload: any = { 
+            const mainQuotePayload: any = {
                 jobTitle: jobTitle.trim(),
                 clientName: clientName.trim() || undefined,
-                clientAddress: clientAddress.trim() || undefined, 
+                clientAddress: clientAddress.trim() || undefined,
                 clientEmail: clientEmail.trim() || undefined,
                 clientPhone: clientPhone.trim() || undefined,
                 terms: terms.trim() || userProfile.defaultQuoteTerms || undefined,
                 status: quoteData?.status || 'Draft',
                 totalAmount: calculatedTotal,
-                projectDescription: quoteData?.projectDescription || undefined, 
+                projectDescription: quoteData?.projectDescription || undefined,
                 additionalDetails: quoteData?.additionalDetails || undefined,
                 generalNotes: quoteData?.generalNotes || undefined,
                 validUntil: quoteData?.validUntil || null,
@@ -466,11 +561,11 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             alert(`Quote ${existingQuoteId ? 'updated' : 'saved'}! Number: ${finalQuoteNumber}`);
             if (onSaveSuccess) onSaveSuccess(quoteIdToUse);
             if (!existingQuoteId) {
-                setQuoteLines([]); setJobTitle(''); 
-                setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone(''); 
+                setQuoteLines([]); setJobTitle('');
+                setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
                 setTerms(userProfile.defaultQuoteTerms || '');
                 setQuoteData({}); setActiveSection(globalAreas.length > 0 ? globalAreas[0].name : 'Main Area'); clearSelections();
-                setSelectedClientId(''); 
+                setSelectedClientId('');
             } else {
                 const updatedSnap = await getDoc(doc(db, 'users', userId, 'quotes', quoteIdToUse));
                 if (updatedSnap.exists()) setQuoteData(updatedSnap.data() as Quote);
@@ -480,11 +575,11 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         } catch (error: any) { console.error("Error saving quote:", error); setErrorQuote(`Failed: ${error.message}`); alert(`Failed: ${error.message}`);}
         finally { setIsLoadingQuote(false); }
     };
-    
+
     const groupedQuoteLines = useMemo(() => groupLinesBySection(quoteLines), [quoteLines]);
     const sortedSectionNames = useMemo(() => Object.keys(groupedQuoteLines).sort(), [groupedQuoteLines]);
     const toggleSectionCollapse = (name: string) => setCollapsedSections(prev => ({ ...prev, [name]: !prev[name] }));
-    
+
     const isLoading = isLoadingGlobals || isLoadingRates || isLoadingAreas || isLoadingClients || (existingQuoteId ? isLoadingQuote : false);
 
     return (
@@ -492,8 +587,8 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             <h2 className={styles.mainHeading}>
                 {existingQuoteId ? `Edit Quote (#${quoteData?.quoteNumber || '...'})` : 'Create New Quote'}
             </h2>
-            
-            {isLoading && !isQuickAddMaterialModalOpen && <div className={styles.loadingMessage}>Loading essential data...</div>}
+
+            {isLoading && !isTaskFormModalOpen && !isMaterialFormModalOpen && <div className={styles.loadingMessage}>Loading essential data...</div>}
             {errorQuote && <p className={styles.errorMessage}>Quote Error: {errorQuote}</p>}
             {errorRates && <p className={styles.errorMessage}>Rates Error: {errorRates}</p>}
 
@@ -504,12 +599,12 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                             <label htmlFor="jobTitle" className={styles.headerLabel}>Job Title:*</label>
                             <input id="jobTitle" type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} required className={styles.headerInput}/>
                          </div>
-                         
+
                          <div className={styles.headerInputGroup}>
                             <label htmlFor="clientSelector" className={styles.headerLabel}>Select Client (or type new):</label>
-                            <select 
-                                id="clientSelector" 
-                                value={selectedClientId} 
+                            <select
+                                id="clientSelector"
+                                value={selectedClientId}
                                 onChange={(e) => setSelectedClientId(e.target.value)}
                                 className={styles.headerInput}
                                 disabled={isLoadingClients}
@@ -521,7 +616,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                             </select>
                             {isLoadingClients && <small> Loading clients...</small>}
                          </div>
-                         
+
                          <div className={styles.headerInputGroup}>
                             <label htmlFor="clientName" className={styles.headerLabel}>Client Name:</label>
                             <input id="clientName" type="text" value={clientName} onChange={(e) => {setClientName(e.target.value); if(selectedClientId) setSelectedClientId('');}} placeholder="Or type new client name" className={styles.headerInput} />
@@ -547,11 +642,11 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
 
                     <div className={styles.activeSectionContainer}>
                         <label className={styles.activeSectionLabel}>Working Area/Section:</label>
-                        <AreaSelector 
-                            globalAreas={globalAreas} 
-                            activeSection={activeSection} 
-                            onChange={setActiveSection} 
-                            isLoading={isLoadingAreas} 
+                        <AreaSelector
+                            globalAreas={globalAreas}
+                            activeSection={activeSection}
+                            onChange={setActiveSection}
+                            isLoading={isLoadingAreas}
                         />
                         <span className={styles.activeSectionNote}>(Items added below go here)</span>
                     </div>
@@ -559,27 +654,44 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                     <div ref={itemSelectorRef} className={styles.itemSelector}>
                          <h3 className={styles.itemSelectorHeading}>Add New Item to "{activeSection || 'Default Section'}"</h3>
                          <div className={styles.selectorsGrid}>
-                            <TaskSelector
-                                userId={userId}
-                                onSelect={handleTaskSelectForItemForm} // Corrected
-                                onCreateCustomTask={handleCreateCustomTask} 
-                                isLoading={isLoadingGlobals || isLoadingRates}
-                            />
-                            <MaterialSelector
-                                userId={userId}
-                                onSelect={handleMaterialSelectForItemForm} // Corrected
-                                onCreateCustomMaterial={initiateCreateCustomMaterial} 
-                                isLoading={isLoadingGlobals || isLoadingRates}
-                            />
+                            <div className={styles.selectorWrapper}>
+                                <TaskSelector
+                                    userId={userId}
+                                    onSelect={handleTaskSelectForItemForm}
+                                    onCreateCustomTask={handleOpenNewTaskModal} 
+                                    isLoading={isLoadingGlobals || isLoadingRates}
+                                    allTasks={allTasks} 
+                                />
+                                <button onClick={() => handleOpenNewTaskModal()} className={styles.quickAddButton}>+ Task</button>
+                            </div>
+                            <div className={styles.selectorWrapper}>
+                                <MaterialSelector
+                                    userId={userId}
+                                    onSelect={handleMaterialSelectForItemForm}
+                                    onCreateCustomMaterial={handleOpenNewMaterialModal} 
+                                    isLoading={isLoadingGlobals || isLoadingRates}
+                                    allMaterials={allMaterials} 
+                                />
+                                <button onClick={() => handleOpenNewMaterialModal()} className={styles.quickAddButton}>+ Material</button>
+                            </div>
                             {selectedMaterial && selectedMaterial.optionsAvailable && (
                                 <MaterialOptionSelector
                                     selectedMaterial={selectedMaterial}
-                                    onSelect={handleOptionSelectForItemForm} // Corrected
+                                    onSelect={handleOptionSelectForItemForm}
                                     currentOptionId={selectedOption?.id}
                                 />
                             )}
                          </div>
-                         <KitSelector userId={userId} onSelect={handleKitSelected} />
+                         <div className={styles.kitSelectorContainer}> {/* Wrapper for KitSelector and new button */}
+                            <KitSelector userId={userId} onSelect={handleKitSelected} />
+                            <button 
+                                onClick={handleNavigateToKitCreator} 
+                                className={styles.manageKitsButton}
+                                title="Create or Edit Kits"
+                            >
+                                Create & Edit Kits
+                            </button>
+                         </div>
 
                          {(selectedTask || selectedMaterial) && (
                             <div className={styles.selectedItemsDetails}>
@@ -588,38 +700,38 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                 {selectedMaterial?.defaultRate !== undefined && <p><small>Material Base Rate: {formatCurrency(selectedMaterial.defaultRate)} / {selectedMaterial.defaultUnit}</small></p>}
                                 {selectedOption && <p>Option: {selectedOption.name}</p>}
                                 <p className={styles.calculatedRate}>
-                                    Calculated Rate: {formatCurrency(currentItemDetails.rate)} / {currentItemDetails.unit} 
+                                    Calculated Rate: {formatCurrency(currentItemDetails.rate)} / {currentItemDetails.unit}
                                     (Input Type: {currentItemDetails.inputType})
                                 </p>
                             </div>
                          )}
-                         
+
                          <div className={styles.inputsGrid}>
                             {currentItemDetails.inputType === 'quantity' && (
-                            <div className={styles.inputColumn}> 
-                                <label htmlFor="quantityInput" className={styles.inputLabel}>{currentItemDetails.isHourly ? 'Hours: ' : 'Quantity: '}</label> 
-                                <input id="quantityInput" type="number" value={selectedQuantity} onChange={e => setSelectedQuantity(Number(e.target.value) || 0)} min="0" step="any" className={styles.formInput} /> 
-                            </div> 
+                            <div className={styles.inputColumn}>
+                                <label htmlFor="quantityInput" className={styles.inputLabel}>{currentItemDetails.isHourly ? 'Hours: ' : 'Quantity: '}</label>
+                                <input id="quantityInput" type="number" value={selectedQuantity} onChange={e => setSelectedQuantity(Number(e.target.value) || 0)} min="0" step="any" className={styles.formInput} />
+                            </div>
                             )}
                             {(currentItemDetails.inputType === 'quantity' || currentItemDetails.inputType === 'price') && (
-                            <div className={styles.inputColumn}> 
-                                <label htmlFor="rateInput" className={styles.inputLabel}>{currentItemDetails.inputType === 'quantity' ? 'Override Rate ($):' : 'Price ($):'}</label> 
-                                <input id="rateInput" type="number" placeholder={currentItemDetails.inputType === 'quantity' ? `Calc: ${currentItemDetails.rate.toFixed(2)}` : ''} value={overrideRateInput} onChange={e => setOverrideRateInput(e.target.value)} min="0" step="any" className={styles.formInput} /> 
+                            <div className={styles.inputColumn}>
+                                <label htmlFor="rateInput" className={styles.inputLabel}>{currentItemDetails.inputType === 'quantity' ? 'Override Rate ($):' : 'Price ($):'}</label>
+                                <input id="rateInput" type="number" placeholder={currentItemDetails.inputType === 'quantity' ? `Calc: ${currentItemDetails.rate.toFixed(2)}` : ''} value={overrideRateInput} onChange={e => setOverrideRateInput(e.target.value)} min="0" step="any" className={styles.formInput} />
                                 {currentItemDetails.inputType === 'quantity' && <span className={styles.rateUnitSpan}> per {currentItemDetails.unit}</span>}
                             </div>
                             )}
-                            <div className={styles.descriptionInputGroup}> 
-                                <label htmlFor="descriptionInput" className={styles.inputLabel}>Description/Notes for this item: </label> 
-                                <textarea id="descriptionInput" value={selectedDescription} onChange={e => setSelectedDescription(e.target.value)} rows={2} className={styles.formTextarea}/> 
+                            <div className={styles.descriptionInputGroup}>
+                                <label htmlFor="descriptionInput" className={styles.inputLabel}>Description/Notes for this item: </label>
+                                <textarea id="descriptionInput" value={selectedDescription} onChange={e => setSelectedDescription(e.target.value)} rows={2} className={styles.formTextarea}/>
                             </div>
                          </div>
-                         <button 
-                            onClick={handleAddLineItem} 
-                            disabled={(!selectedTask && !selectedMaterial) || isLoadingQuote || !activeSection.trim()} 
-                            className={styles.addLineItemButton} 
+                         <button
+                            onClick={handleAddLineItem}
+                            disabled={(!selectedTask && !selectedMaterial) || isLoadingQuote || !activeSection.trim()}
+                            className={styles.addLineItemButton}
                             title={!activeSection.trim() ? "Please select an active section first" : ""}
-                          > 
-                            Add Line Item 
+                          >
+                            Add Line Item
                           </button>
                     </div>
 
@@ -628,34 +740,34 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                         {quoteLines.length === 0 && <p>No items added yet.</p>}
                         {sortedSectionNames.map(sectionName => {
                             const linesInSection = groupedQuoteLines[sectionName];
-                            if (linesInSection.length === 0) return null; 
+                            if (linesInSection.length === 0) return null;
                             const isCollapsed = collapsedSections[sectionName] ?? false;
                             const sectionSubtotal = linesInSection.reduce((sum, line) => sum + (line.lineTotal || 0), 0);
                             return (
                                 <div key={sectionName} className={styles.quoteSection}>
-                                    <h4 
-                                        className={`${styles.sectionToggleHeader} ${isCollapsed ? styles.collapsed : ''}`} 
-                                        onClick={() => toggleSectionCollapse(sectionName)} 
-                                    > 
-                                        <span> {isCollapsed ? '▶' : '▼'} {sectionName} ({linesInSection.length} items) </span> 
-                                        <span className={styles.sectionSubtotal}>Subtotal: {formatCurrency(sectionSubtotal)}</span> 
+                                    <h4
+                                        className={`${styles.sectionToggleHeader} ${isCollapsed ? styles.collapsed : ''}`}
+                                        onClick={() => toggleSectionCollapse(sectionName)}
+                                    >
+                                        <span> {isCollapsed ? '▶' : '▼'} {sectionName} ({linesInSection.length} items) </span>
+                                        <span className={styles.sectionSubtotal}>Subtotal: {formatCurrency(sectionSubtotal)}</span>
                                     </h4>
                                     {!isCollapsed && (
                                         <div className={styles.sectionContent}>
                                             <ul className={styles.sectionLineItemsList}>
                                                 {linesInSection.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((line) => (
-                                                    <QuoteLineItemDisplay 
-                                                        key={line.id} 
-                                                        item={line} 
-                                                        onDelete={handleDeleteLineItem} 
-                                                        onEdit={handleEditLineItem} 
+                                                    <QuoteLineItemDisplay
+                                                        key={line.id}
+                                                        item={line}
+                                                        onDelete={handleDeleteLineItem}
+                                                        onEdit={handleEditLineItem}
                                                     />
                                                 ))}
                                             </ul>
-                                            <button 
-                                                onClick={() => handleSetActiveSection(sectionName)} 
+                                            <button
+                                                onClick={() => handleSetActiveSection(sectionName)}
                                                 className={styles.addItemToSectionButton}
-                                            > 
+                                            >
                                                 + Add another item to {sectionName}
                                             </button>
                                         </div>
@@ -664,8 +776,6 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                             );
                          })}
                     </div>
-                    
-                    {/* <QuoteSummary lines={quoteLines} /> */}
 
                     <div className={styles.actionsContainer}>
                          <button
@@ -678,14 +788,40 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                          {saveDisabledMessage && ( <span className={styles.saveDisabledMessage}>{saveDisabledMessage}</span> )}
                      </div>
                 </>
-            )} 
+            )}
 
-            <QuickAddMaterialModal
-                isOpen={isQuickAddMaterialModalOpen}
-                onClose={handleCloseQuickAddMaterialModal}
-                onSave={handleSaveQuickAddMaterial}
-                initialName={quickAddMaterialInitialName}
-            />
+            {userId && (
+                <>
+                    <TaskFormModal
+                        isOpen={isTaskFormModalOpen}
+                        onClose={() => {
+                            setIsTaskFormModalOpen(false);
+                            if (createTaskPromiseRef.current) {
+                                createTaskPromiseRef.current.resolve(null); 
+                                createTaskPromiseRef.current = null;
+                            }
+                        }}
+                        onSave={handleSaveTaskFromModal}
+                        initialData={taskFormInitialData} 
+                        mode="add" 
+                    />
+
+                    <MaterialFormModal
+                        isOpen={isMaterialFormModalOpen}
+                        onClose={() => {
+                            setIsMaterialFormModalOpen(false);
+                            if (createMaterialPromiseRef.current) {
+                                createMaterialPromiseRef.current.resolve(null); 
+                                createMaterialPromiseRef.current = null;
+                            }
+                        }}
+                        onSaveCallback={handleMaterialSavedFromModal} 
+                        userId={userId}
+                        initialData={materialFormInitialData} 
+                        mode="add" 
+                    />
+                </>
+            )}
         </div>
     );
 }

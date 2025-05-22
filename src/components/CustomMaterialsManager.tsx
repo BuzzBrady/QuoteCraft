@@ -1,10 +1,9 @@
 // src/components/CustomMaterialsManager.tsx
-import { useState, useEffect, useCallback } from 'react'; // <-- ADDED/CORRECTED REACT IMPORTS
+import { useState, useEffect, useCallback } from 'react';
 import styles from './CustomMaterialsManager.module.css';
 import {
     collection,
     query,
-    // where, // Not strictly needed for the current version but often used
     getDocs,
     addDoc,
     doc,
@@ -13,12 +12,12 @@ import {
     writeBatch,
     serverTimestamp,
     orderBy,
-    // Timestamp // Not directly used as a type here, but useful for type checking if needed
+    Timestamp // Added Timestamp for type safety
 } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
-import { useAuth } from '../contexts/AuthContext'; // <-- ADDED
-import { CustomMaterial, MaterialOption } from '../types'; // <-- ADDED (Adjust path if needed)
-import MaterialFormModal from './MaterialFormModal'; // <-- ADDED
+import { useAuth } from '../contexts/AuthContext';
+import { CustomMaterial, MaterialOption } from '../types';
+import MaterialFormModal from './MaterialFormModal';
 
 interface CustomMaterialsManagerProps {
     // Props, if any
@@ -36,8 +35,9 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
 
     // Fetch Materials
     const fetchMaterials = useCallback(async () => {
-        if (!currentUser) {
+        if (!currentUser?.uid) {
             setMaterials([]);
+            setIsLoading(false); // Stop loading if no user
             return;
         }
         setIsLoading(true);
@@ -46,7 +46,7 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
             const materialsCollectionRef = collection(db, `users/${currentUser.uid}/customMaterials`);
             const q = query(materialsCollectionRef, orderBy('name_lowercase', 'asc'));
             const querySnapshot = await getDocs(q);
-            const fetchedMaterials: CustomMaterial[] = querySnapshot.docs.map(docSnap => ({ // Renamed doc to docSnap to avoid conflict if Timestamp was imported as doc
+            const fetchedMaterials: CustomMaterial[] = querySnapshot.docs.map(docSnap => ({
                 id: docSnap.id,
                 ...docSnap.data(),
             } as CustomMaterial));
@@ -57,7 +57,7 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
         } finally {
             setIsLoading(false);
         }
-    }, [currentUser]);
+    }, [currentUser]); // Dependency on currentUser
 
     useEffect(() => {
         fetchMaterials();
@@ -71,8 +71,6 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
     };
 
     const handleOpenModalForEdit = (material: CustomMaterial) => {
-        // For now, just pass the material. The modal will handle fetching its own options if needed,
-        // or we can enhance this later to pre-fetch options here.
         setCurrentMaterial(material);
         setModalMode('edit');
         setIsModalOpen(true);
@@ -84,40 +82,53 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
     };
 
     const handleSaveMaterialCallback = async () => {
-        await fetchMaterials();
-        handleCloseModal();
+        await fetchMaterials(); // Refresh list
+        handleCloseModal();     // Close modal
     };
 
     const handleDeleteMaterial = async (materialId: string, materialHasOptions: boolean) => {
-        if (!currentUser) {
+        if (!currentUser?.uid) {
             setError("You must be logged in to delete a material.");
+            console.error("Delete Material: No current user found.");
             return;
         }
-        if (window.confirm("Are you sure you want to delete this custom material? If it has options, those will also be deleted. This action cannot be undone.")) {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const batch = writeBatch(db);
-                const materialDocRef = doc(db, `users/${currentUser.uid}/customMaterials`, materialId);
 
-                if (materialHasOptions) {
-                    const optionsCollectionRef = collection(db, `users/${currentUser.uid}/customMaterials/${materialId}/options`);
-                    const optionsSnapshot = await getDocs(optionsCollectionRef);
-                    if (!optionsSnapshot.empty) {
-                        optionsSnapshot.docs.forEach(optionDoc => {
-                            batch.delete(optionDoc.ref);
-                        });
-                    }
+        // MODIFICATION: Removed window.confirm to allow deletion to proceed in iframe environments.
+        // For a production app, implement a custom confirmation modal here.
+        console.log(`Proceeding with delete for material ID: ${materialId}. Has options: ${materialHasOptions}`);
+
+        setIsLoading(true);
+        setError(null);
+        try {
+            const batch = writeBatch(db);
+            const materialDocRef = doc(db, `users/${currentUser.uid}/customMaterials`, materialId);
+
+            // If the material has options, delete them from the subcollection
+            if (materialHasOptions) {
+                const optionsCollectionRef = collection(db, `users/${currentUser.uid}/customMaterials/${materialId}/options`);
+                const optionsSnapshot = await getDocs(optionsCollectionRef);
+                if (!optionsSnapshot.empty) {
+                    console.log(`Deleting ${optionsSnapshot.docs.length} options for material ${materialId}`);
+                    optionsSnapshot.docs.forEach(optionDoc => {
+                        batch.delete(optionDoc.ref);
+                    });
+                } else {
+                    console.log(`No options found in subcollection for material ${materialId}, though materialHasOptions was true.`);
                 }
-                batch.delete(materialDocRef);
-                await batch.commit();
-                await fetchMaterials();
-            } catch (err: any) {
-                console.error("Error deleting material:", err);
-                setError(`Failed to delete material: ${err.message}`);
-            } finally {
-                setIsLoading(false);
             }
+            
+            // Delete the main material document
+            batch.delete(materialDocRef);
+            
+            await batch.commit();
+            console.log(`Material ${materialId} and its options (if any) deleted successfully from Firestore.`);
+            
+            await fetchMaterials(); // Refresh the list in the UI
+        } catch (err: any) {
+            console.error("Error deleting material:", err);
+            setError(`Failed to delete material: ${err.message}. Check console for details.`);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -125,31 +136,24 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
         return <p>Please log in to manage your custom materials.</p>;
     }
 
-    // --- CORRECTED JSX RETURN ---
     return (
-        // Use className from imported styles object
         <div className={styles.managerContainer}>
             <h3>My Custom Materials</h3>
-            {/* Use className from imported styles object */}
             <button className={styles.button} onClick={handleOpenModalForAdd} disabled={isLoading}>
                 + Add New Material
             </button>
 
             {isLoading && <p>Loading materials...</p>}
-            {/* Use className for error message styling if defined in CSS */}
-            {error && <p className={styles.error || ''} style={!styles.error ? { color: 'red'} : {}}>{error}</p>} {/* Added fallback inline style if .error class doesn't exist */}
+            {error && <p className={styles.error || ''} style={!styles.error ? { color: 'red'} : {}}>{error}</p>}
 
             {!isLoading && !error && materials.length === 0 && (
                 <p>You haven't added any custom materials yet.</p>
             )}
 
             {!isLoading && !error && materials.length > 0 && (
-                 // Use className for the list container
                  <ul className={styles.itemList}>
-                    {materials.map(material => ( // Removed stray backslash here
-                        // Use className for list item
+                    {materials.map(material => (
                         <li key={material.id} className={styles.item}>
-                           {/* Use className for item details section */}
                            <div className={styles.itemDetails}>
                                 <strong>{material.name}</strong>
                                 <br />
@@ -157,36 +161,33 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
                                 {(material.defaultRate !== undefined && material.defaultRate !== null) && (
                                     <>
                                         <br />
-                                        {/* Consider helper function for formatting currency */}
-                                        <small> Rate: ${material.defaultRate.toFixed(2)} per {material.defaultUnit || 'item'} </small>
+                                        <small> Rate: ${Number(material.defaultRate).toFixed(2)} per {material.defaultUnit || 'item'} </small>
                                     </>
                                 )}
                                 {material.description && <><br /><small>Desc: {material.description}</small></>}
                             </div>
-                            {/* ADDED BACK: Actions div with buttons using className */}
                             <div className={styles.actions}>
                                 <button
-                                    className={styles.editButton} // Use styles.editButton
+                                    className={styles.editButton}
                                     onClick={() => handleOpenModalForEdit(material)}
                                     disabled={isLoading}
                                 >
                                     Edit / Manage Options
                                 </button>
                                 <button
-                                    className={styles.deleteButton} // Use styles.deleteButton
+                                    className={styles.deleteButton}
                                     onClick={() => handleDeleteMaterial(material.id, material.optionsAvailable || false)}
                                     disabled={isLoading}
                                 >
                                     Delete
                                 </button>
                             </div>
-                        </li> // Removed stray backslash here
+                        </li>
                     ))}
                 </ul>
             )}
 
-            {/* Modal rendering (should be correct) */}
-            {isModalOpen && currentUser && (
+            {isModalOpen && currentUser?.uid && (
                 <MaterialFormModal
                     isOpen={isModalOpen}
                     onClose={handleCloseModal}
@@ -201,5 +202,3 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
 }
 
 export default CustomMaterialsManager;
-
-           

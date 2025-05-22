@@ -1,0 +1,203 @@
+/* src/components/MaterialFormModal.module.css */
+/* Styles specific to the content INSIDE the MaterialFormModal's body */
+
+.formGroup {
+    margin-bottom: 18px;
+}
+
+.label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 0.95em;
+    color: #333;
+}
+
+.input,
+.textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 1em;
+    color: #333;
+    background-color: #fff;
+}
+
+.textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.95em;
+    color: #333;
+}
+
+.checkboxInput {
+    margin-right: 10px;
+    height: 1.1em;
+    width: 1.1em;
+    accent-color: #007bff;
+}
+
+.formRow {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 18px;
+}
+
+.formRow > div { /* Target direct children divs in formRow */
+    flex: 1;
+}
+
+.optionsSection {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.optionsTitle {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    color: #444;
+}
+
+.optionInputRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+
+.optionInputGroup {
+    flex: 1;
+    min-width: 120px; /* Adjust for responsiveness */
+}
+
+.optionAddButtonContainer {
+    /* Aligns with the bottom of the input fields due to align-items: flex-end on parent */
+   margin-left: 10px; /* If needed, or let gap handle it */
+}
+
+.optionsList {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 15px 0;
+    max-height: 150px; /* Or adjust as needed */
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 3px;
+}
+
+.optionItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9em;
+}
+.optionItem:last-child {
+    border-bottom: none;
+}
+.optionItemName {
+    font-weight: bold;
+}
+.optionItemDescription {
+    display: block;
+    color: #555;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+.optionActions {
+    white-space: nowrap;
+}
+
+.errorMessage {
+    color: red;
+    margin-top: 10px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+/* Buttons for the footer (can use generic or define specific) */
+.button {
+    padding: 10px 18px;
+    margin-left: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.primaryButton {
+    composes: button;
+    background-color: #007bff;
+    color: white;
+}
+.primaryButton:hover {
+    background-color: #0056b3;
+}
+.primaryButton:disabled {
+    background-color: #a0cfff;
+    cursor: not-allowed;
+}
+
+.secondaryButton {
+    composes: button;
+    background-color: #6c757d;
+    color: white;
+}
+.secondaryButton:hover {
+    background-color: #5a6268;
+}
+.secondaryButton:disabled {
+    background-color: #adb5bd;
+    cursor: not-allowed;
+}
+
+/* Specific button for adding an option within the options form */
+.primaryButtonSmall {
+    composes: primaryButton; /* Inherits from primaryButton */
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin-left: 0; /* Override margin if needed */
+}
+
+
+.optionActionButton {
+    composes: button;
+    background-color: #ffc107; /* Yellow for edit */
+    color: black;
+    padding: 4px 8px;
+    font-size: 0.85em;
+    margin-right: 5px;
+}
+.optionActionButton:hover {
+    background-color: #e0a800;
+}
+
+.optionDeleteButton {
+    composes: button;
+    background-color: #dc3545; /* Red for delete */
+    color: white;
+    padding: 4px 8px;
+    font-size: 0.85em;
+}
+.optionDeleteButton:hover {
+    background-color: #c82333;
+}
+

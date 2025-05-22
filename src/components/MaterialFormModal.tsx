@@ -1,51 +1,31 @@
 // src/components/MaterialFormModal.tsx
 import { useState, useEffect, FormEvent } from 'react';
-// ... other imports (firebase, types, db config)
 import { CustomMaterial, MaterialOption } from '../types';
 import { db } from '../config/firebaseConfig';
 import {
-    doc, addDoc, updateDoc, collection, getDocs, writeBatch,
-    serverTimestamp, query, orderBy, Timestamp // Added Timestamp for type safety
+    doc, addDoc, updateDoc, collection, getDocs, getDoc, writeBatch,
+    serverTimestamp, query, orderBy, Timestamp
 } from 'firebase/firestore';
+import GenericFormModal from './GenericFormModal'; // Import the generic modal
+import styles from './MaterialFormModal.module.css';   // Import specific styles for this form's content
 
-// Define common units (can be moved to a constants file if used elsewhere)
+// Define common units
 const COMMON_UNITS = [
     "item", "each", "unit", "set",
-    "m", "m²", "m³", "lm", // meter, square meter, cubic meter, linear meter
+    "m", "m²", "m³", "lm",
     "kg", "tonne", "g",
-    "L", "mL", // liter, milliliter
+    "L", "mL",
     "sheet", "length", "roll", "bag", "box", "pack",
-    // Add any other common material units
 ];
 
 interface MaterialFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSaveCallback: () => Promise<void>;
+    onSaveCallback: (savedMaterial: CustomMaterial | null) => void;
     userId: string;
     initialData?: CustomMaterial | null;
     mode: 'add' | 'edit';
 }
-
-// --- STYLES (Assuming they are defined as previously discussed) ---
-const modalStyles: React.CSSProperties = { /* ... */ };
-const modalContentStyles: React.CSSProperties = { /* ... */ };
-const formGroupStyles: React.CSSProperties = { /* ... */ };
-const labelStyles: React.CSSProperties = { /* ... */ };
-const inputStyles: React.CSSProperties = { /* ... */ };
-const textareaStyles: React.CSSProperties = { /* ... */ };
-const buttonContainerStyles: React.CSSProperties = { /* ... */ };
-const buttonStyles: React.CSSProperties = { /* ... */ };
-const primaryButtonStyles: React.CSSProperties = { /* ... */ };
-const secondaryButtonStyles: React.CSSProperties = { /* ... */ };
-const optionsSectionStyles: React.CSSProperties = { /* ... */ };
-const optionItemStyles: React.CSSProperties = { /* ... */ };
-const optionInputStyles: React.CSSProperties = { /* ... */ };
-const optionButtonStyles: React.CSSProperties = { /* ... */ };
-const optionActionButtonStyles: React.CSSProperties = { /* ... */ };
-const optionDeleteButtonStyles: React.CSSProperties = { /* ... */ };
-// (Ensure all styles from the previous full MaterialFormModal are defined here)
-
 
 function MaterialFormModal({
     isOpen,
@@ -55,20 +35,16 @@ function MaterialFormModal({
     initialData,
     mode,
 }: MaterialFormModalProps) {
-    // Material fields
     const [name, setName] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [optionsAvailable, setOptionsAvailable] = useState<boolean>(false);
-    const [defaultRate, setDefaultRate] = useState<string>(''); // Store as string for input, convert on save
+    const [defaultRate, setDefaultRate] = useState<string>('');
     const [defaultUnit, setDefaultUnit] = useState<string>('');
-
-    // Options management (as before)
     const [options, setOptions] = useState<MaterialOption[]>([]);
     const [currentOptionName, setCurrentOptionName] = useState<string>('');
     const [currentOptionDescription, setCurrentOptionDescription] = useState<string>('');
+    const [currentOptionRateModifier, setCurrentOptionRateModifier] = useState<string>('');
     const [editingOptionId, setEditingOptionId] = useState<string | null>(null);
-
-    // Modal state (as before)
     const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [formError, setFormError] = useState<string | null>(null);
@@ -78,44 +54,42 @@ function MaterialFormModal({
         if (isOpen) {
             setFormError(null);
             setOptionsError(null);
+            setIsSaving(false); // Reset saving state when modal opens
             if (mode === 'edit' && initialData) {
                 setName(initialData.name || '');
                 setDescription(initialData.description || '');
                 setOptionsAvailable(initialData.optionsAvailable || false);
-                setDefaultRate(initialData.defaultRate?.toString() || ''); // Convert number to string for input
-                setDefaultUnit(initialData.defaultUnit || 'item'); // Default to 'item' if not set
-
+                setDefaultRate(initialData.defaultRate?.toString() || '');
+                setDefaultUnit(initialData.defaultUnit || 'item');
                 if (initialData.optionsAvailable && initialData.id) {
                     fetchOptions(initialData.id);
                 } else {
                     setOptions([]);
                 }
             } else { // Add mode
-                setName('');
-                setDescription('');
-                setOptionsAvailable(false);
-                setDefaultRate('');
-                setDefaultUnit('item'); // Sensible default
-                setOptions([]);
+                setName(initialData?.name || ''); // Keep initialName if provided (e.g., from QuickAdd)
+                setDescription(initialData?.description || '');
+                setOptionsAvailable(initialData?.optionsAvailable || false);
+                setDefaultRate(initialData?.defaultRate?.toString() || '');
+                setDefaultUnit(initialData?.defaultUnit || 'item');
+                setOptions(initialData && (initialData as any).options ? (initialData as any).options : []);
             }
+            // Reset option form fields
             setCurrentOptionName('');
             setCurrentOptionDescription('');
+            setCurrentOptionRateModifier('');
             setEditingOptionId(null);
         }
-    }, [isOpen, mode, initialData, userId]); // Added userId as it's used in fetchOptions
+    }, [isOpen, mode, initialData, userId]);
 
-    const fetchOptions = async (materialId: string) => { /* ... (same as before) ... */
+    const fetchOptions = async (materialId: string) => {
         setIsLoadingOptions(true);
         setOptionsError(null);
         try {
             const optionsRef = collection(db, `users/${userId}/customMaterials/${materialId}/options`);
             const q = query(optionsRef, orderBy('name_lowercase', 'asc'));
             const snapshot = await getDocs(q);
-            const fetchedOptions: MaterialOption[] = snapshot.docs.map(docSnap => ({
-                id: docSnap.id,
-                ...docSnap.data(),
-            } as MaterialOption));
-            setOptions(fetchedOptions);
+            setOptions(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as MaterialOption)));
         } catch (err) {
             console.error("Error fetching material options:", err);
             setOptionsError("Failed to load options.");
@@ -123,45 +97,46 @@ function MaterialFormModal({
             setIsLoadingOptions(false);
         }
     };
-    const handleAddOrUpdateOption = () => { /* ... (same as before) ... */
+
+    const handleAddOrUpdateOption = () => {
         if (!currentOptionName.trim()) {
             setOptionsError("Option name cannot be empty.");
             return;
         }
         setOptionsError(null);
-
+        const rateModifierValue = parseFloat(currentOptionRateModifier);
         const newOptionData = {
             name: currentOptionName.trim(),
             name_lowercase: currentOptionName.trim().toLowerCase(),
             description: currentOptionDescription.trim(),
+            rateModifier: !isNaN(rateModifierValue) ? rateModifierValue : 0,
         };
 
         if (editingOptionId) {
-            setOptions(options.map(opt =>
-                opt.id === editingOptionId
-                    ? { ...opt, ...newOptionData }
-                    : opt
-            ));
+            setOptions(options.map(opt => opt.id === editingOptionId ? { ...opt, ...newOptionData } : opt));
         } else {
-            setOptions([...options, {
-                id: `temp-${Date.now()}-${Math.random()}`,
-                ...newOptionData,
-            } as MaterialOption]);
+            const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+            setOptions([...options, { id: tempId, ...newOptionData } as MaterialOption]);
         }
         setCurrentOptionName('');
         setCurrentOptionDescription('');
+        setCurrentOptionRateModifier('');
         setEditingOptionId(null);
     };
-    const handleEditOption = (option: MaterialOption) => { /* ... (same as before) ... */
+
+    const handleEditOption = (option: MaterialOption) => {
         setEditingOptionId(option.id);
         setCurrentOptionName(option.name);
         setCurrentOptionDescription(option.description || '');
+        setCurrentOptionRateModifier(option.rateModifier?.toString() || '');
     };
-    const handleDeleteOptionFromLocal = (optionId: string) => { /* ... (same as before) ... */
+
+    const handleDeleteOptionFromLocal = (optionId: string) => {
         setOptions(options.filter(opt => opt.id !== optionId));
         if (editingOptionId === optionId) {
             setCurrentOptionName('');
             setCurrentOptionDescription('');
+            setCurrentOptionRateModifier('');
             setEditingOptionId(null);
         }
     };
@@ -169,63 +144,48 @@ function MaterialFormModal({
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
         setFormError(null);
-
         if (!name.trim()) {
-            setFormError("Material name is required.");
-            return;
+            setFormError("Material name is required."); return;
         }
-
         const rateValue = parseFloat(defaultRate);
-
         setIsSaving(true);
-        const materialDataToSave: Partial<CustomMaterial> = { // Use Partial for flexibility
-            userId: userId,
-            name: name.trim(),
-            name_lowercase: name.trim().toLowerCase(),
-            description: description.trim(),
-            optionsAvailable: optionsAvailable,
-            defaultUnit: defaultUnit.trim() || 'item', // Ensure a unit
-            updatedAt: serverTimestamp() as Timestamp, // Cast for type safety
+        const materialDataToSave: Partial<CustomMaterial> = {
+            userId: userId, name: name.trim(), name_lowercase: name.trim().toLowerCase(),
+            description: description.trim(), optionsAvailable: optionsAvailable,
+            defaultUnit: defaultUnit.trim() || 'item', updatedAt: serverTimestamp() as Timestamp,
         };
 
-        if (!isNaN(rateValue) && defaultRate.trim() !== '') { // Only include rate if it's a valid number
+        if (!isNaN(rateValue) && defaultRate.trim() !== '') {
             materialDataToSave.defaultRate = rateValue;
-        } else if (defaultRate.trim() === '') { // If user cleared the rate, explicitly set to null or remove
-             materialDataToSave.defaultRate = undefined; // Or use delete if you want to remove the field
+        } else if (defaultRate.trim() === '') {
+            materialDataToSave.defaultRate = undefined;
         } else {
             setFormError("Default Rate must be a valid number if provided.");
             setIsSaving(false);
             return;
         }
 
-
         try {
             let materialId = initialData?.id;
-
+            const materialCollectionRef = collection(db, `users/${userId}/customMaterials`);
             if (mode === 'add') {
-                const docRef = await addDoc(collection(db, `users/${userId}/customMaterials`), {
-                    ...materialDataToSave,
-                    createdAt: serverTimestamp() as Timestamp, // Cast for type safety
-                });
+                const docRef = await addDoc(materialCollectionRef, { ...materialDataToSave, createdAt: serverTimestamp() as Timestamp });
                 materialId = docRef.id;
-            } else if (materialId) { // Edit mode
-                const materialDocRef = doc(db, `users/${userId}/customMaterials`, materialId);
-                await updateDoc(materialDocRef, materialDataToSave);
+            } else if (materialId) {
+                await updateDoc(doc(materialCollectionRef, materialId), materialDataToSave);
             }
-
             if (!materialId) throw new Error("Material ID is missing for options handling.");
 
-            // Manage options subcollection (same logic as before)
             const optionsRef = collection(db, `users/${userId}/customMaterials/${materialId}/options`);
             const batch = writeBatch(db);
-            if (mode === 'edit') {
+            if (mode === 'edit') { // Clear old options only if editing and options were fetched
                 const existingOptionsSnapshot = await getDocs(optionsRef);
                 existingOptionsSnapshot.forEach(optionDoc => batch.delete(optionDoc.ref));
             }
             if (optionsAvailable && options.length > 0) {
                 options.forEach(option => {
-                    const newOptionRef = doc(optionsRef);
-                    const { id: tempId, createdAt: oldCreatedAt, updatedAt: oldUpdatedAt, ...optionDataForDb } = option;
+                    const { id: tempId, ...optionDataForDb } = option; // Exclude tempId
+                    const newOptionRef = doc(optionsRef); // Let Firestore generate ID
                     batch.set(newOptionRef, {
                         ...optionDataForDb,
                         name_lowercase: option.name.toLowerCase(),
@@ -235,118 +195,123 @@ function MaterialFormModal({
                 });
             }
             await batch.commit();
-            await onSaveCallback();
+
+            // Fetch the saved material to pass back (necessary for 'add' mode to get the ID)
+            const savedMaterialDoc = await getDoc(doc(materialCollectionRef, materialId));
+            const savedMaterial = savedMaterialDoc.exists() ? { id: savedMaterialDoc.id, ...savedMaterialDoc.data() } as CustomMaterial : null;
+
+            onSaveCallback(savedMaterial); // Call with the saved material
+            onClose(); // Close the modal on success
+
         } catch (err: any) {
-            console.error("Error saving material and options:", err);
-            setFormError(`Failed to save material: ${err.message}`);
+ console.error("Error saving material:", err);
+ setFormError(`Failed to save material: ${err.message}`);
+ onSaveCallback(null); // Call with null on save failure
         } finally {
             setIsSaving(false);
         }
+
     };
 
-    if (!isOpen) return null;
+    const footerContent = (
+        <>
+            <button type="button" className={styles.secondaryButton} onClick={() => {
+ onSaveCallback(null); // Call with null when cancelled
+ onClose();
+            }} disabled={isSaving}>Cancel</button>
+            <button type="submit" form="material-form" className={styles.primaryButton} disabled={isSaving}>
+                {isSaving ? 'Saving...' : (mode === 'add' ? 'Add Material' : 'Save Changes')}
+            </button>
+        </>
+    );
 
     return (
-        <div style={modalStyles} onClick={onClose}>
-            <div style={modalContentStyles} onClick={(e) => e.stopPropagation()}>
-                <h3>{mode === 'add' ? 'Add New Custom Material' : 'Edit Custom Material'}</h3>
-                <form onSubmit={handleSubmit}>
-                    {/* Material Name */}
-                    <div style={formGroupStyles}>
-                        <label htmlFor="materialNameModal" style={labelStyles}>Material Name<span style={{color: 'red'}}>*</span>:</label>
-                        <input type="text" id="materialNameModal" style={inputStyles} value={name} onChange={(e) => setName(e.target.value)} required />
-                    </div>
+        <GenericFormModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={mode === 'add' ? 'Add New Custom Material' : 'Edit Custom Material'}
+            footerContent={footerContent}
+        >
+            <form onSubmit={handleSubmit} id="material-form">
+                <div className={styles.formGroup}>
+                    <label htmlFor="materialFormNameInput" className={styles.label}>Material Name<span style={{color: 'red'}}>*</span>:</label>
+                    <input type="text" id="materialFormNameInput" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} required autoFocus/>
+                </div>
 
-                    {/* === NEW: Default Rate and Unit === */}
-                    <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                        <div style={{ flex: 1 }}>
-                            <label htmlFor="materialDefaultRate" style={labelStyles}>Default Rate ($):</label>
-                            <input
-                                type="number"
-                                id="materialDefaultRate"
-                                style={inputStyles}
-                                value={defaultRate}
-                                onChange={(e) => setDefaultRate(e.target.value)}
-                                placeholder="e.g., 15.50"
-                                step="0.01" // Allows decimal input
-                            />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <label htmlFor="materialDefaultUnit" style={labelStyles}>Default Unit:</label>
-                            <input
-                                type="text"
-                                id="materialDefaultUnit"
-                                style={inputStyles}
-                                value={defaultUnit}
-                                onChange={(e) => setDefaultUnit(e.target.value)}
-                                placeholder="e.g., each, m, kg"
-                                list="common-material-units-datalist"
-                            />
-                            <datalist id="common-material-units-datalist">
-                                {COMMON_UNITS.map(unit => (
-                                    <option key={unit} value={unit} />
-                                ))}
-                            </datalist>
-                        </div>
+                <div className={styles.formRow}>
+                    <div>
+                        <label htmlFor="materialFormDefaultRate" className={styles.label}>Default Rate ($):</label>
+                        <input type="number" id="materialFormDefaultRate" className={styles.input} value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} placeholder="e.g., 15.50" step="0.01" />
                     </div>
-                    {/* === END NEW: Default Rate and Unit === */}
-
-                    {/* Material Description */}
-                    <div style={formGroupStyles}>
-                        <label htmlFor="materialDescriptionModal" style={labelStyles}>Description:</label>
-                        <textarea id="materialDescriptionModal" style={textareaStyles} value={description} onChange={(e) => setDescription(e.target.value)} />
+                    <div>
+                        <label htmlFor="materialFormDefaultUnit" className={styles.label}>Default Unit:</label>
+                        <input type="text" id="materialFormDefaultUnit" className={styles.input} value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="e.g., each, m, kg" list="common-material-units-datalist-modal" />
+                        <datalist id="common-material-units-datalist-modal">
+                            {COMMON_UNITS.map(unit => (<option key={unit} value={unit} />))}
+                        </datalist>
                     </div>
+                </div>
 
-                    {/* Options Available Checkbox (same as before) */}
-                    <div style={formGroupStyles}>
-                        <label style={{ ...labelStyles, display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={optionsAvailable} onChange={(e) => setOptionsAvailable(e.target.checked)} style={{ marginRight: '10px', height: '1.1em', width: '1.1em' }} />
-                            Has Options (e.g., sizes, colors)
-                        </label>
-                    </div>
+                {/* Moved "Has Options" checkbox before "Description" */}
+                <div className={styles.formGroup}>
+                    <label className={styles.checkboxLabel}>
+                        <input type="checkbox" className={styles.checkboxInput} checked={optionsAvailable} onChange={(e) => setOptionsAvailable(e.target.checked)} />
+                        Has Options (e.g., sizes, colors, rate modifiers)
+                    </label>
+                </div>
 
-                    {/* Options Management Section (same as before) */}
-                    {optionsAvailable && (
-                        <div style={optionsSectionStyles}>
-                            {/* ... (options management UI - same as the full version I provided previously) ... */}
-                            <h4>Manage Options</h4>
-                            {isLoadingOptions && <p>Loading options...</p>}
-                            {optionsError && <p style={{ color: 'red' }}>{optionsError}</p>}
-                            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', alignItems: 'flex-end' }}>
-                                <div style={{flexGrow: 1}}>
-                                    <label htmlFor="optionNameModal" style={{...labelStyles, fontSize: '0.9em', marginBottom: '3px'}}>Option Name:</label>
-                                    <input type="text" id="optionNameModal" placeholder="E.g., Large" style={optionInputStyles} value={currentOptionName} onChange={(e) => setCurrentOptionName(e.target.value)} />
-                                </div>
-                                <div style={{flexGrow: 1}}>
-                                    <label htmlFor="optionDescModal" style={{...labelStyles, fontSize: '0.9em', marginBottom: '3px'}}>Option Description:</label>
-                                     <input type="text" id="optionDescModal" placeholder="E.g., 1200x600mm" style={optionInputStyles} value={currentOptionDescription} onChange={(e) => setCurrentOptionDescription(e.target.value)} />
-                                </div>
-                                <button type="button" style={{...primaryButtonStyles, ...optionButtonStyles}} onClick={handleAddOrUpdateOption} disabled={isSaving}> {editingOptionId ? 'Update' : '+ Add'} </button>
+                <div className={styles.formGroup}>
+                    <label htmlFor="materialFormDescription" className={styles.label}>Description:</label>
+                    <textarea id="materialFormDescription" className={styles.textarea} value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+
+
+                {optionsAvailable && (
+                    <div className={styles.optionsSection}>
+                        <h4 className={styles.optionsTitle}>Manage Options</h4>
+                        {isLoadingOptions && <p>Loading options...</p>}
+                        {optionsError && <p className={styles.errorMessage}>{optionsError}</p>}
+                        
+                        <div className={styles.optionInputRow}>
+                            <div className={styles.optionInputGroup}>
+                                <label htmlFor="optionFormName" className={styles.label}>Option Name:</label>
+                                <input type="text" id="optionFormName" placeholder="E.g., Large" className={styles.input} value={currentOptionName} onChange={(e) => setCurrentOptionName(e.target.value)} />
                             </div>
-                            {options.length > 0 && (
-                                <ul style={{ listStyle: 'none', padding: 0, maxHeight: '150px', overflowY: 'auto' }}>
-                                    {options.map((opt) => (
-                                        <li key={opt.id} style={optionItemStyles}>
-                                            <div><strong>{opt.name}</strong>{opt.description && <small style={{ display: 'block', color: '#555' }}>{opt.description}</small>}</div>
-                                            <div style={{whiteSpace: 'nowrap'}}><button type="button" style={optionActionButtonStyles} onClick={() => handleEditOption(opt)} disabled={isSaving}>Edit</button><button type="button" style={optionDeleteButtonStyles} onClick={() => handleDeleteOptionFromLocal(opt.id)} disabled={isSaving}>Del</button></div>
-                                        </li>))}
-                                </ul>
-                            )}
-                             {options.length === 0 && !isLoadingOptions && <p style={{fontSize: '0.9em', color: '#666'}}>No options added yet for this material.</p>}
+                            <div className={styles.optionInputGroup}>
+                                <label htmlFor="optionFormDescription" className={styles.label}>Option Description:</label>
+                                <input type="text" id="optionFormDescription" placeholder="E.g., 1200x600mm" className={styles.input} value={currentOptionDescription} onChange={(e) => setCurrentOptionDescription(e.target.value)} />
+                            </div>
+                             <div className={styles.optionInputGroup}>
+                                <label htmlFor="optionFormRateModifier" className={styles.label}>Rate Modifier ($):</label>
+                                <input type="number" id="optionFormRateModifier" placeholder="e.g., +5.00 or -2.50" className={styles.input} value={currentOptionRateModifier} onChange={(e) => setCurrentOptionRateModifier(e.target.value)} step="any" />
+                            </div>
+                            <div className={styles.optionAddButtonContainer}>
+                                <button type="button" className={styles.primaryButtonSmall} onClick={handleAddOrUpdateOption} disabled={isSaving}> {editingOptionId ? 'Update' : '+ Add'} </button>
+                            </div>
                         </div>
-                    )}
 
-                    {formError && <p style={{ color: 'red', marginTop: '15px', textAlign: 'center' }}>{formError}</p>}
-
-                    <div style={buttonContainerStyles}>
-                        <button type="button" style={secondaryButtonStyles} onClick={onClose} disabled={isSaving}>Cancel</button>
-                        <button type="submit" style={primaryButtonStyles} disabled={isSaving}>
-                            {isSaving ? 'Saving...' : (mode === 'add' ? 'Add Material' : 'Save Changes')}
-                        </button>
+                        {options.length > 0 && (
+                            <ul className={styles.optionsList}>
+                                {options.map((opt) => (
+                                    <li key={opt.id} className={styles.optionItem}>
+                                        <div>
+                                            <strong className={styles.optionItemName}>{opt.name}</strong>
+                                            {opt.description && <small className={styles.optionItemDescription}>{opt.description}</small>}
+                                            {(typeof opt.rateModifier === 'number' && opt.rateModifier !== 0) && <small className={styles.optionItemDescription}> Modifier: {opt.rateModifier > 0 ? '+' : ''}{opt.rateModifier.toFixed(2)}</small>}
+                                        </div>
+                                        <div className={styles.optionActions}>
+                                            <button type="button" className={styles.optionActionButton} onClick={() => handleEditOption(opt)} disabled={isSaving}>Edit</button>
+                                            <button type="button" className={styles.optionDeleteButton} onClick={() => handleDeleteOptionFromLocal(opt.id)} disabled={isSaving}>Del</button>
+                                        </div>
+                                    </li>))}
+                            </ul>
+                        )}
+                        {options.length === 0 && !isLoadingOptions && <p style={{fontSize: '0.9em', color: '#666', textAlign: 'center'}}>No options added yet for this material.</p>}
                     </div>
-                </form>
-            </div>
-        </div>
+                )}
+                {formError && <p className={styles.errorMessage}>{formError}</p>}
+            </form>
+        </GenericFormModal>
     );
 }
 

@@ -5,12 +5,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import CreatableSelect from 'react-select/creatable';
-import { ActionMeta, OnChangeValue, OptionsOrGroups, GroupBase } from 'react-select';
+import { ActionMeta, OnChangeValue, } from 'react-select';
 import { collection, query, getDocs, orderBy, QuerySnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig'; // Adjust path if needed
-import { Task, CustomTask } from '../types'; // Adjust path if needed
+import { Task, CustomTask, CombinedTask, MaterialOption } from '../types'; // Adjust path if needed
 
-// Option structure for react-select
 interface TaskOptionType {
   label: string;
   value: string; // Typically the task ID for existing tasks
@@ -19,13 +18,11 @@ interface TaskOptionType {
   originalTask: CombinedTask | null;
 }
 
-// Combine Task types with a flag
-type CombinedTask = (Task | CustomTask) & { isCustom?: boolean };
-
 // Define the props the component accepts
 interface TaskSelectorProps {
     userId: string | null | undefined;
-    onSelect: (task: CombinedTask) => void; // Callback for selecting an EXISTING task
+ allTasks: CombinedTask[]; // Pass the list of all tasks down
+    onSelect: (task: CombinedTask | null) => void; // Callback for selecting an EXISTING task or null for clearing
     onCreateCustomTask: (taskName: string) => Promise<CombinedTask | null>; // Callback to CREATE a new task, returns the created task or null
     isLoading?: boolean; // Optional: Pass loading state from parent if needed
 }
@@ -42,6 +39,7 @@ function TaskSelector({ userId, onSelect, onCreateCustomTask, isLoading: isLoadi
     const isLoading = isLoadingProp !== undefined ? isLoadingProp : isLoadingInternal;
 
     // Effect to fetch tasks
+    // This effect is no longer strictly necessary if allTasks is passed as a prop
     useEffect(() => {
         if (!userId) { setAllTasks([]); return; }
         const fetchTasks = async () => {
@@ -82,7 +80,7 @@ function TaskSelector({ userId, onSelect, onCreateCustomTask, isLoading: isLoadi
 
     // Convert fetched tasks into options for react-select
     const taskOptions: TaskOptionType[] = useMemo(() => {
-        return allTasks.map(task => ({
+        return allTasks.map(task => ({ // Use the allTasks prop here
             label: `${task.name}${task.isCustom ? ' (Custom)' : ''}`,
             value: task.id, // Use Firestore ID as the value
             originalTask: task, // Keep the original object
@@ -125,8 +123,7 @@ function TaskSelector({ userId, onSelect, onCreateCustomTask, isLoading: isLoadi
         } else if (actionMeta.action === 'clear') {
             // Handle clearing the selection
              console.log("Task selection cleared");
-             setSelectedOption(null);
-             // Optionally call onSelect with null if the parent needs to know about deselection
+ setSelectedOption(null); // Update local state
              // onSelect(null); // Depends on how you want QuoteBuilder to react
         }
     };

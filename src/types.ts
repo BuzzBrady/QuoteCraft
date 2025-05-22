@@ -207,3 +207,17 @@ export interface Quote {
     updatedAt: Timestamp; 
 }
 
+// --- Combined types for selectors (combines global and custom) ---
+export type CombinedTask = Omit<Task | CustomTask, 'name' | 'name_lowercase'> & {
+    isCustom?: boolean;
+    name: string;
+    name_lowercase: string;
+};
+
+export type CombinedMaterial = Omit<Material | CustomMaterial, 'name' | 'name_lowercase'> & {
+    isCustom?: boolean;
+    options?: MaterialOption[];
+    name: string;
+    name_lowercase: string;
+};
+

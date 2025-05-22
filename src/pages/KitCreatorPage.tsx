@@ -1,23 +1,36 @@
 // src/pages/KitCreatorPage.tsx
 // Page for creating, viewing, and managing Kit Templates.
 // Includes item selection, cost calculation, "Quick Add", and corrected MaterialOptionSelector usage.
+// Corrected TypeScript type conflicts.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../config/firebaseConfig';
-import { KitTemplate, KitLineItemTemplate, Task, CustomTask, Material, CustomMaterial, MaterialOption, UserRateTemplate } from '../types';
+// Ensure CombinedTask and CombinedMaterial are imported from types.ts and NOT re-declared locally
+import { 
+    KitTemplate, 
+    KitLineItemTemplate, 
+    Task, 
+    CustomTask, 
+    Material, 
+    CustomMaterial, 
+    MaterialOption, 
+    UserRateTemplate,
+    CombinedTask,  // Imported from types.ts
+    CombinedMaterial // Imported from types.ts
+} from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
-import TaskSelector from '../components/TaskSelector'; 
-import MaterialSelector from '../components/MaterialSelector'; 
+import TaskSelector from '../components/TaskSelector';
+import MaterialSelector from '../components/MaterialSelector';
 import MaterialOptionSelector from '../components/MaterialOptionSelector';
 import QuickAddMaterialModal from '../components/QuickAddMaterialModal';
 
 import styles from './KitCreatorPage.module.css';
 
-// Utility functions
+// Utility functions (assuming these are correct and don't cause type issues with UserRateTemplate)
 const findMatchingRate = (
     rates: UserRateTemplate[],
     taskId: string | null,
@@ -56,29 +69,31 @@ const formatCurrency = (amount: number | null | undefined): string => {
 
 
 type ActiveTab = 'myKits' | 'kitBuilder';
-type CombinedTask = (Task | CustomTask) & { isCustom?: boolean };
-type CombinedMaterial = (Material | CustomMaterial) & { isCustom?: boolean; options?: MaterialOption[] };
+
+// REMOVE LOCAL DECLARATIONS OF CombinedTask and CombinedMaterial
+// type CombinedTask = (Task | CustomTask) & { isCustom?: boolean }; // REMOVE THIS
+// type CombinedMaterial = (Material | CustomMaterial) & { isCustom?: boolean; options?: MaterialOption[] }; // REMOVE THIS
 
 interface KitItemFormData {
-    id: string; 
+    id: string;
     selectedTaskObj: CombinedTask | null;
     selectedMaterialObj: CombinedMaterial | null;
     selectedMaterialOptionObj: MaterialOption | null;
-    displayName: string; 
+    displayName: string;
     baseQuantity: number;
     unit: string;
     inputType: 'quantity' | 'price' | 'checkbox';
     description?: string;
-    overrideRateForKit: string; 
-    calculatedRate: number; 
-    finalRateForKitItem: number; 
-    calculatedTotal: number; 
+    overrideRateForKit: string;
+    calculatedRate: number;
+    finalRateForKitItem: number;
+    calculatedTotal: number;
 }
 
 const initialKitItemFormData: KitItemFormData = {
     id: '', selectedTaskObj: null, selectedMaterialObj: null, selectedMaterialOptionObj: null,
     displayName: '', baseQuantity: 1, unit: 'item', inputType: 'quantity', description: '',
-    overrideRateForKit: '', 
+    overrideRateForKit: '',
     calculatedRate: 0, finalRateForKitItem: 0, calculatedTotal: 0,
 };
 
@@ -104,6 +119,7 @@ function KitCreatorPage() {
     const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
     const [itemFormData, setItemFormData] = useState<KitItemFormData>(initialKitItemFormData);
 
+    // Use the imported CombinedTask and CombinedMaterial types for state
     const [allTasks, setAllTasks] = useState<CombinedTask[]>([]);
     const [allMaterials, setAllMaterials] = useState<CombinedMaterial[]>([]);
     const [userRates, setUserRates] = useState<UserRateTemplate[]>([]);
@@ -139,13 +155,48 @@ function KitCreatorPage() {
                     getDocs(query(collection(db, `users/${userId}/customMaterials`))),
                     getDocs(query(collection(db, `users/${userId}/rateTemplates`)))
                 ]);
-                const globalTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() } as Task));
-                const userTasks = customTasksSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true } as CustomTask & {isCustom?:boolean}));
-                setAllTasks([...globalTasks, ...userTasks].sort((a,b) => a.name.localeCompare(b.name)));
 
-                const globalMtls = materialsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Material));
-                const userMtls = customMaterialsSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true } as CustomMaterial & {isCustom?:boolean}));
-                setAllMaterials([...globalMtls, ...userMtls].sort((a,b) => a.name.localeCompare(b.name)));
+                const globalTasks = tasksSnap.docs.map(d => {
+                    const data = d.data();
+                    return { 
+                        id: d.id, 
+                        ...data, 
+                        name: data.name || '', // Ensure name is string
+                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') // Ensure name_lowercase is string
+                    } as CombinedTask; // Cast to the imported CombinedTask
+                });
+                const userTasks = customTasksSnap.docs.map(d => {
+                    const data = d.data();
+                    return { 
+                        id: d.id, 
+                        ...data, 
+                        isCustom: true, 
+                        name: data.name || '', 
+                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') 
+                    } as CombinedTask; // Cast to the imported CombinedTask
+                });
+                setAllTasks([...globalTasks, ...userTasks].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
+
+                const globalMtls = materialsSnap.docs.map(d => {
+                    const data = d.data();
+                    return { 
+                        id: d.id, 
+                        ...data, 
+                        name: data.name || '', 
+                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') 
+                    } as CombinedMaterial; // Cast to the imported CombinedMaterial
+                });
+                const userMtls = customMaterialsSnap.docs.map(d => {
+                    const data = d.data();
+                    return { 
+                        id: d.id, 
+                        ...data, 
+                        isCustom: true, 
+                        name: data.name || '', 
+                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') 
+                    } as CombinedMaterial; // Cast to the imported CombinedMaterial
+                });
+                setAllMaterials([...globalMtls, ...userMtls].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
                 
                 setUserRates(ratesSnap.docs.map(d => ({ id: d.id, ...d.data() } as UserRateTemplate)));
 
@@ -200,7 +251,7 @@ function KitCreatorPage() {
         itemFormData.selectedTaskObj, itemFormData.selectedMaterialObj, itemFormData.selectedMaterialOptionObj, 
         itemFormData.baseQuantity, itemFormData.inputType, itemFormData.overrideRateForKit, 
         userRates, 
-        itemFormData.unit
+        // itemFormData.unit // Removed to prevent potential infinite loop if unit is also set here. Unit calculation seems okay above.
     ]);
 
     const resetKitBuilderForm = useCallback(() => {
@@ -232,7 +283,7 @@ function KitCreatorPage() {
             fetchUserKits(); 
             if (currentKitId === kitId) { resetKitBuilderForm(); setActiveTab('myKits'); }
         } catch (err: any) { console.error("Error deleting kit:", err); alert(`Failed to delete kit: ${err.message}`);}
-     }, [userId, currentKitId, fetchUserKits, resetKitBuilderForm]);
+       }, [userId, currentKitId, fetchUserKits, resetKitBuilderForm]);
     
     const handleItemFormInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -247,11 +298,27 @@ function KitCreatorPage() {
         if (!userId) { alert("Login required."); return null; }
         if (!taskName?.trim()) { alert("Task name empty."); return null; }
         const defaultUnit = prompt(`Default unit for new task "${taskName}":`, 'item') || 'item';
-        const newTaskData = { userId, name: taskName.trim(), name_lowercase: taskName.trim().toLowerCase(), defaultUnit, description: "", createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        const newTaskData = { 
+            userId, 
+            name: taskName.trim(), 
+            name_lowercase: taskName.trim().toLowerCase(), 
+            defaultUnit, 
+            description: "", 
+            createdAt: serverTimestamp(), 
+            updatedAt: serverTimestamp() 
+        };
         try {
             const docRef = await addDoc(collection(db, `users/${userId}/customTasks`), newTaskData);
-            const createdTask: CombinedTask = { id: docRef.id, ...newTaskData, isCustom: true, createdAt: Timestamp.now(), updatedAt: Timestamp.now() } as CombinedTask;
-            setAllTasks(prev => [...prev, createdTask].sort((a,b) => a.name.localeCompare(b.name)));
+            const createdTask: CombinedTask = { 
+                id: docRef.id, 
+                ...newTaskData, 
+                isCustom: true, 
+                name: newTaskData.name, // Ensure name is part of the object for CombinedTask
+                name_lowercase: newTaskData.name_lowercase, // Ensure name_lowercase
+                createdAt: Timestamp.now(), // For local state after creation
+                updatedAt: Timestamp.now()  // For local state after creation
+            } as CombinedTask; // Casting as ServerTimestamp fields are not Timestamps yet.
+            setAllTasks(prev => [...prev, createdTask].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
             setItemFormData(prev => ({...prev, selectedTaskObj: createdTask, displayName: createdTask.name, unit: createdTask.defaultUnit || 'item' }));
             return createdTask;
         } catch (error) { console.error("Error saving custom task for kit item:", error); alert(`Failed to save task "${taskName}".`); return null; }
@@ -272,11 +339,30 @@ function KitCreatorPage() {
             kitItemCreateMaterialPromiseRef.current = null; setIsKitItemQuickAddMaterialModalOpen(false); return;
         }
         const { resolve, reject } = kitItemCreateMaterialPromiseRef.current;
-        const newMatData = { userId, name: modalData.name, name_lowercase: modalData.name.toLowerCase(), description: modalData.description, optionsAvailable: modalData.optionsAvailable, defaultRate: modalData.defaultRate, defaultUnit: modalData.defaultUnit || 'item', searchKeywords: [modalData.name.toLowerCase()], createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        const newMatData = { 
+            userId, 
+            name: modalData.name, 
+            name_lowercase: modalData.name.toLowerCase(), 
+            description: modalData.description, 
+            optionsAvailable: modalData.optionsAvailable, 
+            defaultRate: modalData.defaultRate, 
+            defaultUnit: modalData.defaultUnit || 'item', 
+            searchKeywords: [modalData.name.toLowerCase()], 
+            createdAt: serverTimestamp(), 
+            updatedAt: serverTimestamp() 
+        };
         try {
             const docRef = await addDoc(collection(db, `users/${userId}/customMaterials`), newMatData);
-            const createdMat: CombinedMaterial = { id: docRef.id, ...newMatData, isCustom: true, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
-            setAllMaterials(prev => [...prev, createdMat].sort((a,b) => a.name.localeCompare(b.name)));
+            const createdMat: CombinedMaterial = { 
+                id: docRef.id, 
+                ...newMatData, 
+                isCustom: true, 
+                name: newMatData.name, // Ensure name
+                name_lowercase: newMatData.name_lowercase, // Ensure name_lowercase
+                createdAt: Timestamp.now(), 
+                updatedAt: Timestamp.now() 
+            };
+            setAllMaterials(prev => [...prev, createdMat].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
             setItemFormData(prev => ({...prev, selectedMaterialObj: createdMat, selectedMaterialOptionObj: null, displayName: createdMat.name, unit: createdMat.defaultUnit || 'item'}));
             resolve(createdMat);
         } catch (error) { console.error("Error saving material for kit item:", error); reject(error); }
@@ -291,7 +377,7 @@ function KitCreatorPage() {
     const handleTaskSelectForItemForm = (task: CombinedTask | null) => {
         setItemFormData(prev => ({
             ...initialKitItemFormData, 
-            id: prev.id || uuidv4(),    
+            id: prev.id || uuidv4(),   
             selectedTaskObj: task,
             selectedMaterialObj: null, 
             selectedMaterialOptionObj: null,
@@ -351,7 +437,7 @@ function KitCreatorPage() {
         const material = itemToEdit.materialId ? allMaterials.find(m => m.id === itemToEdit.materialId) || null : null;
         let option: MaterialOption | null = null;
         if (material && material.optionsAvailable && itemToEdit.materialOptionId && itemToEdit.materialOptionName) {
-             option = {id: itemToEdit.materialOptionId, name: itemToEdit.materialOptionName} as MaterialOption;
+             option = {id: itemToEdit.materialOptionId, name: itemToEdit.materialOptionName} as MaterialOption; // Assuming structure
         }
         setItemFormData({
             id: uuidv4(), 
@@ -405,8 +491,9 @@ function KitCreatorPage() {
                 <TaskSelector
                     userId={userId}
                     onSelect={handleTaskSelectForItemForm}
-                    onCreateCustomTask={handleCreateCustomTaskForItemForm}
+                    onCreateCustomTask={handleCreateCustomTaskForItemForm} // This function returns Promise<CombinedTask | null>
                     isLoading={isLoadingGlobalData}
+                    allTasks={allTasks} // Assuming TaskSelectorProps expects CombinedTask[]
                 />
             </div>
             <div className={styles.formGroup}>
@@ -414,8 +501,9 @@ function KitCreatorPage() {
                 <MaterialSelector
                     userId={userId}
                     onSelect={handleMaterialSelectForItemForm}
-                    onCreateCustomMaterial={initiateCreateCustomMaterialForItemForm}
+                    onCreateCustomMaterial={initiateCreateCustomMaterialForItemForm} // This function returns Promise<CombinedMaterial | null>
                     isLoading={isLoadingGlobalData}
+                    allMaterials={allMaterials} // Assuming MaterialSelectorProps expects CombinedMaterial[]
                 />
             </div>
 
@@ -425,7 +513,6 @@ function KitCreatorPage() {
                     <MaterialOptionSelector
                         selectedMaterial={itemFormData.selectedMaterialObj} 
                         onSelect={handleOptionSelectForItemForm}
-                        // userId prop removed here
                     />
                 </div>
             )}

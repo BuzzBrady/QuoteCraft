@@ -1,0 +1,80 @@
+/* src/components/TaskFormModal.module.css */
+/* Styles specific to the content INSIDE the TaskFormModal's body */
+
+.formGroup {
+    margin-bottom: 18px;
+}
+
+.label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 0.95em;
+    color: #333;
+}
+
+.input,
+.textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 1em;
+    color: #333;
+    background-color: #fff;
+}
+
+.textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.errorMessage {
+    color: red;
+    margin-top: 10px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+/* Button styles for the footer, if not using generic ones from GenericFormModal.module.css */
+/* These can override or complement the generic footer button styles if needed */
+.buttonContainer { /* This class might not be needed if using GenericFormModal's footer */
+    margin-top: 20px;
+    text-align: right;
+}
+
+.button { /* General button style, can be used if GenericFormModal's footer isn't used */
+    padding: 10px 15px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.primaryButton {
+    composes: button; /* Or define directly if not using generic footer */
+    background-color: #007bff;
+    color: white;
+}
+.primaryButton:hover {
+    background-color: #0056b3;
+}
+.primaryButton:disabled {
+    background-color: #a0cfff;
+    cursor: not-allowed;
+}
+
+.secondaryButton {
+    composes: button; /* Or define directly */
+    background-color: #6c757d;
+    color: white;
+}
+.secondaryButton:hover {
+    background-color: #5a6268;
+}
+.secondaryButton:disabled {
+    background-color: #adb5bd;
+    cursor: not-allowed;
+}
