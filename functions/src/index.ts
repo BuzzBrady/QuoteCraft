@@ -1,19 +1,21 @@
 // QuoteCraftV6/functions/src/index.ts
-// --- Corrected for ESLint errors and warnings ---
-
 import { onCall, HttpsOptions, CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import admin from "firebase-admin";
-import puppeteer, { PDFOptions, Browser } from "puppeteer-core"; // Added Browser type
+import puppeteer, { PDFOptions, Browser } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import handlebars from "handlebars";
-import { Buffer } from "node:buffer"; // For correct Buffer typing
+import { Buffer } from "node:buffer";
 
-// Initialize Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
 
-// --- HTML TEMPLATE (Keep your full HTML template string here) ---
+export type QuoteExportLevel = "summary" | "standardDetail" | "fullDetail";
+
+// --- HTML TEMPLATE ---
+// Ensure this entire string is correctly enclosed in backticks (`)
+// and there are no unescaped backticks within the HTML/CSS content itself.
+// Also, be wary of special characters if you copied this from somewhere rich-text.
 const HTML_QUOTE_TEMPLATE = `
 <!DOCTYPE html>
 <html lang="en">
@@ -50,7 +52,7 @@ const HTML_QUOTE_TEMPLATE = `
         .scope-column ul { list-style-type: none; padding-left: 0; margin-top: 0;}
         .scope-column ul li { padding-left: 1.2em; text-indent: -1.2em; margin-bottom: 0.5em;}
         .scope-column ul li::before { content: "- "; padding-right: 0.3em; }
-        .pre-wrap { white-space: pre-wrap; } 
+        .pre-wrap { white-space: pre-wrap; }
         .area-breakdown-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 9pt; }
         .area-breakdown-table th, .area-breakdown-table td { padding: 5px 4px; text-align: left; border-bottom: 1px dotted #cccccc; }
         .area-breakdown-table th { font-weight: bold; text-transform: uppercase; font-size: 8pt; color: #444; }
@@ -72,7 +74,7 @@ const HTML_QUOTE_TEMPLATE = `
         .totals-table tr.grand-total td { font-weight: bold; font-size: 12pt; color: #000000; border-top: 2px solid #000000; border-bottom: 2px solid #000000; padding-top: 8px; padding-bottom: 8px; }
         .notes-terms-section { margin-top: 25px; padding-top: 10px; border-top: 1px solid #dddddd; font-size: 8pt; line-height: 1.3; }
         .notes-terms-section h3 { font-size: 10pt; margin-bottom: 8px; }
-        .terms-content-columns { columns: 2; column-gap: 15mm; }
+        .terms-content-columns { columns: 2; column-gap: 15mm; -webkit-columns: 2; -webkit-column-gap: 15mm; -moz-columns: 2; -moz-column-gap: 15mm;} /* Added browser prefixes for columns */
         .terms-content-columns h4 { font-size: 8.5pt; font-weight: bold; margin-top: 0.8em; margin-bottom: 0.2em; }
         .terms-content-columns p { margin-bottom: 0.6em; }
         .how-to-proceed { margin-top: 20px; padding: 12px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 3px; font-size: 8.5pt; }
@@ -80,6 +82,7 @@ const HTML_QUOTE_TEMPLATE = `
         .pdf-footer { text-align: center; margin-top: 25px; padding-top: 10px; border-top: 1px solid #cccccc; font-size: 7.5pt; color: #777777; }
         .footer-logo { max-height: 35px; margin-bottom: 5px; }
         .clear { clear:both; }
+        .summary-only-notice { font-style: italic; font-size: 9pt; color: #666; margin-top: 15px; text-align: center; }
     </style>
 </head>
 <body>
@@ -129,58 +132,111 @@ const HTML_QUOTE_TEMPLATE = `
             </div>
         </div>
 
-        <div class="content-columns-container">
-            <div class="scope-column">
-                <h3>Scope of Works</h3>
-                {{#if quote.projectDescription}}
-                    <div class="pre-wrap">{{{breaklines quote.projectDescription}}}</div>
-                {{else}}
-                    <p>Details are itemized below and/or in the additional details section.</p>
-                {{/if}}
-            </div>
-            <div class="details-column">
-                {{#if quote.additionalDetails}}
-                    <h3>Additional Details</h3>
-                    <div class="pre-wrap">{{{breaklines quote.additionalDetails}}}</div>
-                {{/if}}
-                <div class="items-table-container">
-                    <h3>Summary of Costs</h3>
+        {{#if isSummary}}
+            <div class="job-title-main">Quote Summary: {{quote.jobTitle}}</div>
+        {{else}}
+            <div class="job-title-main">{{quote.jobTitle}}</div>
+        {{/if}}
+
+
+        {{#if isSummary}}
+            <div class="content-columns-container">
+                <div class="scope-column">
+                    <h3>Scope Overview</h3>
+                    {{#if quote.projectDescription}}
+                        <p class="pre-wrap">{{{breaklines quote.projectDescription}}}</p>
+                    {{else}}
+                        <p>A summary of costs is provided. Detailed breakdown available in other export options or upon request.</p>
+                    {{/if}}
+                </div>
+                <div class="details-column">
+                    <h3>Summary of Costs by Area</h3>
+                    {{#if groupedLineItemsShort.length}}
                     <table class="area-breakdown-table">
-                        <thead><tr><th>Area</th><th class="quantities">Quantities</th><th class="cost">Cost</th></tr></thead>
+                        <thead><tr><th>Area/Category</th><th class="cost">Total Cost</th></tr></thead>
                         <tbody>
                             {{#each groupedLineItemsShort}}
-                                <tr><td><strong>{{this.sectionName}}</strong></td><td class="quantities">{{this.summaryQuantities}}</td><td class="cost">{{formatCurrency this.sectionSubtotal}}</td></tr>
+                                <tr><td><strong>{{this.sectionName}}</strong></td><td class="cost">{{formatCurrency this.sectionSubtotal}}</td></tr>
                             {{/each}}
                         </tbody>
                     </table>
+                    {{else}}
+                        <p>Overall project total listed below.</p>
+                    {{/unless}}
                 </div>
             </div>
-        </div>
-
-        {{#if showFullItemizedTable}}
-        <h3>Detailed Breakdown</h3>
-        <table class="items-table">
-            <thead>
-                <tr><th class="description-cell">Description</th><th class="qty-cell">Qty</th><th class="unit-cell">Unit</th><th class="amount">Unit Price</th><th class="amount">Total</th></tr>
-            </thead>
-            <tbody>
-                {{#each groupedLineItemsFull}}
-                    <tr><td colspan="5" class="section-header-row">{{this.sectionName}}</td></tr>
-                    {{#each this.items}}
-                    <tr>
-                        <td class="description-cell"><strong>{{this.displayName}}</strong>{{#if this.description}}<br><small>{{{breaklines this.description}}}</small>{{/if}}</td>
-                        <td class="qty-cell">{{this.quantity}}</td>
-                        <td class="unit-cell">{{this.unit}}</td>
-                        <td class="amount">{{formatCurrency this.unitPrice}}</td>
-                        <td class="amount">{{formatCurrency this.lineTotal}}</td>
-                    </tr>
-                    {{/each}}
-                    {{#if this.sectionSubtotal}}
-                    <tr><td colspan="4" class="section-subtotal-row">Section Subtotal:</td><td class="amount" style="font-weight: bold;">{{formatCurrency this.sectionSubtotal}}</td></tr>
+        {{else}} <div class="content-columns-container">
+                <div class="scope-column">
+                    <h3>Scope of Works</h3>
+                    {{#if quote.projectDescription}}
+                        <div class="pre-wrap">{{{breaklines quote.projectDescription}}}</div>
+                    {{else}}
+                        <p>Details are itemized below or in the additional details section.</p>
                     {{/if}}
-                {{/each}}
-            </tbody>
-        </table>
+                </div>
+                <div class="details-column">
+                    {{#if quote.additionalDetails}}
+                        <h3>Additional Details</h3>
+                        <div class="pre-wrap">{{{breaklines quote.additionalDetails}}}</div>
+                    {{/if}}
+                    
+                    {{#if isStandardDetail}} {{#if groupedLineItemsShort.length}}
+                        <div class="items-table-container" style="margin-top: 20px;">
+                            <h3>Summary of Costs by Area</h3>
+                            <table class="area-breakdown-table">
+                                <thead><tr><th>Area</th><th class="quantities">Items Summary</th><th class="cost">Cost</th></tr></thead>
+                                <tbody>
+                                    {{#each groupedLineItemsShort}}
+                                        <tr><td><strong>{{this.sectionName}}</strong></td><td class="quantities">{{this.summaryQuantities}}</td><td class="cost">{{formatCurrency this.sectionSubtotal}}</td></tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                        </div>
+                        {{/if}}
+                    {{/if}}
+                </div>
+            </div>
+
+            {{#if isFullDetail}}
+                {{#if showFullItemizedTable}} <h3>Detailed Itemized Breakdown</h3>
+                    <table class="items-table">
+                        <thead>
+                            <tr><th class="description-cell">Description</th><th class="qty-cell">Qty</th><th class="unit-cell">Unit</th><th class="amount">Unit Price</th><th class="amount">Total</th></tr>
+                        </thead>
+                        <tbody>
+                            {{#each groupedLineItemsFull}}
+                                <tr><td colspan="5" class="section-header-row">{{this.sectionName}}</td></tr>
+                                {{#each this.items}}
+                                <tr>
+                                    <td class="description-cell"><strong>{{this.displayName}}</strong>{{#if this.description}}<br><small>{{{breaklines this.description}}}</small>{{/if}}</td>
+                                    <td class="qty-cell">{{this.quantity}}</td>
+                                    <td class="unit-cell">{{this.unit}}</td>
+                                    <td class="amount">{{formatCurrency this.unitPrice}}</td> <td class="amount">{{formatCurrency this.lineTotal}}</td>
+                                </tr>
+                                {{/each}}
+                                {{#if this.sectionSubtotal}}
+                                <tr><td colspan="4" class="section-subtotal-row">Section Subtotal:</td><td class="amount" style="font-weight: bold;">{{formatCurrency this.sectionSubtotal}}</td></tr>
+                                {{/if}}
+                            {{/each}}
+                        </tbody>
+                    </table>
+                {{else}}
+                     {{#if groupedLineItemsShort.length}}
+                        <div class="items-table-container" style="margin-top: 20px;">
+                            <h3>Summary of Costs by Area</h3>
+                            <table class="area-breakdown-table">
+                                <thead><tr><th>Area</th><th class="quantities">Items Summary</th><th class="cost">Cost</th></tr></thead>
+                                <tbody>
+                                    {{#each groupedLineItemsShort}}
+                                        <tr><td><strong>{{this.sectionName}}</strong></td><td class="quantities">{{this.summaryQuantities}}</td><td class="cost">{{formatCurrency this.sectionSubtotal}}</td></tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{/if}}
+                     <p class="summary-only-notice">Full itemized breakdown has been omitted as per your profile settings for this quote.</p>
+                {{/if}}
+            {{/if}}
         {{/if}}
 
         <div class="financial-summary-container">
@@ -196,17 +252,21 @@ const HTML_QUOTE_TEMPLATE = `
         </div>
         <div class="clear"></div>
     </div> <div class="page-container">
-        {{#if quote.generalNotes}}
-        <div class="notes-terms-section">
-            <h3>General Notes</h3>
-            <div class="pre-wrap">{{{breaklines quote.generalNotes}}}</div>
-        </div>
-        {{/if}}
+        {{#unless isSummary}} {{#if quote.generalNotes}}
+            <div class="notes-terms-section">
+                <h3>General Notes</h3>
+                <div class="pre-wrap">{{{breaklines quote.generalNotes}}}</div>
+            </div>
+            {{/if}}
+        {{/unless}}
 
         {{#if combinedTerms}}
         <div class="notes-terms-section">
             <h3>Terms & Conditions</h3>
-            <div class="terms-content-columns pre-wrap">{{{breaklines combinedTerms}}}</div>
+            {{#if isSummary}}
+                <p><small>Abbreviated terms. Full terms and conditions apply and are available in the detailed version of this quote or upon request.</small></p>
+                {{else}} <div class="terms-content-columns pre-wrap">{{{breaklines combinedTerms}}}</div>
+            {{/if}}
         </div>
         {{/if}}
 
@@ -223,25 +283,43 @@ const HTML_QUOTE_TEMPLATE = `
             {{else}}
                 <p><strong>{{userProfile.businessName}}</strong></p>
             {{/if}}
+            <p>Quote generated by QuoteCraft</p>
         </div>
-    </div> </body>
+    </div>
+</body>
 </html>
 `; // End of HTML_QUOTE_TEMPLATE
 
 const compiledTemplate = handlebars.compile(HTML_QUOTE_TEMPLATE);
 
-handlebars.registerHelper("formatCurrency", (amount: number | null | undefined): string => {
-  if (amount === null || amount === undefined) return "$0.00";
-  // Corrected: Removed unnecessary escape for $
-  return `$${Number(amount).toFixed(2)}`;
-});
-
+// --- FIX FOR HANDLEBARS HELPER 'breaklines' ---
+// The regex itself is fine, the issue was likely an invisible character
+// or a copy-paste error in the surrounding template or code.
+// Ensuring the helper is exactly as follows:
 handlebars.registerHelper("breaklines", function(text: unknown) {
   if (typeof text !== "string" || !text) return "";
   const escapedText = handlebars.Utils.escapeExpression(text);
+  // Corrected regex usage (ensure it's directly within the replace method)
   const brText = escapedText.replace(/(\r\n|\n|\r)/gm, "<br>");
   return new handlebars.SafeString(brText);
 });
+// --- END FIX ---
+
+
+// --- FIX FOR HANDLEBARS HELPER 'formatCurrency' ---
+handlebars.registerHelper("formatCurrency", (amount: number | null | undefined): string => {
+  if (amount === null || amount === undefined) {
+    // Optionally, you can return a specific string for undefined/null amounts
+    // e.g., return "N/A" or userProfileData.currencyCode + " 0.00"
+    // For now, defaulting to $0.00 if no currency code logic is added here
+    return "$0.00";
+  }
+  // This helper doesn't have access to userProfileData.currencyCode directly.
+  // currencyCode should be part of the templatePayload and used in the Handlebars template like {{currencyCode}}{{formatCurrency this.totalAmount}}
+  // For now, this helper will just format the number with a $.
+  return `$${Number(amount).toFixed(2)}`;
+});
+// --- END FIX ---
 
 const functionOptions: HttpsOptions = {
   timeoutSeconds: 300,
@@ -249,10 +327,9 @@ const functionOptions: HttpsOptions = {
   region: "australia-southeast1",
 };
 
-// Define a more specific type for line items if possible, or use a generic object type
 interface LineItem {
     section?: string;
-    inputType?: "price" | "quantity"; // Assuming these are the possible values
+    inputType?: "price" | "quantity";
     price?: number;
     referenceRate?: number;
     lineTotal?: number;
@@ -260,20 +337,24 @@ interface LineItem {
     unit?: string;
     description?: string;
     displayName?: string;
-    // Add other properties of line items here
-    [key: string]: any; // Allows other properties, but try to be more specific
+    unitPrice?: number; // Added for consistency in the template
+    [key: string]: any;
 }
 
 interface GroupedLineItem {
     sectionName: string;
-    items: LineItem[]; // Use the LineItem interface
+    items: LineItem[];
     itemCount: number;
     sectionSubtotal: number;
     summaryQuantities?: string;
 }
 
+interface GeneratePdfRequestData {
+    quoteId: string;
+    exportLevel: QuoteExportLevel;
+}
 
-export const generateQuotePdf = onCall(functionOptions, async (request: CallableRequest<{ quoteId: string }>) => {
+export const generateQuotePdf = onCall(functionOptions, async (request: CallableRequest<GeneratePdfRequestData>) => {
   logger.info("[PDF Gen Sparticuz] Function called. Process Env (Subset):", {
     HOME: process.env.HOME,
     PUPPETEER_CACHE_DIR: process.env.PUPPETEER_CACHE_DIR,
@@ -285,7 +366,7 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
     throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
   }
   const userId = request.auth.uid;
-  const quoteId = request.data.quoteId;
+  const { quoteId, exportLevel } = request.data;
 
   if (!quoteId || typeof quoteId !== "string") {
     logger.error(
@@ -295,11 +376,19 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
     throw new HttpsError("invalid-argument", "The function must be called with a \"quoteId\" string parameter.");
   }
 
+  if (!exportLevel || !["summary", "standardDetail", "fullDetail"].includes(exportLevel)) {
+    logger.error(
+      "[PDF Gen Sparticuz] Invalid Argument: exportLevel missing or invalid.",
+      { receivedData: request.data }
+    );
+    throw new HttpsError("invalid-argument", "Invalid or missing \"exportLevel\". Must be 'summary', 'standardDetail', or 'fullDetail'.");
+  }
+
   try {
-    logger.info(`[PDF Gen Sparticuz] START - QuoteID: ${quoteId}, UserID: ${userId}`);
+    logger.info(`[PDF Gen Sparticuz] START - QuoteID: ${quoteId}, UserID: ${userId}, ExportLevel: ${exportLevel}`);
 
     const userProfileRef = db.doc(`users/${userId}`);
-    const quoteRef = db.doc(`users/${userId}/quotes/${quoteId}`);
+    const quoteRef = db.doc("users/<span class=\"math-inline\">\{userId\}/quotes/</span>{quoteId}");
     const [userProfileSnap, quoteSnap] = await Promise.all([
       userProfileRef.get(),
       quoteRef.get(),
@@ -321,11 +410,9 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
 
     const linesRef = quoteRef.collection("quoteLines");
     const linesSnap = await linesRef.orderBy("order").get();
-    // Explicitly type lineItemsData if possible, or use LineItem[]
     const lineItemsData: LineItem[] = linesSnap.docs.map(docValue => docValue.data() as LineItem);
     logger.info(`[PDF Gen Sparticuz] Fetched ${lineItemsData.length} line items.`);
 
-    // Using GroupedLineItem interface for the accumulator
     const groupedLineItems = lineItemsData.reduce<GroupedLineItem[]>((acc, line) => {
       const sectionName = line.section || "Uncategorized";
       let section = acc.find(s => s.sectionName === sectionName);
@@ -338,10 +425,10 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
       section.itemCount += 1;
       section.sectionSubtotal += line.lineTotal || 0;
       let itemQtyUnit = "";
-      if(line.quantity && line.unit) { itemQtyUnit = `${line.quantity}${line.unit}`; }
+      if(line.quantity && line.unit) { itemQtyUnit = "<span class=\"math-inline\">\{line\.quantity\}</span>{line.unit}"; }
       else if (line.price && !line.quantity) { itemQtyUnit = "Fixed"; }
-      if (itemQtyUnit && typeof section.summaryQuantities === "string") { 
-        section.summaryQuantities += (section.summaryQuantities ? "; " : "") + itemQtyUnit; 
+      if (itemQtyUnit && typeof section.summaryQuantities === "string") {
+        section.summaryQuantities += (section.summaryQuantities ? "; " : "") + itemQtyUnit;
       }
       return acc;
     }, []);
@@ -349,7 +436,7 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
     let combinedTerms = "";
     if (quoteDataFromDb.terms) combinedTerms += quoteDataFromDb.terms;
     if (userProfileData.defaultQuoteTerms) {
-      if (combinedTerms) combinedTerms += "\n\n\n"; 
+      if (combinedTerms) combinedTerms += "\n\n\n";
       combinedTerms += userProfileData.defaultQuoteTerms;
     }
 
@@ -362,17 +449,24 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
       taxAmountVal = totalAmount - subtotalBeforeTaxVal;
     }
 
+    // --- FIX FOR templatePayload ---
+    // The shorthand property errors in the log usually mean variables weren't defined
+    // or a preceding syntax error confused the parser.
+    // Ensure all variables used here are correctly defined in this scope.
     const templatePayload = {
       userProfile: userProfileData,
       quote: quoteDataFromDb,
       groupedLineItemsFull: groupedLineItems,
       groupedLineItemsShort: groupedLineItems.filter(
-        (section: GroupedLineItem) => // Use GroupedLineItem type
+        (section: GroupedLineItem) =>
           (userProfileData.summarySections as string[] || ["Main House Roof", "Additional"])
             .map((s:string) => s.toLowerCase())
             .includes(section.sectionName.toLowerCase())
       ),
-      showFullItemizedTable: userProfileData.showFullItemizedTableInPdf ?? true,
+      isSummary: exportLevel === "summary",
+      isStandardDetail: exportLevel === "standardDetail",
+      isFullDetail: exportLevel === "fullDetail",
+      showFullItemizedTable: (exportLevel === "fullDetail") && (userProfileData.showFullItemizedTableInPdf ?? true),
       dateIssued: (quoteDataFromDb.createdAt as admin.firestore.Timestamp)?.toDate().toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) || "N/A",
       validUntilFormatted: (quoteDataFromDb.validUntil as admin.firestore.Timestamp)?.toDate().toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) || null,
       combinedTerms: combinedTerms,
@@ -384,11 +478,12 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
       taxAmount: taxRate > 0 ? taxAmountVal : null,
       taxRatePercentage: taxRate > 0 ? (taxRate * 100).toFixed(0) : null,
     };
+    // --- END FIX for templatePayload ---
 
     const htmlContent = compiledTemplate(templatePayload);
     logger.info("[PDF Gen Sparticuz] HTML content populated.");
 
-    let browser: Browser | null = null; // Typed browser
+    let browser: Browser | null = null;
     try {
       logger.info("[PDF Gen Sparticuz] Launching Puppeteer with @sparticuz/chromium...");
       const executablePath = await chromium.executablePath();
@@ -398,12 +493,12 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
         logger.error("[PDF Gen Sparticuz] Chromium executable path is invalid or not found by @sparticuz/chromium.");
         throw new HttpsError("internal", "Chromium setup failed, executable path not found by @sparticuz/chromium.");
       }
-            
+
       browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
         executablePath,
-        headless: chromium.headless, 
+        headless: chromium.headless,
       });
 
       const page = await browser.newPage();
@@ -411,22 +506,28 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
       await page.setContent(htmlContent, { waitUntil: "networkidle0" });
       logger.info("[PDF Gen Sparticuz] Content set. Generating PDF buffer...");
 
+      // --- FIX FOR pdfOptions ---
+      // The footerTemplate string needs to have its inner quotes escaped correctly.
+      // The previous errors indicated that the string was being broken.
       const pdfOptions: PDFOptions = {
         format: "A4",
         printBackground: true,
         margin: { top: "15mm", right: "15mm", bottom: "20mm", left: "15mm" },
         displayHeaderFooter: true,
+        // Ensure the string for footerTemplate is correctly formatted and escaped
         footerTemplate: "<div style=\"font-size:7pt; width:100%; text-align:center; padding: 0 10mm;\">Page <span class=\"pageNumber\"></span> of <span class=\"totalPages\"></span></div>",
-        headerTemplate: "<div></div>",
+        headerTemplate: "<div></div>", // Keep header empty if managed in HTML
       };
-      const pdfBufferOutput = await page.pdf(pdfOptions); 
-      const pdfBufferNode: Buffer = Buffer.from(pdfBufferOutput); 
+      // --- END FIX for pdfOptions ---
+
+      const pdfBufferOutput = await page.pdf(pdfOptions);
+      const pdfBufferNode: Buffer = Buffer.from(pdfBufferOutput);
 
       logger.info("[PDF Gen Sparticuz] PDF buffer generated successfully.");
       return { pdfBase64: pdfBufferNode.toString("base64") };
 
-    } catch (puppeteerError: unknown) { // Catch unknown for better type safety
-      const error = puppeteerError as Error; // Assert as Error type
+    } catch (puppeteerError: unknown) {
+      const error = puppeteerError as Error;
       logger.error("[PDF Gen Sparticuz] Puppeteer operation failed:", { message: error.message, stack: error.stack });
       throw new HttpsError("internal", `PDF generation failed at Puppeteer stage: ${error.message}`);
     } finally {
@@ -436,13 +537,19 @@ export const generateQuotePdf = onCall(functionOptions, async (request: Callable
       }
     }
 
-  } catch (error: unknown) { // Catch unknown for better type safety
-    const err = error as (Error & { details?: any; code?: string }); // Assert as Error with potential details and code
+  } catch (error: unknown) {
+    const err = error as (Error & { details?: any; code?: string });
+    // Log the specific variables that were problematic if the shorthand error persists
     logger.error("[PDF Gen Sparticuz] Error in generateQuotePdf (outer catch):", {
-      errorMessage: err.message, errorStack: err.stack, errorDetails: err.details,
-      quoteId, userId,
+      errorMessage: err.message,
+      errorStack: err.stack,
+      errorDetails: err.details,
+      // Access original request data for logging if needed
+      quoteIdFromRequest: request.data.quoteId,
+      userIdFromAuth: request.auth?.uid,
+      exportLevelFromRequest: request.data.exportLevel,
     });
-    if (error instanceof HttpsError) { throw error; } // Re-throw HttpsError instances
+    if (error instanceof HttpsError) { throw error; }
     throw new HttpsError("internal", `Failed to generate PDF: ${err.message}`);
   }
 });

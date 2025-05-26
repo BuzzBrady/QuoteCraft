@@ -6,37 +6,42 @@
 import { Timestamp } from 'firebase/firestore';
 import { User } from 'firebase/auth'; // Import Firebase User type
 
+// --- NEW TYPE FOR EXPORT LEVELS ---
+export type QuoteExportLevel = 'summary' | 'standardDetail' | 'fullDetail';
+// --- END NEW TYPE ---
+
 // --- Authentication Context ---
 export interface AuthContextType {
     currentUser: User | null;
     loadingAuthState: boolean;
-    logout: () => Promise<void>; 
+    logout: () => Promise<void>;
 }
 
-export interface UserProfile { 
-    id?: string; 
+export interface UserProfile {
+    id?: string;
     email?: string;
     displayName?: string;
     businessName?: string;
-    companyAddress?: string;    
-    companyPhone?: string;      
-    companyEmail?: string;      
-    abnOrTaxId?: string;        
-    logoUrl?: string;           
-    defaultQuoteTerms?: string; 
-    quotePrefix?: string;       
-    nextQuoteSequence: number; 
+    companyAddress?: string;
+    companyPhone?: string;
+    companyEmail?: string;
+    abnOrTaxId?: string;
+    logoUrl?: string;
+    defaultQuoteTerms?: string;
+    quotePrefix?: string;
+    nextQuoteSequence: number;
     quoteNumberPadding?: number;
     summarySections?: string[];
     showFullItemizedTableInPdf?: boolean;
-    showUnitPricesInPdf?: boolean; 
-    taxRate?: number; 
-    currencyCode?: string; 
+    showUnitPricesInPdf?: boolean;
+    taxRate?: number;
+    currencyCode?: string;
     acceptanceInstructions?: string;
     salesContactPerson?: string;
     companyWebsite?: string;
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
+    assignedTrades?: string[]; // For later, if you implement trade-specific PDF content
 }
 
 // --- Client ---
@@ -58,64 +63,64 @@ export interface Client {
 
 // --- Global Area ---
 export interface Area {
-    id: string; 
+    id: string;
     name: string;
-    name_lowercase?: string; 
+    name_lowercase?: string;
     order?: number;
     description?: string;
-    type?: string; 
+    type?: string;
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
 }
 
 // --- Global Task ---
 export interface Task {
-    id: string; 
+    id: string;
     name: string;
     name_lowercase?: string;
     description?: string;
-    defaultUnit?: string; 
+    defaultUnit?: string;
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
 }
 
 // --- Custom Task (User-Specific) ---
-export interface CustomTask extends Omit<Task, 'id'> { 
-    id: string; 
-    userId: string; 
+export interface CustomTask extends Omit<Task, 'id'> {
+    id: string;
+    userId: string;
 }
 
 // --- Global Material ---
 export interface Material {
-    id: string; 
+    id: string;
     name: string;
     name_lowercase?: string;
     description?: string;
-    optionsAvailable: boolean; 
+    optionsAvailable: boolean;
     searchKeywords?: string[];
-    defaultRate?: number;   
-    defaultUnit?: string;   
+    defaultRate?: number;
+    defaultUnit?: string;
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
-    isGlobal?: boolean;       
+    isGlobal?: boolean;
 }
 
 // --- Custom Material (User-Specific) ---
-export interface CustomMaterial extends Omit<Material, 'id'> { 
-    id: string; 
-    userId: string; 
-    isCustom?: boolean; 
+export interface CustomMaterial extends Omit<Material, 'id'> {
+    id: string;
+    userId: string;
+    isCustom?: boolean;
 }
 
 
 // --- Material Option ---
 export interface MaterialOption {
-    id: string; 
-    userId?: string; 
+    id: string;
+    userId?: string;
     name: string;
     name_lowercase?: string;
     description?: string;
-    rateModifier?: number; 
+    rateModifier?: number;
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
 }
@@ -123,16 +128,16 @@ export interface MaterialOption {
 
 // --- User Rate Template ---
 export interface UserRateTemplate {
-    id: string; 
-    userId: string; 
-    taskId: string | null; 
-    materialId: string | null; 
-    materialOptionId: string | null; 
-    displayName: string; 
-    displayName_lowercase?: string; 
-    referenceRate: number; 
-    unit: string; 
-    inputType: 'quantity' | 'price' | 'checkbox'; 
+    id: string;
+    userId: string;
+    taskId: string | null;
+    materialId: string | null;
+    materialOptionId: string | null;
+    displayName: string;
+    displayName_lowercase?: string;
+    referenceRate: number;
+    unit: string;
+    inputType: 'quantity' | 'price' | 'checkbox';
     order?: number;
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
@@ -140,71 +145,71 @@ export interface UserRateTemplate {
 
 // --- Kit Line Item Template (Structure within KitTemplate) ---
 export interface KitLineItemTemplate {
-    taskId: string | null; 
-    materialId: string | null; 
-    materialOptionId: string | null; 
-    materialOptionName?: string | null; 
-    displayName: string; 
-    unit: string; 
+    taskId: string | null;
+    materialId: string | null;
+    materialOptionId: string | null;
+    materialOptionName?: string | null;
+    displayName: string;
+    unit: string;
     inputType: 'quantity' | 'price' | 'checkbox';
-    baseQuantity: number; 
-    description?: string; 
+    baseQuantity: number;
+    description?: string;
 }
 
 // --- Kit Template (Global or User-Specific) ---
 export interface KitTemplate {
-    id: string; 
-    userId?: string; 
+    id: string;
+    userId?: string;
     name: string;
     name_lowercase?: string;
     description?: string;
-    tags?: string[]; 
-    isGlobal?: boolean; 
-    lineItems: KitLineItemTemplate[]; 
+    tags?: string[];
+    isGlobal?: boolean;
+    lineItems: KitLineItemTemplate[];
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
 }
 
 // --- Quote Line Item ---
 export interface QuoteLine {
-    id: string; 
-    section: string; 
-    taskId: string | null; 
-    materialId: string | null; 
-    materialOptionId: string | null; 
-    materialOptionName?: string | null; 
-    displayName: string; 
-    description?: string; 
-    quantity: number | null; 
-    price: number | null; 
-    unit: string | null; 
-    referenceRate: number | null; 
-    inputType: 'quantity' | 'price' | 'checkbox' | null; 
-    lineTotal: number; 
-    order: number; 
-    kitTemplateId?: string; 
+    id: string;
+    section: string;
+    taskId: string | null;
+    materialId: string | null;
+    materialOptionId: string | null;
+    materialOptionName?: string | null;
+    displayName: string;
+    description?: string;
+    quantity: number | null;
+    price: number | null;
+    unit: string | null;
+    referenceRate: number | null;
+    inputType: 'quantity' | 'price' | 'checkbox' | null;
+    lineTotal: number;
+    order: number;
+    kitTemplateId?: string;
 }
 
 // --- Quote ---
 export interface Quote {
-    id: string; 
-    userId: string; 
-    quoteNumber: string; 
+    id: string;
+    userId: string;
+    quoteNumber: string;
     jobTitle: string;
-    clientName?: string; 
-    clientAddress?: string; 
-    clientPhone?: string; 
-    clientEmail?: string; 
+    clientName?: string;
+    clientAddress?: string;
+    clientPhone?: string;
+    clientEmail?: string;
     status: 'Draft' | 'Sent' | 'Accepted' | 'Rejected';
-    totalAmount: number; 
-    terms?: string; 
-    projectDescription?: string; 
-    additionalDetails?: string; 
-    generalNotes?: string; 
-    validUntil?: Timestamp | null; 
-    currencyCode?: string; 
-    createdAt: Timestamp; 
-    updatedAt: Timestamp; 
+    totalAmount: number;
+    terms?: string;
+    projectDescription?: string;
+    additionalDetails?: string;
+    generalNotes?: string;
+    validUntil?: Timestamp | null;
+    currencyCode?: string;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
 }
 
 // --- Combined types for selectors (combines global and custom) ---
@@ -220,4 +225,3 @@ export type CombinedMaterial = Omit<Material | CustomMaterial, 'name' | 'name_lo
     name: string;
     name_lowercase: string;
 };
-

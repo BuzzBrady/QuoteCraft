@@ -1,12 +1,6 @@
 // src/components/QuoteBuilder.tsx
-// -------------
-// Main component for building/editing a quote.
-// Enhanced to use full TaskFormModal and MaterialFormModal for creating custom items.
-// TypeScript errors addressed.
-// Added "Create & Edit Kits" button.
-
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 import {
     collection, query, getDocs, doc, addDoc, setDoc,
     Timestamp,
@@ -15,7 +9,6 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
-// Contexts, Config, Types
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../config/firebaseConfig';
 import {
@@ -24,10 +17,8 @@ import {
     Client
 } from '../types';
 
-// --- IMPORT SHARED UTILITY FUNCTIONS ---
 import { formatCurrency, findMatchingRate, groupLinesBySection } from '../utils/utils';
 
-// Child Components
 import TaskSelector from './TaskSelector';
 import MaterialSelector from './MaterialSelector';
 import MaterialOptionSelector from './MaterialOptionSelector';
@@ -36,7 +27,6 @@ import QuoteLineItemDisplay from './QuoteLineItemDisplay';
 import AreaSelector from './AreaSelector';
 import TaskFormModal from './TaskFormModal';
 import MaterialFormModal from './MaterialFormModal';
-
 
 import styles from './QuoteBuilder.module.css';
 
@@ -49,7 +39,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const itemSelectorRef = useRef<HTMLDivElement>(null);
     const { currentUser } = useAuth();
     const userId = currentUser?.uid;
-    const navigate = useNavigate(); // Initialize navigate
+    const navigate = useNavigate();
 
     // --- State ---
     const [userProfile, setUserProfile] = useState<Partial<UserProfile>>({});
@@ -57,13 +47,19 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const [isLoadingRates, setIsLoadingRates] = useState(false);
     const [errorRates, setErrorRates] = useState<string | null>(null);
 
-    const [quoteData, setQuoteData] = useState<Partial<Quote>>({});
+    const [quoteData, setQuoteData] = useState<Partial<Quote>>({}); // For loaded existing quote or new quote shell
     const [jobTitle, setJobTitle] = useState('');
     const [clientName, setClientName] = useState('');
     const [clientAddress, setClientAddress] = useState('');
     const [clientEmail, setClientEmail] = useState('');
     const [clientPhone, setClientPhone] = useState('');
     const [terms, setTerms] = useState('');
+    // State for new top-level quote fields
+    const [projectDescription, setProjectDescription] = useState('');
+    const [additionalDetails, setAdditionalDetails] = useState('');
+    const [generalNotes, setGeneralNotes] = useState('');
+    const [validUntilDate, setValidUntilDate] = useState<Date | null>(null);
+
 
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoadingClients, setIsLoadingClients] = useState(false);
@@ -73,12 +69,14 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const [activeSection, setActiveSection] = useState<string>('');
     const [isLoadingQuote, setIsLoadingQuote] = useState(false);
     const [errorQuote, setErrorQuote] = useState<string | null>(null);
+
     const [selectedTask, setSelectedTask] = useState<CombinedTask | null>(null);
     const [selectedMaterial, setSelectedMaterial] = useState<CombinedMaterial | null>(null);
     const [selectedOption, setSelectedOption] = useState<MaterialOption | null>(null);
     const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
-    const [selectedDescription, setSelectedDescription] = useState<string>('');
+    const [selectedDescription, setSelectedDescription] = useState<string>(''); // For line item description
     const [overrideRateInput, setOverrideRateInput] = useState<string>('');
+
     const [globalAreas, setGlobalAreas] = useState<Area[]>([]);
     const [isLoadingAreas, setIsLoadingAreas] = useState(false);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -87,15 +85,13 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const [allMaterials, setAllMaterials] = useState<CombinedMaterial[]>([]);
     const [isLoadingGlobals, setIsLoadingGlobals] = useState(false);
 
-    // --- Modal States ---
     const [isTaskFormModalOpen, setIsTaskFormModalOpen] = useState(false);
-    const [taskFormInitialData, setTaskFormInitialData] = useState<CustomTask | null>(null); // Changed to CustomTask | null
+    const [taskFormInitialData, setTaskFormInitialData] = useState<CustomTask | null>(null);
     const createTaskPromiseRef = useRef<{ resolve: (value: CombinedTask | null) => void; reject: (reason?: any) => void; } | null>(null);
 
     const [isMaterialFormModalOpen, setIsMaterialFormModalOpen] = useState(false);
-    const [materialFormInitialData, setMaterialFormInitialData] = useState<CustomMaterial | null>(null); // Changed to CustomMaterial | null
+    const [materialFormInitialData, setMaterialFormInitialData] = useState<CustomMaterial | null>(null);
     const createMaterialPromiseRef = useRef<{ resolve: (value: CombinedMaterial | null) => void; reject: (reason?: any) => void; } | null>(null);
-
 
     const clearSelections = useCallback(() => {
         setSelectedTask(null); setSelectedMaterial(null); setSelectedOption(null);
@@ -128,16 +124,32 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     useEffect(() => { setOverrideRateInput(currentItemDetails.rate.toString()); }, [currentItemDetails.rate]);
 
     // --- Data Fetching useEffects ---
+
     useEffect(() => {
-        if (!userId) { setUserProfile({}); return; }
+        if (!userId) {
+            setUserProfile({});
+            setTerms(''); // Clear terms if user logs out
+            return;
+        }
         const profileRef = doc(db, `users/${userId}`);
         getDoc(profileRef).then(docSnap => {
             if (docSnap.exists()) {
-                setUserProfile(docSnap.data() as UserProfile);
-                if (!existingQuoteId && !terms && docSnap.data().defaultQuoteTerms) setTerms(docSnap.data().defaultQuoteTerms);
-            } else console.warn("User profile not found.");
-        }).catch(err => console.error("Error fetching user profile:", err));
-    }, [userId, existingQuoteId, terms]);
+                const profile = docSnap.data() as UserProfile;
+                setUserProfile(profile);
+                if (!existingQuoteId && terms.trim() === '' && profile.defaultQuoteTerms) {
+                    setTerms(profile.defaultQuoteTerms);
+                }
+            } else {
+                console.warn("User profile not found.");
+                setUserProfile({});
+                if (!existingQuoteId) setTerms('');
+            }
+        }).catch(err => {
+            console.error("Error fetching user profile:", err);
+            setUserProfile({});
+            if (!existingQuoteId) setTerms('');
+        });
+    }, [userId, existingQuoteId]); // `terms` removed to avoid loop, it's set based on profile/client
 
     useEffect(() => {
         if (!userId) { setClients([]); return; }
@@ -158,19 +170,24 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                 setClientAddress(client.clientAddress || '');
                 setClientEmail(client.clientEmail || '');
                 setClientPhone(client.clientPhone || '');
-                if (!terms.trim() && client.defaultClientTerms) setTerms(client.defaultClientTerms);
+                if (terms.trim() === '' && client.defaultClientTerms) {
+                    setTerms(client.defaultClientTerms);
+                }
             }
-        } else {
-            if (!existingQuoteId) {
-                setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
-                setTerms(userProfile.defaultQuoteTerms || '');
-            }
+        } else if (!existingQuoteId) { // Only reset if no client selected AND it's a new quote
+            setClientName('');
+            setClientAddress('');
+            setClientEmail('');
+            setClientPhone('');
+            setTerms(userProfile.defaultQuoteTerms || ''); // Reset to user profile default or empty
         }
-    }, [selectedClientId, clients, terms, existingQuoteId, userProfile.defaultQuoteTerms]);
+    }, [selectedClientId, clients, existingQuoteId, userProfile.defaultQuoteTerms]);
+
 
     useEffect(() => {
         if (!userId) { setUserRates([]); return; }
-        setIsLoadingRates(true); setErrorRates(null);
+        setIsLoadingRates(true);
+        setErrorRates(null);
         const ratesCollectionRef = collection(db, `users/${userId}/rateTemplates`);
         const q = query(ratesCollectionRef, orderBy('displayName_lowercase', 'asc'));
         getDocs(q)
@@ -187,24 +204,53 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             .then(snap => {
                 const fetchedAreas = snap.docs.map(d => ({ id: d.id, ...d.data() } as Area));
                 setGlobalAreas(fetchedAreas);
-                if (fetchedAreas.length > 0 && !activeSection && !existingQuoteId) setActiveSection(fetchedAreas[0].name);
             })
-            .catch(err => console.error("Error fetching areas:", err))
+            .catch(err => {
+                console.error("Error fetching areas:", err);
+                setGlobalAreas([]);
+            })
             .finally(() => setIsLoadingAreas(false));
-     }, [activeSection, existingQuoteId]);
+    }, []);
 
-     useEffect(() => {
-        if (!existingQuoteId || !userId) {
-            setQuoteLines([]); setJobTitle('');
-            setClientName(quoteData?.clientName || '');
-            setClientAddress(quoteData?.clientAddress || '');
-            setClientEmail(quoteData?.clientEmail || '');
-            setClientPhone(quoteData?.clientPhone || '');
-            setTerms(quoteData?.terms || userProfile.defaultQuoteTerms || '');
+    useEffect(() => {
+        if (!existingQuoteId && !activeSection && globalAreas.length > 0 && !isLoadingAreas) {
+            setActiveSection(globalAreas[0].name);
+        } else if (!existingQuoteId && !activeSection && globalAreas.length === 0 && !isLoadingAreas) {
+            setActiveSection('Main Area');
+        }
+    }, [existingQuoteId, globalAreas, isLoadingAreas, activeSection]);
+
+
+    useEffect(() => {
+        if (!userId) {
+            setJobTitle(''); setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
+            setTerms(''); setSelectedClientId(''); setQuoteLines([]); setQuoteData({});
+            setProjectDescription(''); setAdditionalDetails(''); setGeneralNotes(''); setValidUntilDate(null);
             setActiveSection(globalAreas.length > 0 ? globalAreas[0].name : 'Main Area');
-            clearSelections(); setSelectedClientId('');
+            clearSelections(); setCollapsedSections({}); setIsLoadingQuote(false);
             return;
-        };
+        }
+
+        if (!existingQuoteId) {
+            // Initialize for a new quote only if key fields are not already set (to avoid wiping user input on re-renders)
+            if (jobTitle === '' && clientName === '' && quoteLines.length === 0 && projectDescription === '') {
+                setIsLoadingQuote(true);
+                setJobTitle(''); setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
+                setTerms(userProfile.defaultQuoteTerms || '');
+                setProjectDescription(''); setAdditionalDetails(''); setGeneralNotes(''); setValidUntilDate(null);
+                setSelectedClientId(''); setQuoteLines([]);
+                setQuoteData({ status: 'Draft', userId: userId, terms: userProfile.defaultQuoteTerms || '' });
+                if (!activeSection && globalAreas.length > 0) {
+                    setActiveSection(globalAreas[0].name);
+                } else if (!activeSection) {
+                    setActiveSection('Main Area');
+                }
+                clearSelections(); setCollapsedSections({});
+                setIsLoadingQuote(false);
+            }
+            return;
+        }
+
         const fetchQuote = async () => {
             setIsLoadingQuote(true); setErrorQuote(null);
             const quoteRef = doc(db, 'users', userId, 'quotes', existingQuoteId);
@@ -217,24 +263,52 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                     setClientName(data.clientName || ''); setClientAddress(data.clientAddress || '');
                     setClientEmail(data.clientEmail || ''); setClientPhone(data.clientPhone || '');
                     setTerms(data.terms || userProfile.defaultQuoteTerms || '');
+                    setProjectDescription(data.projectDescription || '');
+                    setAdditionalDetails(data.additionalDetails || '');
+                    setGeneralNotes(data.generalNotes || '');
+                    setValidUntilDate(data.validUntil ? data.validUntil.toDate() : null);
+
+                    const loadedClient = clients.find(c => c.clientEmail === data.clientEmail || (c.clientName === data.clientName && c.clientAddress === data.clientAddress));
+                    setSelectedClientId(loadedClient?.id || '');
+
                     const linesQuery = query(linesRef, orderBy('order'));
                     const linesSnap = await getDocs(linesQuery);
                     const fetchedLines = linesSnap.docs.map(d => ({ id: d.id, ...d.data() } as QuoteLine));
                     setQuoteLines(fetchedLines);
-                    if (fetchedLines.length > 0 && fetchedLines[0].section) setActiveSection(fetchedLines[0].section);
-                    else if (globalAreas.length > 0) setActiveSection(globalAreas[0].name);
-                    else setActiveSection('Main Area');
+
+                    if (fetchedLines.length > 0 && fetchedLines[0].section) {
+                        setActiveSection(fetchedLines[0].section);
+                    } else if (globalAreas.length > 0) {
+                        setActiveSection(globalAreas[0].name);
+                    } else {
+                        setActiveSection('Main Area');
+                    }
                     setCollapsedSections({});
-                } else { setErrorQuote(`Quote not found.`); console.error(`Quote ${existingQuoteId} not found for user ${userId}`); }
-            } catch (err: any) { console.error("Error fetching quote:", err); setErrorQuote(`Failed: ${err.message}`); }
-            finally { setIsLoadingQuote(false); }
+                    clearSelections();
+                } else {
+                    setErrorQuote(`Quote not found: ${existingQuoteId}`);
+                    setJobTitle(''); setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
+                    setTerms(userProfile.defaultQuoteTerms || ''); setSelectedClientId(''); setQuoteLines([]); setQuoteData({});
+                    setProjectDescription(''); setAdditionalDetails(''); setGeneralNotes(''); setValidUntilDate(null);
+                    setActiveSection(globalAreas.length > 0 ? globalAreas[0].name : 'Main Area'); clearSelections();
+                }
+            } catch (err: any) {
+                console.error("Error fetching quote:", err);
+                setErrorQuote(`Failed to fetch quote: ${err.message}`);
+            } finally {
+                setIsLoadingQuote(false);
+            }
         };
-        if (userId) fetchQuote();
-    }, [existingQuoteId, userId, globalAreas, clearSelections, userProfile.defaultQuoteTerms]);
+        fetchQuote();
+    }, [existingQuoteId, userId, userProfile.defaultQuoteTerms, globalAreas, clients, clearSelections]);
 
 
     useEffect(() => {
-        if (!userId) return;
+        if (!userId) {
+            setAllTasks([]);
+            setAllMaterials([]);
+            return;
+        }
         setIsLoadingGlobals(true);
         const fetchAllReferencedData = async () => {
             try {
@@ -244,7 +318,6 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                     getDocs(query(collection(db, 'materials'), orderBy('name_lowercase', 'asc'))),
                     getDocs(query(collection(db, `users/${userId}/customMaterials`), orderBy('name_lowercase', 'asc')))
                 ]);
-                
                 const globalTasks = tasksSnap.docs.map(d => {
                     const data = d.data();
                     return { id: d.id, ...data, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedTask;
@@ -254,7 +327,6 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                     return { id: d.id, ...data, isCustom: true, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedTask;
                 });
                 setAllTasks([...globalTasks, ...userCustomTasks].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
-
                 const globalMaterialsData = materialsSnap.docs.map(d => {
                     const data = d.data();
                     return { id: d.id, ...data, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedMaterial;
@@ -264,7 +336,6 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                     return { id: d.id, ...data, isCustom: true, name: data.name || '', name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') } as CombinedMaterial;
                 });
                 setAllMaterials([...globalMaterialsData, ...userCustomMaterialsData].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
-
             } catch (err) {
                 console.error("Error fetching all tasks/materials for QuoteBuilder", err);
                 setErrorQuote("Failed to load necessary task/material data.");
@@ -275,137 +346,84 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         fetchAllReferencedData();
     }, [userId]);
 
-    // --- Modal Openers and Handlers ---
     const handleOpenNewTaskModal = (initialName?: string) => {
         return new Promise<CombinedTask | null>((resolve, reject) => {
             if (!userId) { alert("Login required."); reject(new Error("User not logged in")); return; }
             if (initialName) {
                 const initialTaskData: CustomTask = {
-                    id: `temp-new-${Date.now()}`, 
-                    name: initialName,
-                    name_lowercase: initialName.toLowerCase(),
-                    defaultUnit: 'item',
-                    description: '',
-                    userId: userId, 
-                    createdAt: Timestamp.now(), 
-                    updatedAt: Timestamp.now()  
+                    id: `temp-new-${Date.now()}`,
+                    name: initialName, name_lowercase: initialName.toLowerCase(),
+                    defaultUnit: 'item', description: '', userId: userId,
+                    createdAt: Timestamp.now(), updatedAt: Timestamp.now()
                 };
                 setTaskFormInitialData(initialTaskData);
-            } else {
-                setTaskFormInitialData(null); 
-            }
+            } else { setTaskFormInitialData(null); }
             setIsTaskFormModalOpen(true);
             createTaskPromiseRef.current = { resolve, reject };
         });
     };
-
     const handleOpenNewMaterialModal = (initialName?: string) => {
         return new Promise<CombinedMaterial | null>((resolve, reject) => {
             if (!userId) { alert("Login required."); reject(new Error("User not logged in")); return; }
             if (initialName) {
                 const initialMaterialData: CustomMaterial = {
-                    id: `temp-new-${Date.now()}`,
-                    name: initialName,
-                    name_lowercase: initialName.toLowerCase(),
-                    defaultUnit: 'item',
-                    description: '',
-                    optionsAvailable: false,
-                    userId: userId,
-                    createdAt: Timestamp.now(),
-                    updatedAt: Timestamp.now()
+                    id: `temp-new-${Date.now()}`, name: initialName, name_lowercase: initialName.toLowerCase(),
+                    defaultUnit: 'item', description: '', optionsAvailable: false, userId: userId,
+                    createdAt: Timestamp.now(), updatedAt: Timestamp.now()
                 };
                 setMaterialFormInitialData(initialMaterialData);
-            } else {
-                setMaterialFormInitialData(null);
-            }
+            } else { setMaterialFormInitialData(null); }
             setIsMaterialFormModalOpen(true);
             createMaterialPromiseRef.current = { resolve, reject };
         });
     };
-
     const handleSaveTaskFromModal = async (taskDataFromModal: { name: string; defaultUnit: string; description: string }) => {
         if (!userId) {
-            alert("Login required to save task.");
-            if (createTaskPromiseRef.current) createTaskPromiseRef.current.reject(new Error("User not logged in"));
-            setIsTaskFormModalOpen(false);
-            createTaskPromiseRef.current = null;
-            return;
+            alert("Login required."); if (createTaskPromiseRef.current) createTaskPromiseRef.current.reject(new Error("User not logged in"));
+            setIsTaskFormModalOpen(false); createTaskPromiseRef.current = null; return;
         }
-
         const newTaskData = {
-            userId,
-            name: taskDataFromModal.name.trim(),
-            name_lowercase: taskDataFromModal.name.trim().toLowerCase(),
-            defaultUnit: taskDataFromModal.defaultUnit.trim() || 'item',
-            description: taskDataFromModal.description.trim(),
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            userId, name: taskDataFromModal.name.trim(), name_lowercase: taskDataFromModal.name.trim().toLowerCase(),
+            defaultUnit: taskDataFromModal.defaultUnit.trim() || 'item', description: taskDataFromModal.description.trim(),
+            createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
         };
-
         try {
             const docRef = await addDoc(collection(db, `users/${userId}/customTasks`), newTaskData);
             const createdTask: CombinedTask = {
-                id: docRef.id, ...newTaskData, isCustom: true,
-                name: newTaskData.name, 
-                name_lowercase: newTaskData.name_lowercase, 
+                id: docRef.id, ...newTaskData, isCustom: true, name: newTaskData.name, name_lowercase: newTaskData.name_lowercase,
                 createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
             } as CombinedTask;
-
             setAllTasks(prev => [...prev, createdTask].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
             if (createTaskPromiseRef.current) createTaskPromiseRef.current.resolve(createdTask);
-            setSelectedTask(createdTask);
-            setIsTaskFormModalOpen(false);
+            setSelectedTask(createdTask); setIsTaskFormModalOpen(false);
         } catch (error) {
-            console.error("Error saving custom task from modal:", error);
-            alert(`Failed to save task "${taskDataFromModal.name}".`);
+            console.error("Error saving custom task:", error); alert(`Failed to save task.`);
             if (createTaskPromiseRef.current) createTaskPromiseRef.current.reject(error);
-        } finally {
-            if (createTaskPromiseRef.current) createTaskPromiseRef.current = null;
-        }
+        } finally { if (createTaskPromiseRef.current) createTaskPromiseRef.current = null; }
     };
-
     const handleMaterialSavedFromModal = async (savedMaterial: CustomMaterial | null) => {
         setIsMaterialFormModalOpen(false);
-
         if (savedMaterial && userId) {
             const newCombinedMaterial: CombinedMaterial = {
-                ...savedMaterial,
-                isCustom: true,
-                name: savedMaterial.name || '', 
-                name_lowercase: (savedMaterial.name_lowercase || savedMaterial.name?.toLowerCase() || '') 
+                ...savedMaterial, isCustom: true, name: savedMaterial.name || '',
+                name_lowercase: (savedMaterial.name_lowercase || savedMaterial.name?.toLowerCase() || '')
             };
             setAllMaterials(prev => [...prev, newCombinedMaterial].sort((a, b) => a.name_lowercase.localeCompare(b.name_lowercase)));
-
-            if (createMaterialPromiseRef.current) {
-                createMaterialPromiseRef.current.resolve(newCombinedMaterial);
-            }
+            if (createMaterialPromiseRef.current) createMaterialPromiseRef.current.resolve(newCombinedMaterial);
             setSelectedMaterial(newCombinedMaterial);
-        } else {
-            if (createMaterialPromiseRef.current) {
-                createMaterialPromiseRef.current.resolve(null);
-            }
-        }
+        } else { if (createMaterialPromiseRef.current) createMaterialPromiseRef.current.resolve(null); }
         createMaterialPromiseRef.current = null;
     };
 
-
     const handleTaskSelectForItemForm = (task: CombinedTask | null) => {
-        setSelectedTask(task);
-        if (task) { setSelectedMaterial(null); setSelectedOption(null); }
-        setOverrideRateInput('');
+        setSelectedTask(task); if (task) { setSelectedMaterial(null); setSelectedOption(null); } setOverrideRateInput('');
     };
-
     const handleMaterialSelectForItemForm = (material: CombinedMaterial | null) => {
-        setSelectedMaterial(material);
-        setSelectedOption(null);
-        setOverrideRateInput('');
+        setSelectedMaterial(material); setSelectedOption(null); setOverrideRateInput('');
     };
-
     const handleOptionSelectForItemForm = (option: MaterialOption | null) => {
-        setSelectedOption(option);
-        setOverrideRateInput('');
+        setSelectedOption(option); setOverrideRateInput('');
     };
-
 
     const handleAddLineItem = useCallback(() => {
         const taskId = selectedTask?.id ?? null;
@@ -429,7 +447,9 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         const newQuoteLine: Omit<QuoteLine, 'id'> = {
             section: activeSection.trim(), taskId, materialId, materialOptionId: optionId,
             materialOptionName: optionObject?.name ?? null, displayName: baseDisplayName,
-            description: selectedDescription.trim() ? selectedDescription.trim() : undefined,
+            // --- CORRECTED LINE FOR THE Firestore "undefined" ERROR ---
+            description: selectedDescription.trim() || null,
+            // ---
             quantity: inputType === 'quantity' ? selectedQuantity : null,
             price: inputType === 'price' ? finalRate : null, unit,
             referenceRate: inputType === 'quantity' ? finalRate : null, inputType, lineTotal,
@@ -441,7 +461,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     }, [activeSection, currentItemDetails, overrideRateInput, quoteLines, selectedDescription, selectedMaterial, selectedOption, selectedQuantity, selectedTask, clearSelections]);
 
     const handleKitSelected = useCallback((kit: KitTemplate) => {
-        if (!activeSection?.trim()) { alert("Please select or enter an active Section/Area before adding a kit."); return; }
+        if (!activeSection?.trim()) { alert("Please select or enter an active Section/Area first."); return; }
         const linesToAdd: QuoteLine[] = [];
         const startingOrder = quoteLines.reduce((max, line) => Math.max(max, line.order ?? -1), -1) + 1;
         kit.lineItems.forEach((kitItem, index) => {
@@ -457,7 +477,9 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             const newLine: Omit<QuoteLine, 'id'> = {
                 section: activeSection.trim(), taskId: kitItem.taskId, materialId: kitItem.materialId,
                 materialOptionId: kitItem.materialOptionId, materialOptionName: materialOptionNameFromKit,
-                displayName: kitItem.displayName, description: kitItem.description || undefined,
+                displayName: kitItem.displayName,
+                // Ensure description from kit is also handled (null if empty/undefined)
+                description: (kitItem.description && kitItem.description.trim() !== "") ? kitItem.description.trim() : null,
                 quantity: lineInputType === 'quantity' ? quantity : null,
                 price: lineInputType === 'price' ? lineRate : null, unit: lineUnit,
                 referenceRate: lineInputType === 'quantity' ? lineRate : null, inputType: lineInputType,
@@ -483,23 +505,25 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         setSelectedMaterial(materialToSet);
         let optionToSet: MaterialOption | null = null;
         if (materialToSet?.optionsAvailable && lineToEdit.materialOptionId && lineToEdit.materialOptionName) {
-            optionToSet = { id: lineToEdit.materialOptionId, name: lineToEdit.materialOptionName } as MaterialOption;
+            optionToSet = { id: lineToEdit.materialOptionId, name: lineToEdit.materialOptionName } as MaterialOption; // Assuming structure for simplicity
         }
         setSelectedOption(optionToSet);
         setActiveSection(lineToEdit.section);
         setSelectedQuantity(lineToEdit.quantity ?? 1);
         const rateForEdit = lineToEdit.inputType === 'price' ? lineToEdit.price : lineToEdit.referenceRate;
         setOverrideRateInput(rateForEdit?.toString() ?? '');
-        setSelectedDescription(lineToEdit.description || '');
+        setSelectedDescription(lineToEdit.description || ''); // Populate line item description for editing
         setQuoteLines(prev => prev.filter(line => line.id !== idToEdit));
-        alert(`"${lineToEdit.displayName}" loaded. Modify and click "Add Line Item" to save changes.`);
+        alert(`"${lineToEdit.displayName}" loaded for editing. Modify above and click "Add Line Item" to re-add it to the quote.`);
         itemSelectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, [quoteLines, allTasks, allMaterials]);
 
-    const handleSetActiveSection = useCallback((name: string) => { setActiveSection(name); itemSelectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, []);
+    const handleSetActiveSection = useCallback((name: string) => {
+        setActiveSection(name);
+    }, []);
 
     const handleNavigateToKitCreator = () => {
-        navigate('/kit-creator'); // Assuming '/kit-creator' is the route for KitCreatorPage
+        navigate('/kit-creator');
     };
 
     const handleSaveQuote = async () => {
@@ -510,30 +534,44 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         const calculatedTotal = quoteLines.reduce((sum, line) => sum + (line.lineTotal || 0), 0);
         let quoteIdToUse = existingQuoteId;
         let finalQuoteNumber = quoteData?.quoteNumber;
+
         try {
-            const mainQuotePayload: any = {
+            const mainQuotePayload: Partial<Quote> = { // Use Partial<Quote> for better type safety
                 jobTitle: jobTitle.trim(),
-                clientName: clientName.trim() || undefined,
-                clientAddress: clientAddress.trim() || undefined,
-                clientEmail: clientEmail.trim() || undefined,
-                clientPhone: clientPhone.trim() || undefined,
-                terms: terms.trim() || userProfile.defaultQuoteTerms || undefined,
+                clientName: clientName.trim() || null,
+                clientAddress: clientAddress.trim() || null,
+                clientEmail: clientEmail.trim() || null,
+                clientPhone: clientPhone.trim() || null,
+                terms: terms.trim() || userProfile.defaultQuoteTerms || null,
                 status: quoteData?.status || 'Draft',
                 totalAmount: calculatedTotal,
-                projectDescription: quoteData?.projectDescription || undefined,
-                additionalDetails: quoteData?.additionalDetails || undefined,
-                generalNotes: quoteData?.generalNotes || undefined,
-                validUntil: quoteData?.validUntil || null,
-                updatedAt: serverTimestamp(),
+                updatedAt: serverTimestamp() as Timestamp,
+
+                projectDescription: projectDescription.trim() || null,
+                additionalDetails: additionalDetails.trim() || null,
+                generalNotes: generalNotes.trim() || null,
             };
+
+            if (validUntilDate) {
+                mainQuotePayload.validUntil = Timestamp.fromDate(validUntilDate);
+            } else {
+                mainQuotePayload.validUntil = null;
+            }
+
             const userQuotesCollectionRef = collection(db, 'users', userId, 'quotes');
             let quoteDocRef;
+
             if (!existingQuoteId) {
-                mainQuotePayload.userId = userId; mainQuotePayload.createdAt = serverTimestamp();
+                mainQuotePayload.userId = userId;
+                mainQuotePayload.createdAt = serverTimestamp() as Timestamp;
+
                 finalQuoteNumber = await runTransaction(db, async (transaction) => {
                     const profileRef = doc(db, `users/${userId}`);
                     const profileSnap = await transaction.get(profileRef);
-                    if (!profileSnap.exists()) { console.warn("Profile not found for numbering."); return `TEMP-${Date.now().toString().slice(-6)}`; }
+                    if (!profileSnap.exists()) {
+                        console.warn("Profile not found for numbering. Using temporary number.");
+                        return `TEMP-${Date.now().toString().slice(-6)}`;
+                    }
                     const profile = profileSnap.data() as UserProfile;
                     const prefix = profile.quotePrefix || 'QT-';
                     const nextNum = profile.nextQuoteSequence || 1;
@@ -544,43 +582,63 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                 });
                 if (!finalQuoteNumber) throw new Error("Failed to generate quote number.");
                 mainQuotePayload.quoteNumber = finalQuoteNumber;
+
                 quoteDocRef = await addDoc(userQuotesCollectionRef, mainQuotePayload);
                 quoteIdToUse = quoteDocRef.id;
             } else {
                 if (!quoteIdToUse) throw new Error("Quote ID missing for update.");
                 quoteDocRef = doc(userQuotesCollectionRef, quoteIdToUse);
-                if (finalQuoteNumber) mainQuotePayload.quoteNumber = finalQuoteNumber;
+                if (finalQuoteNumber) mainQuotePayload.quoteNumber = finalQuoteNumber; // Preserve existing number if editing
                 await setDoc(quoteDocRef, mainQuotePayload, { merge: true });
             }
+
             if (!quoteIdToUse) throw new Error("Quote ID for line items is undefined.");
+
             const batch = writeBatch(db);
             const linesSubColRef = collection(db, 'users', userId, 'quotes', quoteIdToUse, 'quoteLines');
-            if (existingQuoteId) { const oldLines = await getDocs(query(linesSubColRef)); oldLines.forEach(l => batch.delete(l.ref)); }
-            quoteLines.forEach(line => { const { id, ...data } = line; batch.set(doc(linesSubColRef), data); });
+
+            if (existingQuoteId) { // If editing, clear old lines first
+                const oldLinesSnap = await getDocs(query(linesSubColRef));
+                oldLinesSnap.forEach(lineDoc => batch.delete(lineDoc.ref));
+            }
+
+            quoteLines.forEach(line => {
+                const { id, ...dataToSave } = line; // Exclude client-side 'id'
+                const newLineDocRef = doc(linesSubColRef); // Let Firestore generate ID for new line items
+                batch.set(newLineDocRef, dataToSave);
+            });
             await batch.commit();
+
             alert(`Quote ${existingQuoteId ? 'updated' : 'saved'}! Number: ${finalQuoteNumber}`);
             if (onSaveSuccess) onSaveSuccess(quoteIdToUse);
-            if (!existingQuoteId) {
-                setQuoteLines([]); setJobTitle('');
-                setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
+
+            if (!existingQuoteId) { // Reset form for next new quote
+                setJobTitle(''); setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
                 setTerms(userProfile.defaultQuoteTerms || '');
-                setQuoteData({}); setActiveSection(globalAreas.length > 0 ? globalAreas[0].name : 'Main Area'); clearSelections();
-                setSelectedClientId('');
-            } else {
+                setProjectDescription(''); setAdditionalDetails(''); setGeneralNotes(''); setValidUntilDate(null);
+                setQuoteLines([]); setSelectedClientId(''); setQuoteData({});
+                setActiveSection(globalAreas.length > 0 ? globalAreas[0].name : 'Main Area');
+                clearSelections();
+            } else { // Re-fetch data if editing to ensure consistency
                 const updatedSnap = await getDoc(doc(db, 'users', userId, 'quotes', quoteIdToUse));
                 if (updatedSnap.exists()) setQuoteData(updatedSnap.data() as Quote);
                 const updatedLines = await getDocs(query(collection(db, 'users', userId, 'quotes', quoteIdToUse, 'quoteLines'), orderBy('order')));
                 setQuoteLines(updatedLines.docs.map(d => ({ id: d.id, ...d.data() } as QuoteLine)));
             }
-        } catch (error: any) { console.error("Error saving quote:", error); setErrorQuote(`Failed: ${error.message}`); alert(`Failed: ${error.message}`);}
-        finally { setIsLoadingQuote(false); }
+        } catch (error: any) {
+            console.error("Error saving quote:", error);
+            setErrorQuote(`Failed to save quote: ${error.message || "Unknown error"}`);
+            alert(`Failed to save quote: ${error.message || "Unknown error"}`);
+        } finally {
+            setIsLoadingQuote(false);
+        }
     };
 
     const groupedQuoteLines = useMemo(() => groupLinesBySection(quoteLines), [quoteLines]);
     const sortedSectionNames = useMemo(() => Object.keys(groupedQuoteLines).sort(), [groupedQuoteLines]);
     const toggleSectionCollapse = (name: string) => setCollapsedSections(prev => ({ ...prev, [name]: !prev[name] }));
 
-    const isLoading = isLoadingGlobals || isLoadingRates || isLoadingAreas || isLoadingClients || (existingQuoteId ? isLoadingQuote : false);
+    const isLoadingOverall = isLoadingGlobals || isLoadingRates || isLoadingAreas || isLoadingClients || isLoadingQuote;
 
     return (
         <div className={styles.quoteBuilderContainer}>
@@ -588,11 +646,11 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                 {existingQuoteId ? `Edit Quote (#${quoteData?.quoteNumber || '...'})` : 'Create New Quote'}
             </h2>
 
-            {isLoading && !isTaskFormModalOpen && !isMaterialFormModalOpen && <div className={styles.loadingMessage}>Loading essential data...</div>}
+            {isLoadingOverall && !isTaskFormModalOpen && !isMaterialFormModalOpen && <div className={styles.loadingMessage}>Loading essential data...</div>}
             {errorQuote && <p className={styles.errorMessage}>Quote Error: {errorQuote}</p>}
             {errorRates && <p className={styles.errorMessage}>Rates Error: {errorRates}</p>}
 
-            {!isLoading && (
+            {!isLoadingOverall && (
                 <>
                      <div className={styles.headerSection}>
                          <div className={styles.headerInputGroup}>
@@ -633,11 +691,54 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                             <label htmlFor="clientPhone" className={styles.headerLabel}>Client Phone:</label>
                             <input id="clientPhone" type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className={styles.headerInput} />
                          </div>
-
                          <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
                             <label htmlFor="terms" className={styles.headerLabel}>Terms:</label>
-                            <textarea id="terms" value={terms} onChange={(e) => setTerms(e.target.value)} rows={3} className={styles.headerTextarea} />
+                            <textarea id="terms" value={terms} onChange={(e) => setTerms(e.target.value)} rows={3} className={styles.headerTextarea} placeholder="Default terms are loaded from your profile if set..." />
                          </div>
+                         {/* New Input Fields */}
+                         <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
+                            <label htmlFor="projectDescription" className={styles.headerLabel}>Project Description / Scope:</label>
+                            <textarea
+                                id="projectDescription"
+                                value={projectDescription}
+                                onChange={(e) => setProjectDescription(e.target.value)}
+                                rows={4}
+                                className={styles.headerTextarea}
+                                placeholder="Detailed description of the project or scope of works..."
+                            />
+                        </div>
+                        <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
+                            <label htmlFor="additionalDetails" className={styles.headerLabel}>Additional Details / Inclusions:</label>
+                            <textarea
+                                id="additionalDetails"
+                                value={additionalDetails}
+                                onChange={(e) => setAdditionalDetails(e.target.value)}
+                                rows={3}
+                                className={styles.headerTextarea}
+                                placeholder="E.g., Specific materials included, site conditions, access notes..."
+                            />
+                        </div>
+                        <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
+                            <label htmlFor="generalNotes" className={styles.headerLabel}>General Notes for Client:</label>
+                            <textarea
+                                id="generalNotes"
+                                value={generalNotes}
+                                onChange={(e) => setGeneralNotes(e.target.value)}
+                                rows={3}
+                                className={styles.headerTextarea}
+                                placeholder="Any other notes for the client relevant to this quote..."
+                            />
+                        </div>
+                        <div className={styles.headerInputGroup}>
+                            <label htmlFor="validUntilDate" className={styles.headerLabel}>Quote Valid Until:</label>
+                            <input
+                                id="validUntilDate"
+                                type="date"
+                                value={validUntilDate ? validUntilDate.toISOString().split('T')[0] : ''}
+                                onChange={(e) => setValidUntilDate(e.target.value ? new Date(e.target.value) : null)}
+                                className={styles.headerInput}
+                            />
+                        </div>
                     </div>
 
                     <div className={styles.activeSectionContainer}>
@@ -645,7 +746,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                         <AreaSelector
                             globalAreas={globalAreas}
                             activeSection={activeSection}
-                            onChange={setActiveSection}
+                            onChange={handleSetActiveSection}
                             isLoading={isLoadingAreas}
                         />
                         <span className={styles.activeSectionNote}>(Items added below go here)</span>
@@ -658,9 +759,9 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                 <TaskSelector
                                     userId={userId}
                                     onSelect={handleTaskSelectForItemForm}
-                                    onCreateCustomTask={handleOpenNewTaskModal} 
+                                    onCreateCustomTask={handleOpenNewTaskModal}
                                     isLoading={isLoadingGlobals || isLoadingRates}
-                                    allTasks={allTasks} 
+                                    allTasks={allTasks}
                                 />
                                 <button onClick={() => handleOpenNewTaskModal()} className={styles.quickAddButton}>+ Task</button>
                             </div>
@@ -668,9 +769,9 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                 <MaterialSelector
                                     userId={userId}
                                     onSelect={handleMaterialSelectForItemForm}
-                                    onCreateCustomMaterial={handleOpenNewMaterialModal} 
+                                    onCreateCustomMaterial={handleOpenNewMaterialModal}
                                     isLoading={isLoadingGlobals || isLoadingRates}
-                                    allMaterials={allMaterials} 
+                                    allMaterials={allMaterials}
                                 />
                                 <button onClick={() => handleOpenNewMaterialModal()} className={styles.quickAddButton}>+ Material</button>
                             </div>
@@ -682,10 +783,10 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                 />
                             )}
                          </div>
-                         <div className={styles.kitSelectorContainer}> {/* Wrapper for KitSelector and new button */}
+                         <div className={styles.kitSelectorContainer}>
                             <KitSelector userId={userId} onSelect={handleKitSelected} />
-                            <button 
-                                onClick={handleNavigateToKitCreator} 
+                            <button
+                                onClick={handleNavigateToKitCreator}
                                 className={styles.manageKitsButton}
                                 title="Create or Edit Kits"
                             >
@@ -721,7 +822,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                             </div>
                             )}
                             <div className={styles.descriptionInputGroup}>
-                                <label htmlFor="descriptionInput" className={styles.inputLabel}>Description/Notes for this item: </label>
+                                <label htmlFor="descriptionInput" className={styles.inputLabel}>Line Item Description/Notes:</label>
                                 <textarea id="descriptionInput" value={selectedDescription} onChange={e => setSelectedDescription(e.target.value)} rows={2} className={styles.formTextarea}/>
                             </div>
                          </div>
@@ -797,13 +898,13 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                         onClose={() => {
                             setIsTaskFormModalOpen(false);
                             if (createTaskPromiseRef.current) {
-                                createTaskPromiseRef.current.resolve(null); 
+                                createTaskPromiseRef.current.resolve(null);
                                 createTaskPromiseRef.current = null;
                             }
                         }}
                         onSave={handleSaveTaskFromModal}
-                        initialData={taskFormInitialData} 
-                        mode="add" 
+                        initialData={taskFormInitialData}
+                        mode="add"
                     />
 
                     <MaterialFormModal
@@ -811,14 +912,14 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                         onClose={() => {
                             setIsMaterialFormModalOpen(false);
                             if (createMaterialPromiseRef.current) {
-                                createMaterialPromiseRef.current.resolve(null); 
+                                createMaterialPromiseRef.current.resolve(null);
                                 createMaterialPromiseRef.current = null;
                             }
                         }}
-                        onSaveCallback={handleMaterialSavedFromModal} 
+                        onSaveCallback={handleMaterialSavedFromModal}
                         userId={userId}
-                        initialData={materialFormInitialData} 
-                        mode="add" 
+                        initialData={materialFormInitialData}
+                        mode="add"
                     />
                 </>
             )}
