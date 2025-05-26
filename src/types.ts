@@ -153,7 +153,7 @@ export interface KitLineItemTemplate {
     unit: string;
     inputType: 'quantity' | 'price' | 'checkbox';
     baseQuantity: number;
-    description?: string;
+    description?: string | null;
 }
 
 // --- Kit Template (Global or User-Specific) ---
@@ -179,7 +179,7 @@ export interface QuoteLine {
     materialOptionId: string | null;
     materialOptionName?: string | null;
     displayName: string;
-    description?: string;
+    description?: string | null;
     quantity: number | null;
     price: number | null;
     unit: string | null;

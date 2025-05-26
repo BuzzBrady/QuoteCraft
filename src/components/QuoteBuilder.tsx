@@ -536,59 +536,98 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         let finalQuoteNumber = quoteData?.quoteNumber;
 
         try {
-            const mainQuotePayload: Partial<Quote> = { // Use Partial<Quote> for better type safety
+            const mainQuotePayload: any = {
                 jobTitle: jobTitle.trim(),
+                // Ensure client fields are null if empty, otherwise use the trimmed value
                 clientName: clientName.trim() || null,
                 clientAddress: clientAddress.trim() || null,
                 clientEmail: clientEmail.trim() || null,
                 clientPhone: clientPhone.trim() || null,
-                terms: terms.trim() || userProfile.defaultQuoteTerms || null,
+                // Ensure terms are null if empty, otherwise use trimmed userProfile.defaultQuoteTerms or null
+                terms: terms.trim() || userProfile.defaultQuoteTerms?.trim() || null,
                 status: quoteData?.status || 'Draft',
                 totalAmount: calculatedTotal,
-                updatedAt: serverTimestamp() as Timestamp,
+                updatedAt: serverTimestamp(),
 
-                projectDescription: projectDescription.trim() || null,
-                additionalDetails: additionalDetails.trim() || null,
-                generalNotes: generalNotes.trim() || null,
+                // Corrected handling for optional fields:
+                // If these fields come from quoteData (e.g., when editing an existing quote)
+                // and might be empty or not yet defined for new quotes, set to null.
+                // Assuming projectDescription, additionalDetails, generalNotes will eventually come from their own state variables (Part 2)
+                // For now, if they are still intended to be sourced from quoteData:
+                projectDescription: (quoteData?.projectDescription && typeof quoteData.projectDescription === 'string' && quoteData.projectDescription.trim() !== "") 
+                                      ? quoteData.projectDescription.trim() 
+                                      : null,
+                additionalDetails: (quoteData?.additionalDetails && typeof quoteData.additionalDetails === 'string' && quoteData.additionalDetails.trim() !== "") 
+                                     ? quoteData.additionalDetails.trim() 
+                                     : null,
+                generalNotes: (quoteData?.generalNotes && typeof quoteData.generalNotes === 'string' && quoteData.generalNotes.trim() !== "") 
+                                ? quoteData.generalNotes.trim() 
+                                : null,
             };
 
-            if (validUntilDate) {
-                mainQuotePayload.validUntil = Timestamp.fromDate(validUntilDate);
+            // Handle validUntil specifically
+            if (quoteData?.validUntil instanceof Timestamp) {
+                mainQuotePayload.validUntil = quoteData.validUntil;
             } else {
-                mainQuotePayload.validUntil = null;
+                mainQuotePayload.validUntil = null; // Default to null if not a valid Timestamp
+                if (quoteData?.validUntil) { // If it existed but wasn't a Timestamp
+                    console.warn("validUntil was present in quoteData but not a Firebase Timestamp object. Setting to null for save.", quoteData.validUntil);
+                }
             }
-
+            
+            // This part of your existing code for new vs existing quotes looks fine:
             const userQuotesCollectionRef = collection(db, 'users', userId, 'quotes');
             let quoteDocRef;
 
             if (!existingQuoteId) {
-                mainQuotePayload.userId = userId;
-                mainQuotePayload.createdAt = serverTimestamp() as Timestamp;
-
+                mainQuotePayload.userId = userId; 
+                mainQuotePayload.createdAt = serverTimestamp();
+                
+                // Transaction for quote numbering (seems okay, but ensure profile exists and has values)
                 finalQuoteNumber = await runTransaction(db, async (transaction) => {
                     const profileRef = doc(db, `users/${userId}`);
                     const profileSnap = await transaction.get(profileRef);
-                    if (!profileSnap.exists()) {
-                        console.warn("Profile not found for numbering. Using temporary number.");
-                        return `TEMP-${Date.now().toString().slice(-6)}`;
+                    if (!profileSnap.exists()) { 
+                        console.warn("User profile not found during quote number generation."); 
+                        // Fallback quote number if profile is missing, though ideally profile should always exist
+                        return `TEMP-${Date.now().toString().slice(-6)}`; 
                     }
                     const profile = profileSnap.data() as UserProfile;
                     const prefix = profile.quotePrefix || 'QT-';
                     const nextNum = profile.nextQuoteSequence || 1;
                     const padding = profile.quoteNumberPadding || 4;
-                    const newNum = `${prefix}${nextNum.toString().padStart(padding, '0')}`;
+                    const newNumStr = nextNum.toString().padStart(padding, '0');
                     transaction.update(profileRef, { nextQuoteSequence: nextNum + 1 });
-                    return newNum;
+                    return `${prefix}${newNumStr}`;
                 });
-                if (!finalQuoteNumber) throw new Error("Failed to generate quote number.");
-                mainQuotePayload.quoteNumber = finalQuoteNumber;
 
+                if (!finalQuoteNumber) {
+                    // This error will be caught by the main try-catch
+                    throw new Error("Failed to generate quote number.");
+                }
+                mainQuotePayload.quoteNumber = finalQuoteNumber;
                 quoteDocRef = await addDoc(userQuotesCollectionRef, mainQuotePayload);
                 quoteIdToUse = quoteDocRef.id;
             } else {
-                if (!quoteIdToUse) throw new Error("Quote ID missing for update.");
+                if (!quoteIdToUse) { // Should be existingQuoteId
+                    throw new Error("Quote ID missing for update.");
+                }
                 quoteDocRef = doc(userQuotesCollectionRef, quoteIdToUse);
-                if (finalQuoteNumber) mainQuotePayload.quoteNumber = finalQuoteNumber; // Preserve existing number if editing
+                // Only include quoteNumber in payload if it was already on quoteData (for existing quotes)
+                // It's generally safer not to allow quoteNumber to be easily changed during a simple update
+                // unless specifically intended. The current code adds it if quoteData.quoteNumber exists.
+                if (quoteData?.quoteNumber) {
+                     mainQuotePayload.quoteNumber = quoteData.quoteNumber;
+                }
+                // If quoteNumber is NOT in quoteData (e.g. an older quote before numbering scheme),
+                // you might decide if it should be generated here or left as is.
+                // For now, following your existing logic for `finalQuoteNumber` which is already
+                // initialized with `quoteData?.quoteNumber`.
+                // If `finalQuoteNumber` is a new number from a transaction (which won't happen for existing quotes here)
+                // or from `quoteData?.quoteNumber`, it will be set.
+                if (finalQuoteNumber) mainQuotePayload.quoteNumber = finalQuoteNumber;
+
+
                 await setDoc(quoteDocRef, mainQuotePayload, { merge: true });
             }
 
