@@ -1,124 +1,144 @@
-# QuoteCraftv6 - Project Context for AI Assistant
+# QuoteCraftv6 - UI/UX Enhancement Plan
 
-**Last Updated:** May 26, 2025 (AEST) - Reflects discussion on Firestore saves, TypeScript types, initial steps for PDF export variations, and expanded app workflow. Git issues resolved.
+**Last Updated:** May 27, 2025
 
-## Project Overview
+## 1. Overall UI/UX Goals
 
-QuoteCraftv6 is a web application designed to help users (likely businesses or tradespeople) create, manage, and generate professional PDF quotes for their clients. The application is being built with a React frontend and Firebase as the backend. The development is primarily happening within Firebase Studio (IDX).
+* **Primary Objective 1:** Modernize the visual appearance for a clean, professional, and trustworthy feel.
+* **Primary Objective 2:** Improve ease of use for key workflows, especially quote creation and management, to enhance user efficiency.
+* **Primary Objective 3:** Ensure a responsive and accessible experience across common devices (desktop, tablet, mobile).
+* **Target User Persona(s):** Tradespeople, estimators, small to medium-sized businesses requiring an efficient quoting tool.
+* **Desired Look & Feel:** Intuitive, professional, fast, modern, reliable, and polished.
 
-## Typical User Workflow:
+## 2. Foundational UI/UX Enhancements (Phase 1 - Immediate Focus)
 
-1.  **Authentication & Setup:**
-    * User signs up or logs in using Firebase Authentication.
-    * **(First-time/Optional):** User navigates to "Profile & Settings" (`ProfileSettingsPage.tsx`) to configure their business details (name, address, logo URL, ABN/Tax ID), default quote terms, quote numbering preferences (prefix, next number), and PDF display preferences.
+### 2.1. Color Scheme & Typography
+* **Current State:** Basic styling, mix of inline styles and CSS Modules.
+* **Desired Enhancements:**
+    * [ ] Define a consistent color palette:
+        * Primary Color: `_________` (e.g., for buttons, active elements)
+        * Secondary Color: `_________` (e.g., for secondary actions, borders)
+        * Accent Color: `_________` (e.g., for highlights, notifications)
+        * Neutral - Text: `_________` (e.g., dark grey/black)
+        * Neutral - Background (Main): `_________` (e.g., white/off-white)
+        * Neutral - Background (Sections/Cards): `_________`
+        * Neutral - Borders/Dividers: `_________`
+    * [ ] Standardize typography:
+        * Primary Font (Body & UI): `_________` (e.g., Inter, Lato, Open Sans from Google Fonts)
+        * Heading Font (if different): `_________`
+        * Define hierarchy (sizes, weights) for H1, H2, H3, p, label, small.
+    * [ ] Apply globally via `src/index.css` or CSS Variables for module consumption.
+* **Action Items/Notes:**
+    * Discuss initial color preferences.
+    * Select web-safe/Google Fonts.
 
-2.  **Pre-Quote Preparations (Building Custom Libraries):**
-    * User navigates to "Manage Custom Items" (`ManageCustomItemsPage.tsx`). From here, they can:
-        * Create and manage custom **Tasks** (e.g., "Site Setup," "Installation Labor") with default units.
-        * Create and manage custom **Materials** (e.g., "Colorbond Roofing," "Pendant Light") with default units, rates, and potentially multiple selectable **Options** (e.g., different sizes or colors for a material, each with its own rate adjustment).
-    * User navigates to "Kit Creator" (`KitCreatorPage.tsx`) to define **Kits/Assemblies** – pre-defined bundles of tasks and materials for commonly repeated work.
-    * (Implicitly) User might also manage **Rate Templates** if there's a dedicated interface, or these are managed through task/material creation.
-    * User can manage their client list via "My Clients" (`MyClientsPage.tsx`).
+### 2.2. Basic Element Styling Consistency
+* **Current State:** Varies per component/module.
+* **Desired Enhancements:**
+    * [ ] Create consistent base styles for:
+        * Buttons (primary, secondary, danger/warning).
+        * Form Inputs (text, textarea, select, checkbox).
+        * Modals.
+        * Tables.
+* **Action Items/Notes:**
+    * Implement based on chosen color scheme and typography.
 
-3.  **Creating or Editing a Quote (`QuoteBuilder.tsx`):**
-    * User navigates to create a new quote or selects an existing quote to edit from the "Existing Quotes" page.
-    * **Quote Header:**
-        * Inputs Job Title.
-        * Selects an existing client or enters new client details (name, address, contact). Client details may auto-fill if an existing client is chosen.
-        * Enters/reviews quote terms (can be pre-filled from profile/client settings).
-        * (Potentially) Enters `projectDescription`, `additionalDetails`, `generalNotes` once input fields are added.
-    * **Quote Body (Line Items):**
-        * Selects or defines an "Active Section/Area" for the quote (e.g., "Main House Roof," "Kitchen").
-        * For each line item within a section:
-            * Selects from global or user-customized Tasks using `TaskSelector`.
-            * Selects from global or user-customized Materials using `MaterialSelector`.
-            * If a material has options, selects a Material Option using `MaterialOptionSelector`.
-            * Alternatively, selects a pre-defined Kit/Assembly using `KitSelector`, which adds multiple pre-configured line items.
-            * Enters quantity or a fixed price for the line item.
-            * Can override calculated rates if necessary.
-            * Adds a description/note for the line item.
-            * Can add new custom materials on the fly via `QuickAddMaterialModal`.
-        * Line items are displayed grouped by their section, with running totals.
-    * **Saving:** User saves the quote (either as a new quote, generating a quote number, or updating an existing one).
+### 2.3. Core Usability & Layout Review (High-Impact Areas)
+* **Current State:** Functional, but opportunities for improved flow and clarity.
+* **Desired Enhancements:**
+    * [ ] Review and simplify the layout of `QuoteBuilder.tsx` for better workflow.
+    * [ ] Improve table readability and actions on `ExistingQuotesPage.tsx`.
+    * [ ] Standardize loading state indicators (e.g., simple spinner for now).
+    * [ ] Replace browser `alert()` with a consistent, non-blocking notification/toast system (e.g., for save success/error).
+* **Action Items/Notes:**
+    * Focus on one page/component at a time after global styles are set.
 
-4.  **Managing Existing Quotes (`ExistingQuotesPage.tsx`):**
-    * User views a list of all their created quotes.
-    * Key information displayed: Quote #, Job Title, Client, Date, Total, Status.
-    * From here, the user can:
-        * Edit an existing quote (navigates back to `QuoteBuilder.tsx`).
-        * Change the status of a quote (e.g., Draft, Sent, Accepted, Rejected).
-        * Trigger PDF generation:
-            * Opens `ExportQuoteModal.tsx` (once implemented).
-            * Selects PDF type ("summary," "standard detail," or "full detail").
-            * The client calls the `generateQuotePdf` Firebase Function with `quoteId`, `userId`, and the chosen `pdfType`.
-            * The Cloud Function generates the PDF and returns it as a base64 string.
-            * The client side then initiates a download of the PDF.
+### 2.4. Responsiveness Basics
+* **Current State:** Varies.
+* **Desired Enhancements:**
+    * [ ] Ensure `Header.tsx` and `MainLayout.tsx` are responsive.
+    * [ ] Basic checks for key pages like `QuoteBuilder.tsx` and `ExistingQuotesPage.tsx` on smaller screens.
+* **Action Items/Notes:**
+    * Focus on preventing broken layouts initially.
 
-5.  **Dashboard (`DashboardPage.tsx`):**
-    * Provides an overview, potentially showing recent quotes, quote statuses, or summary analytics (feature scope to be detailed).
+### 2.5. Accessibility Basics
+* **Current State:** Minimal explicit implementation.
+* **Desired Enhancements:**
+    * [ ] Ensure semantic HTML where possible.
+    * [ ] Basic keyboard navigation checks for interactive elements.
+    * [ ] Check for sufficient color contrast once the palette is defined.
+* **Action Items/Notes:**
+    * Incorporate during component styling and layout reviews.
 
-## Core Features Implemented or In Progress:
+## 3. Animation with GSAP (Phased Integration)
 
-1.  **User Authentication:** Firebase Authentication for user login.
-2.  **Profile & Settings Management (`ProfileSettingsPage.tsx`):**
-    * Users can set up their company profile.
-    * Configuration for quote generation.
-3.  **Item Management (Custom Library - `ManageCustomItemsPage.tsx`, `KitCreatorPage.tsx`):**
-    * Users can create and manage custom Tasks, Materials (with Options), Kits, and Rate Templates.
-4.  **Client Management (`MyClientsPage.tsx`)**
-    * Users can create and manage their client list.
-5.  **Quote Builder (`QuoteBuilder.tsx`):**
-    * Main interface for creating/editing quotes.
-    * Line items are grouped by section.
-    * **Recent Fixes:** Modified save logic (`mainQuotePayload`) to use `null` for empty optional fields (e.g., `projectDescription`, `clientName`) to prevent Firestore errors. Corresponding TypeScript types in `src/types.ts` updated to accept `string | null` for these fields.
-    * **Pending Enhancement:** Add input fields in `QuoteBuilder.tsx` for `projectDescription`, `additionalDetails`, and `generalNotes`.
-6.  **Existing Quotes Page (`ExistingQuotesPage.tsx`):**
-    * Lists quotes, allows editing, status changes.
-    * Initiates PDF generation via `ExportQuoteModal.tsx`.
-    * **Next Feature:** Fully implement PDF type selection (summary, standard, full detail) in `ExportQuoteModal.tsx`.
-7.  **PDF Generation (Cloud Function - `functions/src/index.ts`):**
-    * `generateQuotePdf` Firebase Cloud Function using Handlebars.js and Puppeteer.
-    * **Upcoming Change:** Will be modified to accept a `pdfType` parameter to generate different versions of the quote PDF.
-8.  **Dashboard (`DashboardPage.tsx`):** Basic overview page.
+### 3.1. Phase 1: No GSAP (Focus on UI/UX Foundation)
+* **Status:** Current phase.
+* **Rationale:** Establish solid structure, styling, and core usability before introducing animations.
 
+### 3.2. Phase 2: Subtle & Enhancing GSAP Animations
+* **Trigger:** After the foundational UI/UX (colors, typography, basic layouts, core usability of main pages) is stable and consistent.
+* **Goals:** Improve user experience with smooth transitions and meaningful feedback without being distracting.
+* **Potential GSAP Uses (Core & ScrollTrigger for simple entrances):**
+    * [ ] Subtle page transitions (e.g., fades, quick slides).
+    * [ ] Micro-interactions for buttons, form elements on hover/focus/click.
+    * [ ] Smooth animations for modal dialogs (open/close).
+    * [ ] Smooth enter/exit animations for list items (e.g., quote lines, items in management pages).
+    * [ ] Simple ScrollTrigger effects: fade-in elements as they enter the viewport on longer pages.
+* **Action Items/Notes:**
+    * Identify specific elements/interactions for initial subtle animations.
+    * Ensure animations are quick and don't hinder performance.
 
-## Technology Stack:
+### 3.3. Phase 3: Advanced & "Delightful" GSAP Animations
+* **Trigger:** After the application is robust, Phase 2 animations are well-integrated, and the core product is polished. When looking to add premium "wow" factors.
+* **Goals:** Create more engaging and memorable user experiences in specific, appropriate areas.
+* **Potential GSAP Uses (Premium Plugins like SplitText, MorphSVG; Advanced ScrollTrigger):**
+    * [ ] **SplitText:** Engaging text reveals for headings, key messages, or section titles.
+    * [ ] **MorphSVG:** Animating icons (e.g., status changes, success indicators), creative transitions between UI states using SVG.
+    * [ ] **ScrollTrigger (Advanced):** More complex scroll-driven animations for landing/marketing pages (if any) or detailed feature showcases. Pinning elements, scrubbing animations.
+    * [ ] **Complex GSAP Timelines:** Orchestrating multiple animations for sophisticated effects (e.g., onboarding tour, data visualizations on the dashboard).
+* **Important Considerations for Advanced Animations:**
+    * Maintain high performance; test thoroughly.
+    * Ensure animations are purposeful and enhance usability or delight, not distract.
+    * Consider user preferences for reduced motion.
+* **Action Items/Notes:**
+    * Identify specific "moments" in the app that could benefit most from these advanced effects.
 
-* **Frontend:** React (with Vite), TypeScript
-* **Backend:** Firebase (Authentication, Cloud Firestore, Cloud Functions V2, Hosting)
-* **PDF Generation:** Puppeteer (via `puppeteer-core` and `@sparticuz/chromium`), Handlebars.js
-* **Development Environment:** Firebase Studio (IDX)
-* **State Management (Frontend):** React Context API (e.g., `AuthContext`)
+## 4. Page-Specific UI/UX Enhancements (To be detailed after Phase 1 Foundations)
 
-## Firestore Data Structure (Key Points):
+* **`QuoteBuilder.tsx`:** (e.g., layout, item entry flow, real-time totals)
+* **`ExistingQuotesPage.tsx`:** (e.g., search, filter, pagination, card view)
+* **`ProfileSettingsPage.tsx`:** (e.g., organization via tabs, tooltips)
+* **Data Management Pages (Clients, Kits, Custom Items):** (e.g., consistent tables, streamlined forms, search)
+* **`DashboardPage.tsx`:** (e.g., metrics, charts, actionable summaries)
 
-* User Profiles: `/users/{userId}`
-* Clients: `/users/{userId}/clients/{clientId}`
-* User-Specific Custom Items (Subcollections under `/users/{userId}` for `customTasks`, `customMaterials`, `kitTemplates`, `rateTemplates`)
-* Quotes (Subcollection under `/users/{userId}`): `/users/{userId}/quotes/{quoteId}`
-    * Optional fields like `projectDescription`, `clientName`, etc., now use `null` for empty values.
-* Quote Lines (Subcollection under each quote): `/users/{userId}/quotes/{quoteId}/quoteLines/{lineId}`
-    * Optional fields like `description` now use `null` for empty values.
+## 5. UI/UX for Future Features
 
-## Current Status & Main Challenges/Goals:
+* **AI Content Generation:**
+    * User interaction points (e.g., button in QuoteBuilder, modal for AI).
+    * Key UI considerations (clear indication of AI content, easy editing, prompt guidance).
 
-1.  **Implement PDF Export Variations:**
-    * **Goal:** Allow users to select and generate "summary PDF", "standard detail PDF", or "full detail PDF" via `ExportQuoteModal.tsx`.
-    * Requires client-side UI in `ExportQuoteModal.tsx` to select PDF type, passing the selected `pdfType` to the `generateQuotePdf` Firebase Cloud Function, and modifying the `generateQuotePdf` function (`functions/src/index.ts`) to handle the `pdfType` parameter. This may involve different Handlebars templates or conditional logic.
-    * The `ExportQuoteModal.tsx` and `ExportQuoteModal.css` files have been created and are now assumed to be pushed to the remote repository.
-2.  **Enhance QuoteBuilder:**
-    * Add input fields for `projectDescription`, `additionalDetails`, and `generalNotes` in `QuoteBuilder.tsx` to allow users to populate these fields for new quotes.
+## 6. Tooling & Process
 
-## Files Provided/Discussed Recently (Relevant to recent changes):
+* **Design Tools (Optional):** Figma (for mockups if needed for complex changes).
+* **Component Library/Framework Choice:** Continue with CSS Modules, potentially introduce CSS Variables for themeability.
+* **Testing Strategy for UI/UX:** Manual testing on different browsers/devices; gather user feedback when possible.
 
-* `QuoteCraftV6/src/components/QuoteBuilder.tsx` (modified for Firestore save logic)
-* `QuoteCraftV6/src/types.ts` (modified for `string | null` types)
-* `QuoteCraftV6/functions/src/index.ts` (to be modified for PDF types)
-* `QuoteCraftV6/src/pages/ExistingQuotesPage.tsx` (will likely trigger `ExportQuoteModal.tsx`)
-* `QuoteCraftV6/src/components/ExportQuoteModal.tsx` (now assumed to be accessible)
-* `QuoteCraftV6/src/components/ExportQuoteModal.css` (now assumed to be accessible)
-* `QuoteCraftV6/src/pages/MyClientsPage.tsx`
-* `QuoteCraftV6/src/pages/KitCreatorPage.tsx`
-* `QuoteCraftV6/src/pages/DashboardPage.tsx`
-* Original `READMEAI.md`
-* Screenshot of Firebase Studio Source Control panel (showed local commit).
+## 7. Prioritization & Roadmap (Simplified for Initial Focus)
+
+* **Phase 1 - Immediate Priorities:**
+    * [ ] Define and apply a new color scheme globally.
+    * [ ] Define and apply basic global typography.
+    * [ ] Remove "Summary Sections" setting from `ProfileSettingsPage.tsx` & `UserProfile` type.
+    * [ ] Initial review and minor layout tweaks for `QuoteBuilder.tsx` for immediate usability gains.
+    * [ ] Implement a non-blocking notification system (toasts) for save/error messages.
+* **Phase 2 - Next Steps (After Phase 1):**
+    * [ ] Introduce subtle GSAP animations (as per section 3.2).
+    * [ ] Deeper UI/UX enhancements for `QuoteBuilder.tsx`.
+    * [ ] UI/UX enhancements for `ExistingQuotesPage.tsx`.
+    * [ ] Comprehensive responsiveness pass.
+* **Phase 3 - Future Polish:**
+    * [ ] Advanced GSAP animations (as per section 3.3).
+    * [ ] UI/UX enhancements for other pages (`ProfileSettingsPage`, Data Management, `DashboardPage`).
+    * [ ] Deeper accessibility audit and improvements.
+    * [ ] AI Content Generation UI/UX.

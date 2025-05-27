@@ -31,7 +31,6 @@ export interface UserProfile {
     quotePrefix?: string;
     nextQuoteSequence: number;
     quoteNumberPadding?: number;
-    summarySections?: string[];
     showFullItemizedTableInPdf?: boolean;
     showUnitPricesInPdf?: boolean;
     taxRate?: number;
@@ -187,7 +186,7 @@ export interface QuoteLine {
     inputType: 'quantity' | 'price' | 'checkbox' | null;
     lineTotal: number;
     order: number;
-    kitTemplateId?: string;
+    kitTemplateId?: string | undefined;
 }
 
 // --- Quote ---

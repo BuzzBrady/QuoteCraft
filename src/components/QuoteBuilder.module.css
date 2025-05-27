@@ -1,278 +1,128 @@
 /* src/components/QuoteBuilder.module.css */
-
 .quoteBuilderContainer {
-    padding: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  .loadingMessage {
-    padding: 20px;
+    padding: 1.5rem;
+    /* background-color: #f8f9fa; */ /* Removed - will inherit from body */
+    border-radius: 8px;
+    /* box-shadow: 0 0 15px rgba(0,0,0,0.05); */ /* Re-evaluate shadow */
+}
+
+.title {
+    color: var(--primary-light-blue);
     text-align: center;
-    font-size: 1.2em;
-  }
-  
-  .errorMessage {
-    color: red;
-    padding: 10px;
-    border: 1px solid red;
-    border-radius: 4px;
-    text-align: center;
-    margin-bottom: 15px;
-  }
-  
-  .mainHeading {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  .headerSection {
-    margin-bottom: 20px;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 15px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-  }
-  
-  .headerInputGroup {
-    /* Styles for divs containing label + input in header */
-  }
-  
-  .headerLabel {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-  }
-  
-  .headerInput {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  .headerTextarea {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-    min-height: 60px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  .headerFullSpan {
-    grid-column: 1 / -1;
-  }
-  
-  .activeSectionContainer {
-    margin-bottom: 20px;
-    padding: 10px;
-    border: 1px solid lightblue;
-    background-color: #f0f8ff;
-    border-radius: 4px;
-  }
-  
-  .activeSectionLabel {
-    font-weight: bold;
-    margin-right: 10px;
-  }
-  
-  .activeSectionNote {
-    margin-left: 10px;
-    font-style: italic;
-    font-size: 0.9em;
-  }
-  
-  .itemSelector {
-    margin-bottom: 20px;
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 4px;
-    background-color: #fdfdfd;
-  }
-  
-  .itemSelectorHeading {
-    margin-top: 0;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-  }
-  
-  .selectorsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-    margin-bottom: 15px;
-  }
-  
-  .selectedItemsDetails {
-    margin-top: 15px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border: 1px solid #eee;
-    border-radius: 3px;
-  }
-  
-  .selectedItemsDetails p {
-    margin: 2px 0;
-  }
-  
-  .calculatedRate {
-    font-style: italic;
-    color: #333;
-    margin-top: 8px;
-    border-top: 1px dashed #ccc;
-    padding-top: 8px;
-    font-weight: 500;
-  }
-  
-  .inputsGrid {
-    margin-top: 15px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px 15px;
-  }
-  
-  .inputColumn {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .inputLabel {
-    margin-bottom: 3px;
-    font-size: 0.9em;
-  }
-  
-  .formInput {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  .formTextarea {
-    width: 100%;
-    padding: 8px;
-    min-height: 50px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  
-  .rateUnitSpan {
-    font-size: 0.8em;
-    color: #555;
-  }
-  
-  .descriptionInputGroup {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .addLineItemButton {
-    margin-top: 15px;
-    padding: 10px 15px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .addLineItemButton:disabled {
-    background-color: #94d3a2;
-    cursor: not-allowed;
-  }
-  
-  
-  .lineItemsSectionHeading {
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-  }
-  
-  .quoteSection {
-    margin-bottom: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden; /* To contain border-radius with background */
-  }
-  
-  .sectionToggleHeader {
-    padding: 10px 15px;
-    margin: 0;
-    cursor: pointer;
+    margin-bottom: 2rem;
+    font-size: 2em;
+}
+
+.topControls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #f8f8f8;
-    font-weight: bold;
-    border-bottom: 1px solid #eee; /* Default border for open state */
-  }
-  .sectionToggleHeader.collapsed {
-    border-bottom: none;
-  }
-  
-  
-  .sectionSubtotal {
-    font-weight: normal;
-    font-size: 0.95em;
-  }
-  
-  .sectionContent {
-    padding: 0; /* Let UL handle padding if needed */
-  }
-  
-  .sectionLineItemsList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .addItemToSectionButton {
-    margin: 10px 15px;
-    font-size: 0.9em;
-    padding: 6px 10px;
-    cursor: pointer;
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-  }
-  .addItemToSectionButton:hover {
-    background-color: #e0e0e0;
-  }
-  
-  
-  .actionsContainer {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 2px solid #ccc;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.quoteNameInput input[type="text"] {
+    padding: 0.6rem;
+    border: 1px solid var(--secondary-steel-gray);
+    border-radius: 4px;
+    font-size: 1em;
+    background-color: var(--primary-deep-charcoal);
+    color: var(--primary-white);
+    min-width: 250px;
+}
+
+.mainLayout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* For wider screens, perhaps a multi-column layout */
+@media (min-width: 992px) { /* Large devices (desktops, 992px and up) */
+    .mainLayout {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+         /* Adjust based on typical content: e.g., 250px 1fr 250px for 3 columns */
+    }
+}
+
+.column {
+    /* background-color: var(--primary-deep-charcoal); */ /* Can be slightly lighter than body bg for card effect */
+    padding: 1rem;
+    border: 1px solid var(--secondary-steel-gray);
+    border-radius: 6px;
+}
+
+.sectionTitle {
+    font-size: 1.3em;
+    color: var(--primary-light-blue);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--secondary-steel-gray);
+}
+
+.summaryBox {
+    /* background-color: #e9ecef; */ /* Old color */
+    background-color: var(--primary-deep-charcoal); /* Or a slightly lighter shade */
+    padding: 1.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--secondary-steel-gray);
+    margin-top: 1rem; /* Space above summary if it's in its own column/section */
+    color: var(--primary-white);
+}
+
+.summaryItem, .summaryTotal {
     display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-  
-  .saveButton {
-    padding: 12px 20px;
-    font-size: 1.1em;
-    background-color: #007bff;
-    color: white;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+}
+
+.summaryTotal {
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--secondary-steel-gray);
+    padding-top: 1rem;
+}
+
+.totalPrice {
+    color: var(--accent-bright-blue);
+}
+
+.actionsContainer {
+    display: flex;
+    justify-content: flex-end; /* Align buttons to the right */
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--secondary-steel-gray);
+}
+
+.actionButton, .saveQuoteButton, .exportQuoteButton {
+    padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-  }
-  
-  .saveButtonDisabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
-  
-  .saveDisabledMessage {
-    color: #e67e22;
-    font-size: 0.9em;
+    font-size: 1em;
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+    transition: background-color 0.2s ease;
+}
+
+.actionButton:hover, .saveQuoteButton:hover, .exportQuoteButton:hover {
+    background-color: var(--accent-bright-blue);
+}
+
+/* Placeholder styling */
+.placeholder {
+    color: var(--secondary-steel-gray);
+    text-align: center;
+    padding: 2rem;
     font-style: italic;
-  }
-  
+}
+
+/* Styling for selectors within QuoteBuilder if not handled by their own modules */
+.taskSelectorContainer, .materialSelectorContainer, .areaSelectorContainer {
+    margin-bottom: 1rem; /* Add space below selectors */
+}

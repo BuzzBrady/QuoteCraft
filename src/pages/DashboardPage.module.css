@@ -4,134 +4,144 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem 1rem;
+    padding: 2rem 1.5rem; /* Increased horizontal padding */
+    gap: 2rem; /* Increased gap for better separation */
+    min-height: calc(90vh - 4rem); /* Adjusted min-height */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.heading {
+  font-size: 2.4em; /* Slightly larger heading */
+  margin-bottom: 0.5rem;
+  color: var(--primary-light-blue);
+  text-align: center;
+}
+
+.subheading {
+  font-size: 1.15em; /* Slightly larger subheading */
+  color: var(--secondary-steel-gray);
+  margin-bottom: 2rem; /* Increased margin for more space */
+  text-align: center;
+  max-width: 600px; /* Constrain width for readability */
+}
+
+.cardGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
     gap: 1.5rem;
-    min-height: calc(80vh - 4rem); /* Example for vertical centering */
-    text-align: center;
-  }
-  
-  .heading {
-    font-size: 2.2em;
-    margin-bottom: 0.25rem;
-    color: #333;
-    text-align: center;
-  }
-  
-  .subheading {
-    font-size: 1.1em;
-    color: #555;
-    margin-bottom: 1rem;
-    text-align: center;
-  }
-  
-  .errorText {
-    color: red;
-    text-align: center;
     width: 100%;
-    max-width: 400px;
-    padding: 10px;
-    border: 1px solid red;
-    border-radius: 5px;
-    margin-bottom: 15px; /* Added from original inline style context */
-  }
-  
-  .errorTextSmall {
-    color: orange;
-    font-size: 0.9em;
-  }
-  
-  .statsContainer {
-    border: 1px solid #e0e0e0;
+    max-width: 1200px; /* Max width for the grid */
+    margin-bottom: 2rem;
+}
+
+.card {
+    background-color: var(--primary-deep-charcoal); /* Base card background */
+    /* For a slight contrast if page bg is also deep-charcoal, consider a slightly lighter shade
+       or rely on borders/shadows. For now, keeping it same as main bg. */
+    border: 1px solid var(--secondary-steel-gray);
     border-radius: 8px;
-    padding: 1rem;
-    width: 100%;
-    max-width: 450px;
-    background-color: #f9f9f9;
-  }
-  
-  .statsContainer h4 {
-      margin-top: 0; /* Common practice for headings in containers */
-      margin-bottom: 0.75rem;
-  }
-  
-  .statsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 0.75rem;
-    text-align: left;
-  }
-  
-  .actionsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    width: 100%;
-    max-width: 800px;
-  }
-  
-  .manageSection {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e0e0e0;
-    width: 100%;
-    max-width: 800px;
-  }
-  
-  .manageHeading {
-    font-size: 1.3em;
-    color: #444;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Pushes action to the bottom */
+    min-height: 180px; /* Minimum height for cards */
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    /* box-shadow: 0 2px 5px rgba(0,0,0,0.2); */ /* Optional: subtle shadow for dark theme */
+}
+
+.card:hover {
+    transform: translateY(-5px); /* Subtle lift effect */
+    /* box-shadow: 0 4px 10px rgba(var(--accent-bright-blue-rgb), 0.1); */ /* Optional: accent shadow */
+}
+
+.card h2 {
+    font-size: 1.5em;
+    color: var(--primary-light-blue);
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+
+.card p {
+    font-size: 0.95em;
+    color: var(--primary-white);
+    line-height: 1.6;
     margin-bottom: 1rem;
-    text-align: center;
-  }
-  
-  .link {
+    flex-grow: 1; /* Allows paragraph to take available space */
+}
+
+.cardAction {
+    padding: 0.6rem 1.2rem;
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
     text-decoration: none;
-    width: 100%; /* Ensure links take full width for button inside */
-    display: block; /* Make link a block to contain button width properly */
-  }
-  
-  .button {
-    width: 100%;
-    padding: 0.8rem 1rem;
-    font-size: 1em;
-    cursor: pointer;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    transition: background-color 0.2s ease;
-  }
-  
-  .button:hover {
-    background-color: #0056b3;
-  }
-  
-  .secondaryButton {
-    background-color: #6c757d;
-  }
-  
-  .secondaryButton:hover {
-    background-color: #5a6268;
-  }
-  
-  .logoutContainer {
-    margin-top: 2.5rem;
+    border-radius: 4px;
     text-align: center;
-  }
-  
-  .logoutButton {
-    padding: 0.6em 1.2em;
-    font-size: 0.9em;
-    background-color: transparent;
-    border: 1px solid #cc0000;
-    color: #cc0000;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    display: block; /* Make link/button take full width of its container if needed */
+    margin-top: auto; /* Pushes to the bottom if card content is short */
+}
+
+.cardAction:hover {
+    background-color: var(--accent-bright-blue);
+}
+
+.bottomActions {
+    display: flex;
+    flex-direction: column; /* Stack settings and logout */
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem; /* Space above this section */
+    width: 100%;
+    max-width: 300px; /* Constrain width of this section */
+}
+
+.settingsLink {
+    color: var(--primary-light-blue);
+    text-decoration: none;
+    font-size: 1em;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.settingsLink:hover {
+    color: var(--accent-bright-blue);
+    background-color: rgba(var(--accent-bright-blue-rgb), 0.1); /* Subtle hover background */
+}
+
+.logoutButton {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--secondary-steel-gray); /* Differentiate from primary actions */
+    color: var(--primary-white);
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
-  
-  .logoutButton:hover {
-    background-color: #cc0000;
-    color: white;
-  }
-  
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    width: 100%; /* Make button full width within its container */
+}
+
+.logoutButton:hover {
+    background-color: #899197; /* Slightly lighter gray or use a variable */
+}
+
+/* Responsive adjustments for smaller screens if needed */
+@media (max-width: 600px) {
+    .heading {
+        font-size: 2em;
+    }
+    .subheading {
+        font-size: 1em;
+    }
+    .cardGrid {
+        grid-template-columns: 1fr; /* Single column on very small screens */
+        gap: 1rem;
+    }
+    .card {
+        min-height: auto; /* Adjust min-height for single column */
+    }
+}
+

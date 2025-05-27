@@ -1,30 +1,78 @@
 /* src/components/ExportQuoteModal.css */
-.export-quote-modal-overlay {
-    position: fixed; /* <-- THIS IS CRUCIAL for pop-up behavior */
+.modalBackground {
+    position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.65);
-    display: flex; /* Used to center the modal content */
-    align-items: center;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
     justify-content: center;
-    z-index: 1050; /* High z-index to ensure it's on top */
-    opacity: 0;
-    animation: fadeIn 0.3s forwards;
+    align-items: center;
+    z-index: 1000; /* Ensure it's above other content */
 }
 
-.export-quote-modal-content {
-    background-color: #ffffff;
-    /* ... other styles for the modal box itself ... */
-    transform: scale(0.95);
-    animation: scaleUp 0.3s forwards;
+.modalContent {
+    background-color: var(--primary-deep-charcoal);
+    color: var(--primary-white);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--secondary-steel-gray);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-@keyframes fadeIn {
-    to { opacity: 1; }
+.modalContent h2 {
+    color: var(--primary-light-blue);
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    text-align: center;
 }
 
-@keyframes scaleUp {
-    to { transform: scale(1); }
+.modalContent textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 0.75rem;
+    border: 1px solid var(--secondary-steel-gray);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+    background-color: var(--primary-deep-charcoal); /* Or a slightly lighter shade for contrast if needed */
+    color: var(--primary-white);
+    resize: vertical; /* Allow vertical resizing */
+}
+
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.modalActions button {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+    transition: background-color 0.2s ease;
+}
+
+.modalActions button:hover {
+    background-color: var(--accent-bright-blue);
+}
+
+/* If you want the close button to be styled differently, e.g., more subdued */
+.closeButton {
+    background-color: var(--secondary-steel-gray); /* Example: A more subdued color */
+}
+
+.closeButton:hover {
+    background-color: var(--primary-light-blue); /* Lighten or change on hover */
 }

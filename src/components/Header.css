@@ -1,3 +1,75 @@
-.some-class-name { } /* Remove this */
+/* src/components/Header.css */
+.header {
+    background-color: var(--primary-deep-charcoal); /* Should match body or be a distinct header color */
+    color: var(--primary-white);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* box-shadow: 0 2px 5px rgba(0,0,0,0.2); */ /* Re-evaluate shadow for dark theme */
+    border-bottom: 1px solid var(--secondary-steel-gray); /* Subtle separator */
+}
 
-div { /* no styles here */ } /* Remove this */
+.logo h1 {
+    margin: 0;
+    font-size: 1.8em;
+    color: var(--primary-light-blue); /* Logo text color */
+}
+
+.navLinks {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 1.5rem; /* Spacing between nav items */
+}
+
+.navLinks li {
+    padding: 0;
+}
+
+.navLinks a {
+    text-decoration: none;
+    color: var(--primary-white);
+    font-size: 1em;
+    padding-bottom: 0.3rem; /* Space for border-bottom on active/hover */
+    border-bottom: 2px solid transparent; /* Placeholder for active/hover */
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+}
+
+.navLinks a:hover {
+    color: var(--primary-light-blue);
+    border-bottom-color: var(--primary-light-blue);
+}
+
+.navLinks a.active {
+    color: var(--accent-bright-blue);
+    border-bottom-color: var(--accent-bright-blue);
+    font-weight: bold;
+}
+
+.userActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.welcomeMessage {
+    font-size: 0.9em;
+    color: var(--secondary-steel-gray); /* Subtler text for welcome message */
+}
+
+.logoutButton {
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.logoutButton:hover {
+    background-color: var(--accent-bright-blue);
+}

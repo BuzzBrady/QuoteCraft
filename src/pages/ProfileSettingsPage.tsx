@@ -1,68 +1,16 @@
 // src/pages/ProfileSettingsPage.tsx
 import React, { useState, useEffect, FormEvent } from 'react';
-import { useAuth } from '../contexts/AuthContext'; // Verify path
-import { db } from '../config/firebaseConfig';    // Verify path
-import { doc, getDoc, setDoc, updateDoc, Timestamp, serverTimestamp } from 'firebase/firestore'; // Added updateDoc
-import { UserProfile } from '../types'; // Assuming UserProfile includes the new fields
-
-// Basic styles (consider moving to a ProfileSettingsPage.module.css)
-const pageStyles: React.CSSProperties = {
-    maxWidth: '700px',
-    margin: '0 auto',
-    padding: '20px',
-};
-const formGroupStyles: React.CSSProperties = {
-    marginBottom: '20px',
-};
-const labelStyles: React.CSSProperties = {
-    display: 'block',
-    marginBottom: '5px',
-    fontWeight: 'bold',
-};
-const inputStyles: React.CSSProperties = {
-    width: '100%',
-    padding: '10px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    boxSizing: 'border-box',
-};
-const textareaStyles: React.CSSProperties = {
-    ...inputStyles,
-    minHeight: '100px',
-    resize: 'vertical',
-};
-const buttonStyles: React.CSSProperties = {
-    padding: '10px 20px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '1rem',
-};
-const successMessageStyles: React.CSSProperties = {
-    color: 'green',
-    backgroundColor: '#e6ffed',
-    border: '1px solid green',
-    padding: '10px',
-    borderRadius: '4px',
-    marginTop: '20px',
-};
-const errorMessageStyles: React.CSSProperties = {
-    color: 'red',
-    backgroundColor: '#ffe6e6',
-    border: '1px solid red',
-    padding: '10px',
-    borderRadius: '4px',
-    marginTop: '20px',
-};
-
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../config/firebaseConfig';
+import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { UserProfile } from '../types';
+import styles from './ProfileSettingsPage.module.css'; // Import the CSS module
 
 function ProfileSettingsPage() {
     const { currentUser } = useAuth();
-    const [profileData, setProfileData] = useState<Partial<UserProfile>>({}); // Use Partial for flexibility
+    const [profileData, setProfileData] = useState<Partial<UserProfile>>({});
 
-    // Form state - initialize with empty strings or defaults
+    // Form state
     const [businessName, setBusinessName] = useState('');
     const [companyAddress, setCompanyAddress] = useState('');
     const [companyPhone, setCompanyPhone] = useState('');
@@ -71,15 +19,22 @@ function ProfileSettingsPage() {
     const [logoUrl, setLogoUrl] = useState('');
     const [defaultQuoteTerms, setDefaultQuoteTerms] = useState('');
     const [quotePrefix, setQuotePrefix] = useState('');
-    const [nextQuoteSequence, setNextQuoteSequence] = useState<number>(1); // For display
-    const [quoteNumberPadding, setQuoteNumberPadding] = useState<string>('0'); // Store as string for input
+    const [nextQuoteSequence, setNextQuoteSequence] = useState<number>(1);
+    const [quoteNumberPadding, setQuoteNumberPadding] = useState<string>('0');
+    const [acceptanceInstructions, setAcceptanceInstructions] = useState('');
+    const [salesContactPerson, setSalesContactPerson] = useState('');
+    const [companyWebsite, setCompanyWebsite] = useState('');
+    const [taxRate, setTaxRate] = useState<string>('0');
+
+    // New PDF settings states
+    const [showUnitPricesInPdf, setShowUnitPricesInPdf] = useState(true);
+    const [showFullItemizedTableInPdf, setShowFullItemizedTableInPdf] = useState(true);
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    // Fetch existing profile data
     useEffect(() => {
         if (!currentUser?.uid) {
             setIsLoading(false);
@@ -92,23 +47,30 @@ function ProfileSettingsPage() {
                 if (docSnap.exists()) {
                     const data = docSnap.data() as UserProfile;
                     setProfileData(data);
-                    // Populate form fields
                     setBusinessName(data.businessName || '');
                     setCompanyAddress(data.companyAddress || '');
                     setCompanyPhone(data.companyPhone || '');
-                    setCompanyEmail(data.companyEmail || currentUser.email || ''); // Fallback to auth email
+                    setCompanyEmail(data.companyEmail || currentUser.email || '');
                     setAbnOrTaxId(data.abnOrTaxId || '');
                     setLogoUrl(data.logoUrl || '');
                     setDefaultQuoteTerms(data.defaultQuoteTerms || '');
                     setQuotePrefix(data.quotePrefix || 'QT-');
                     setNextQuoteSequence(data.nextQuoteSequence || 1);
                     setQuoteNumberPadding((data.quoteNumberPadding || 0).toString());
+                    setAcceptanceInstructions(data.acceptanceInstructions || '');
+                    setSalesContactPerson(data.salesContactPerson || '');
+                    setCompanyWebsite(data.companyWebsite || '');
+                    setTaxRate((data.taxRate ? data.taxRate * 100 : 0).toString()); // Convert decimal to percentage string
+
+                    setShowUnitPricesInPdf(data.showUnitPricesInPdf === undefined ? true : data.showUnitPricesInPdf);
+                    setShowFullItemizedTableInPdf(data.showFullItemizedTableInPdf === undefined ? true : data.showFullItemizedTableInPdf);
                 } else {
-                    // No profile yet, set defaults for new users
                     console.log("No such profile document! Setting defaults.");
                     setQuotePrefix('QT-');
                     setNextQuoteSequence(1);
                     setCompanyEmail(currentUser.email || '');
+                    setShowUnitPricesInPdf(true);
+                    setShowFullItemizedTableInPdf(true);
                 }
             })
             .catch((err) => {
@@ -133,6 +95,8 @@ function ProfileSettingsPage() {
 
         const userProfileRef = doc(db, 'users', currentUser.uid);
         const paddingValue = parseInt(quoteNumberPadding, 10);
+        const parsedTaxRate = parseFloat(taxRate);
+
 
         const settingsToSave: Partial<UserProfile> = {
             businessName: businessName.trim(),
@@ -143,26 +107,36 @@ function ProfileSettingsPage() {
             logoUrl: logoUrl.trim(),
             defaultQuoteTerms: defaultQuoteTerms.trim(),
             quotePrefix: quotePrefix.trim(),
-            // nextQuoteSequence is typically only set once initially or managed by quote creation logic
-            // For this form, we might only set it if it's the very first time or allow users to "reset" it
-            // Be cautious with updating nextQuoteSequence directly here without validation
-            nextQuoteSequence: profileData.nextQuoteSequence || nextQuoteSequence, // Preserve existing unless explicitly changed
+            nextQuoteSequence: profileData.nextQuoteSequence || nextQuoteSequence,
             quoteNumberPadding: isNaN(paddingValue) ? 0 : paddingValue,
+            acceptanceInstructions: acceptanceInstructions.trim(),
+            salesContactPerson: salesContactPerson.trim(),
+            companyWebsite: companyWebsite.trim(),
+            taxRate: isNaN(parsedTaxRate) ? 0 : parsedTaxRate / 100, // Save as decimal
+
+            showUnitPricesInPdf: showUnitPricesInPdf,
+            showFullItemizedTableInPdf: showFullItemizedTableInPdf,
+
             updatedAt: serverTimestamp() as Timestamp,
         };
 
-        // If this is a new profile, also set createdAt
         if (!profileData.createdAt) {
             settingsToSave.createdAt = serverTimestamp() as Timestamp;
         }
 
-
         try {
-            // Use setDoc with merge:true to create if not exists, or update if exists
             await setDoc(userProfileRef, settingsToSave, { merge: true });
             setSuccessMessage("Settings saved successfully!");
-            // Optionally re-fetch or update profileData state if needed immediately
-            setProfileData(prev => ({...prev, ...settingsToSave, updatedAt: Timestamp.now()})); // Optimistic update
+            // Optimistically update local state to reflect saved data, including the potentially converted taxRate
+            const displayTaxRate = (settingsToSave.taxRate ? settingsToSave.taxRate * 100 : 0).toString();
+            setProfileData(prev => ({
+                ...prev, 
+                ...settingsToSave, 
+                taxRate: settingsToSave.taxRate, // Store decimal in profileData
+                updatedAt: Timestamp.now()
+            }));
+            setTaxRate(displayTaxRate); // Keep UI input as percentage string
+
         } catch (err: any) {
             console.error("Error saving settings:", err);
             setError(`Failed to save settings: ${err.message}`);
@@ -172,69 +146,113 @@ function ProfileSettingsPage() {
     };
 
     if (isLoading) {
-        return <div style={pageStyles}><p>Loading profile...</p></div>;
+        return <div className={styles.page}><p className={styles.loadingText}>Loading profile...</p></div>;
     }
 
     return (
-        <div style={pageStyles}>
+        <div className={styles.page}>
             <h2>Profile & Settings</h2>
             <form onSubmit={handleSaveSettings}>
-                <h3>Company Information</h3>
-                <div style={formGroupStyles}>
-                    <label htmlFor="businessName" style={labelStyles}>Business Name:</label>
-                    <input type="text" id="businessName" style={inputStyles} value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="companyEmail" style={labelStyles}>Company Email:</label>
-                    <input type="email" id="companyEmail" style={inputStyles} value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="companyPhone" style={labelStyles}>Company Phone:</label>
-                    <input type="tel" id="companyPhone" style={inputStyles} value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} />
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="companyAddress" style={labelStyles}>Company Address:</label>
-                    <textarea id="companyAddress" style={textareaStyles} value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder="Street, City, State, Postcode, Country" />
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="abnOrTaxId" style={labelStyles}>ABN / Tax ID:</label>
-                    <input type="text" id="abnOrTaxId" style={inputStyles} value={abnOrTaxId} onChange={(e) => setAbnOrTaxId(e.target.value)} />
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="logoUrl" style={labelStyles}>Logo URL (Direct link to image):</label>
-                    <input type="url" id="logoUrl" style={inputStyles} value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
-                </div>
+                <fieldset className={styles.fieldset}>
+                    <legend className={styles.legend}>Company Information</legend>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="businessName" className={styles.label}>Business Name:</label>
+                        <input type="text" id="businessName" className={styles.input} value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="companyEmail" className={styles.label}>Company Email:</label>
+                        <input type="email" id="companyEmail" className={styles.input} value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="companyPhone" className={styles.label}>Company Phone:</label>
+                        <input type="tel" id="companyPhone" className={styles.input} value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="companyAddress" className={styles.label}>Company Address:</label>
+                        <textarea id="companyAddress" className={styles.textarea} value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder="Street, City, State, Postcode, Country" />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="companyWebsite" className={styles.label}>Company Website:</label>
+                        <input type="url" id="companyWebsite" className={styles.input} value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://example.com" />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="abnOrTaxId" className={styles.label}>ABN / Tax ID:</label>
+                        <input type="text" id="abnOrTaxId" className={styles.input} value={abnOrTaxId} onChange={(e) => setAbnOrTaxId(e.target.value)} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="logoUrl" className={styles.label}>Logo URL (Direct link to image):</label>
+                        <input type="url" id="logoUrl" className={styles.input} value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
+                    </div>
+                     <div className={styles.formGroup}>
+                        <label htmlFor="salesContactPerson" className={styles.label}>Sales Contact Person (Optional):</label>
+                        <input type="text" id="salesContactPerson" className={styles.input} value={salesContactPerson} onChange={(e) => setSalesContactPerson(e.target.value)} />
+                    </div>
+                </fieldset>
 
-                <h3>Quote Settings</h3>
-                <div style={formGroupStyles}>
-                    <label htmlFor="defaultQuoteTerms" style={labelStyles}>Default Quote Terms & Conditions:</label>
-                    <textarea id="defaultQuoteTerms" style={textareaStyles} value={defaultQuoteTerms} onChange={(e) => setDefaultQuoteTerms(e.target.value)} />
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="quotePrefix" style={labelStyles}>Quote Number Prefix:</label>
-                    <input type="text" id="quotePrefix" style={inputStyles} value={quotePrefix} onChange={(e) => setQuotePrefix(e.target.value)} placeholder="e.g., QT- or INV-" />
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="nextQuoteSequence" style={labelStyles}>Next Quote Number Will Be: (Updates after saving a quote)</label>
-                    <input type="number" id="nextQuoteSequenceDisplay" style={{...inputStyles, backgroundColor: '#f0f0f0'}} value={nextQuoteSequence} readOnly />
-                    <small>This number increments automatically when you save a new quote. To reset or set a new starting sequence, contact support (or advanced settings in future).</small>
-                </div>
-                <div style={formGroupStyles}>
-                    <label htmlFor="quoteNumberPadding" style={labelStyles}>Quote Number Padding (Digits, e.g., 5 for 00001):</label>
-                    <input type="number" id="quoteNumberPadding" style={inputStyles} value={quoteNumberPadding} onChange={(e) => setQuoteNumberPadding(e.target.value)} placeholder="e.g., 5" min="0" max="10"/>
-                </div>
+                <fieldset className={styles.fieldset}>
+                    <legend className={styles.legend}>Quote Settings</legend>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="defaultQuoteTerms" className={styles.label}>Default Quote Terms & Conditions:</label>
+                        <textarea id="defaultQuoteTerms" className={styles.textarea} value={defaultQuoteTerms} onChange={(e) => setDefaultQuoteTerms(e.target.value)} />
+                    </div>
+                     <div className={styles.formGroup}>
+                        <label htmlFor="acceptanceInstructions" className={styles.label}>Quote Acceptance Instructions:</label>
+                        <textarea id="acceptanceInstructions" className={styles.textarea} value={acceptanceInstructions} onChange={(e) => setAcceptanceInstructions(e.target.value)} placeholder="e.g., To accept this quote, please sign and return..." />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="quotePrefix" className={styles.label}>Quote Number Prefix:</label>
+                        <input type="text" id="quotePrefix" className={styles.input} value={quotePrefix} onChange={(e) => setQuotePrefix(e.target.value)} placeholder="e.g., QT- or INV-" />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="nextQuoteSequenceDisplay" className={styles.label}>Next Quote Number Will Be: (Updates after saving a quote)</label>
+                        <input type="number" id="nextQuoteSequenceDisplay" className={`${styles.input} ${styles.readOnlyInput}`} value={nextQuoteSequence} readOnly />
+                        <small className={styles.fieldDescription}>This number increments automatically when you save a new quote.</small>
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="quoteNumberPadding" className={styles.label}>Quote Number Padding (Digits, e.g., 5 for 00001):</label>
+                        <input type="number" id="quoteNumberPadding" className={styles.input} value={quoteNumberPadding} onChange={(e) => setQuoteNumberPadding(e.target.value)} placeholder="e.g., 5" min="0" max="10"/>
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="taxRate" className={styles.label}>Tax Rate (%):</label>
+                        <input type="number" id="taxRate" className={styles.input} value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="e.g., 10 for 10%" step="0.01" />
+                         <small className={styles.fieldDescription}>Enter as a percentage (e.g., 10 for 10%). This will be used to calculate tax on quotes.</small>
+                    </div>
+                </fieldset>
 
+                <fieldset className={styles.fieldset}>
+                    <legend className={styles.legend}>PDF & Display Settings</legend>
+                    <div className={styles.formGroup}>
+                        <label className={styles.checkboxLabel}>
+                            <input
+                                type="checkbox"
+                                className={styles.checkboxInput}
+                                checked={showUnitPricesInPdf}
+                                onChange={(e) => setShowUnitPricesInPdf(e.target.checked)}
+                            />
+                            Show unit prices in PDF line items by default
+                        </label>
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label className={styles.checkboxLabel}>
+                            <input
+                                type="checkbox"
+                                className={styles.checkboxInput}
+                                checked={showFullItemizedTableInPdf}
+                                onChange={(e) => setShowFullItemizedTableInPdf(e.target.checked)}
+                            />
+                            Include full itemized table in 'Full Detail' PDF by default
+                        </label>
+                        <small className={styles.fieldDescription}>If unchecked, 'Full Detail' PDF will show a summary by area with a notice.</small>
+                    </div>
+                </fieldset>
 
-                {/* TODO: Add Display Name update (Firebase Auth updateProfile) */}
-                {/* TODO: Add Password Change section */}
-
-                <button type="submit" style={buttonStyles} disabled={isSaving}>
+                <button type="submit" className={styles.button} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save Settings'}
                 </button>
             </form>
 
-            {successMessage && <p style={successMessageStyles}>{successMessage}</p>}
-            {error && <p style={errorMessageStyles}>{error}</p>}
+            {successMessage && <p className={styles.successMessage}>{successMessage}</p>}
+            {error && <p className={styles.errorMessage}>{error}</p>}
         </div>
     );
 }

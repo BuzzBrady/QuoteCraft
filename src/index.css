@@ -114,3 +114,58 @@
 }
 
 /* Add more specific styles, responsive adjustments etc. as needed */
+
+:root {
+  --primary-deep-charcoal: #2C2C2C;
+  --primary-light-blue: #4DA8DA;
+  --primary-white: #FFFFFF;
+  --secondary-steel-gray: #A9B1B7;
+  --accent-bright-blue: #00BFFF;
+}
+
+body {
+  background-color: var(--primary-deep-charcoal);
+  color: var(--primary-white);
+  font-family: sans-serif; /* Example font */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--primary-light-blue);
+}
+
+a {
+  color: var(--primary-light-blue);
+}
+
+a:hover {
+  color: var(--accent-bright-blue);
+}
+
+button {
+  background-color: var(--primary-light-blue);
+  color: var(--primary-white);
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+button:hover {
+  background-color: var(--accent-bright-blue);
+}
+
+/* Example of using in a hypothetical .some-element */
+.some-element {
+  background-color: var(--primary-deep-charcoal);
+  color: var(--primary-white);
+  border: 1px solid var(--secondary-steel-gray);
+}
+
+.some-element h2 {
+  color: var(--primary-light-blue);
+}
+
+.some-element .important-button {
+  background-color: var(--accent-bright-blue);
+  color: var(--primary-white);
+}

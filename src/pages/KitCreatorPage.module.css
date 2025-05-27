@@ -1,242 +1,147 @@
 /* src/pages/KitCreatorPage.module.css */
-
 .pageContainer {
-    padding: 2rem;
+    padding: 1.5rem;
     max-width: 1200px;
     margin: 0 auto;
-  }
-  
-  .pageHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e0e0e0;
-  }
-  
-  .pageTitle {
+}
+
+.title {
     font-size: 2em;
-    color: #333;
-    margin: 0;
-  }
-  
-  .tabNavigation {
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #ccc;
-  }
-  
-  .tabButton {
-    padding: 10px 20px;
-    margin-right: 10px;
-    margin-bottom: -1px; /* To make active tab border connect nicely */
-    border: 1px solid #ccc;
-    border-bottom: none;
-    background-color: #f0f0f0;
-    cursor: pointer;
-    font-size: 1em;
-    border-radius: 5px 5px 0 0;
-  }
-  
-  .tabButtonActive {
-    background-color: #fff;
-    border-bottom: 1px solid #fff; /* Cover the main border */
-    font-weight: bold;
-    color: #007bff;
-  }
-  
-  .tabContent {
-    padding-top: 1rem;
-  }
-  
-  .loadingText,
-  .errorText {
-    padding: 20px;
+    color: var(--primary-light-blue);
     text-align: center;
-    font-size: 1.1em;
-  }
-  
-  .errorText {
-    color: red;
-    border: 1px solid red;
-    background-color: #ffe0e0;
-    border-radius: 4px;
-  }
-  
-  .createKitButton {
-    padding: 10px 18px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-    margin-bottom: 1rem; /* Space below if list is empty */
-  }
-  
-  .createKitButton:hover {
-    background-color: #218838;
-  }
-  
-  .kitList {
-    list-style: none;
-    padding: 0;
-  }
-  
-  .kitListItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    background-color: #fff;
-  }
-  
-  .kitListItemInfo h3 {
-    margin: 0 0 5px 0;
-    font-size: 1.2em;
-  }
-  
-  .kitListItemInfo p {
-    margin: 0 0 3px 0;
-    font-size: 0.9em;
-    color: #555;
-  }
-  
-  .kitListItemActions button {
-    margin-left: 10px;
-    padding: 6px 12px;
-    font-size: 0.9em;
-    cursor: pointer;
-    border-radius: 4px;
-    border: 1px solid transparent;
-  }
-  
-  .editButton {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
-  }
-  .editButton:hover {
-    background-color: #0056b3;
-  }
-  
-  .deleteButton {
-    background-color: #dc3545;
-    color: white;
-    border-color: #dc3545;
-  }
-  .deleteButton:hover {
-    background-color: #c82333;
-  }
-  
-  /* Styles for Kit Builder Tab */
-  .kitBuilderForm {
-    /* Add styles for the form layout */
-  }
-  
-  .formSection {
+    margin-bottom: 2rem;
+}
+
+.formSection {
     margin-bottom: 2rem;
     padding: 1.5rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-  }
-  
-  .formSectionTitle {
-    font-size: 1.4em;
-    margin-top: 0;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #ccc;
-  }
-  
-  .formGroup {
-    margin-bottom: 1rem;
-  }
-  
-  .formLabel {
+    background-color: var(--primary-deep-charcoal); /* Slightly lighter shade for section bg */
+    border: 1px solid var(--secondary-steel-gray);
+    border-radius: 6px;
+}
+
+.formGroup {
+    margin-bottom: 1.25rem;
+}
+
+.formGroup label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: bold;
-    color: #333;
-  }
-  
-  .formInput,
-  .formTextarea,
-  .formSelect {
+    color: var(--secondary-steel-gray);
+}
+
+.formGroup input[type="text"],
+.formGroup textarea {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
+    padding: 0.75rem;
+    border: 1px solid var(--secondary-steel-gray);
     border-radius: 4px;
-    box-sizing: border-box;
     font-size: 1em;
-  }
-  
-  .formTextarea {
-    min-height: 80px;
+    background-color: var(--primary-deep-charcoal);
+    color: var(--primary-white);
+    box-sizing: border-box;
+}
+
+.formGroup textarea {
+    min-height: 100px;
     resize: vertical;
-  }
-  
-  .kitItemsList {
-    margin-top: 1rem;
-    border: 1px dashed #ccc;
+}
+
+.sectionTitle {
+    font-size: 1.4em;
+    color: var(--primary-light-blue);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--secondary-steel-gray);
+}
+
+.itemsListContainer {
+    margin-bottom: 1rem;
+}
+
+.addedItemsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.addedItem {
+    background-color: var(--primary-deep-charcoal); /* Card background for items */
     padding: 1rem;
-    min-height: 100px; /* Placeholder height */
-    background-color: #fff;
-  }
-  
-  .kitItem {
-    padding: 8px;
-    margin-bottom: 8px;
-    border: 1px solid #eee;
-    background-color: #fdfdfd;
-    border-radius: 3px;
+    border: 1px solid var(--secondary-steel-gray);
+    border-radius: 4px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-  
-  .kitItemActions button {
-     margin-left: 8px;
-  }
-  
-  .kitBuilderActions {
-    margin-top: 2rem;
+    color: var(--primary-white);
+}
+
+.addedItemName {
+    font-weight: 500;
+}
+
+.itemControls {
     display: flex;
+    gap: 0.5rem;
+}
+
+.buttonSmall, .removeButton {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85em;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s ease;
+}
+
+.removeButton {
+    background-color: var(--secondary-steel-gray);
+    color: var(--primary-white);
+}
+
+.removeButton:hover {
+    opacity: 0.8;
+}
+
+.totalPriceDisplay {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--secondary-steel-gray);
+    text-align: right;
+    font-size: 1.3em;
+    font-weight: bold;
+    color: var(--accent-bright-blue);
+}
+
+.pageActions {
+    display: flex;
+    justify-content: flex-end;
     gap: 1rem;
-  }
-  
-  .saveKitButton {
-    padding: 12px 20px;
-    font-size: 1.1em;
-    background-color: #007bff;
-    color: white;
-  }
-  .saveKitButton:disabled {
-    background-color: #a0cfff;
-    cursor: not-allowed;
-  }
-  
-  .cancelButton {
-    padding: 12px 20px;
-    font-size: 1.1em;
-    background-color: #6c757d;
-    color: white;
-  }
-  .cancelButton:disabled {
-    background-color: #adb5bd;
-  }
-  
-  .backLink {
-    display: inline-block;
     margin-top: 2rem;
-    color: #007bff;
-    text-decoration: none;
-  }
-  .backLink:hover {
-    text-decoration: underline;
-  }
-  
+}
+
+.buttonPrimary, .buttonSecondary {
+    padding: 0.8rem 1.5rem;
+    font-size: 1em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.buttonPrimary {
+    background-color: var(--accent-bright-blue);
+    color: var(--primary-white);
+}
+.buttonPrimary:hover {
+    opacity: 0.85;
+}
+
+.buttonSecondary {
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+}
+.buttonSecondary:hover {
+    background-color: var(--accent-bright-blue);
+}

@@ -1,42 +1,59 @@
-.input {
-    margin-bottom: 10px;
-    padding: 5px;
-    width: 95%;
+/* src/components/KitSelector.module.css */
+.kitSelectorContainer {
+    margin-bottom: 1rem;
 }
 
-.kitList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
+.kitGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
 }
 
-.kitItem {
-    padding: 8px 10px;
+.kitButton {
+    padding: 1rem;
+    border: 1px solid var(--secondary-steel-gray);
+    background-color: var(--primary-deep-charcoal);
+    color: var(--primary-white);
     cursor: pointer;
-    border-bottom: 1px solid #eee;
+    border-radius: 4px;
+    text-align: left;
+    font-size: 0.95em;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column; /* Stack name and description */
+    gap: 0.3rem;
 }
 
-.kitName {
+.kitButton:hover {
+    background-color: var(--secondary-steel-gray);
+    /* border-color: var(--primary-light-blue); */ /* Optional: highlight border on hover */
 }
-.kitName.isCustom {
+
+.kitButton.selected {
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+    border-color: var(--accent-bright-blue);
     font-weight: bold;
 }
 
-.customMark {
-    font-style: italic;
-    color: #666;
-    margin-left: 8px;
+.kitName {
+    font-weight: bold;
+    font-size: 1.05em;
+    margin-bottom: 0.25rem; /* Space between name and description */
 }
 
-.tagsContainer {
-    font-size: 0.8em;
-    color: #888;
-    margin-top: 3px;
+.kitDescription {
+    font-size: 0.85em;
+    color: var(--secondary-steel-gray); /* Subtler color for description */
 }
-.noKitsFound {
-    padding: 8px 10px;
-    color: #777;
+
+.kitButton.selected .kitDescription {
+    color: var(--primary-white); /* Ensure description is readable on selected background */
+}
+
+.loadingKits, .noKitsMessage {
+    padding: 1rem;
+    text-align: center;
+    color: var(--secondary-steel-gray);
+    font-style: italic;
 }

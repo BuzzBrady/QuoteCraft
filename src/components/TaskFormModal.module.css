@@ -1,80 +1,104 @@
 /* src/components/TaskFormModal.module.css */
-/* Styles specific to the content INSIDE the TaskFormModal's body */
-
-.formGroup {
-    margin-bottom: 18px;
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
 }
 
-.label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    font-size: 0.95em;
-    color: #333;
+.modalContent {
+    background: var(--primary-deep-charcoal);
+    color: var(--primary-white);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
 }
 
-.input,
-.textarea {
+.modalContent h2 {
+    color: var(--primary-light-blue);
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    text-align: center;
+    font-size: 1.6em;
+}
+
+.formField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.formField label {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: var(--secondary-steel-gray);
+}
+
+.formField input[type="text"],
+.formField textarea,
+.formField select {
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #ccc;
+    padding: 0.7rem 0.6rem;
+    border: 1px solid var(--secondary-steel-gray);
     border-radius: 4px;
+    font-size: 0.95em;
+    background-color: var(--primary-deep-charcoal); /* Or a shade lighter */
+    color: var(--primary-white);
     box-sizing: border-box;
-    font-size: 1em;
-    color: #333;
-    background-color: #fff;
 }
 
-.textarea {
+.formField textarea {
     min-height: 80px;
     resize: vertical;
 }
 
-.errorMessage {
-    color: red;
-    margin-top: 10px;
-    font-size: 0.9em;
-    text-align: center;
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
-/* Button styles for the footer, if not using generic ones from GenericFormModal.module.css */
-/* These can override or complement the generic footer button styles if needed */
-.buttonContainer { /* This class might not be needed if using GenericFormModal's footer */
-    margin-top: 20px;
-    text-align: right;
-}
-
-.button { /* General button style, can be used if GenericFormModal's footer isn't used */
-    padding: 10px 15px;
-    margin-left: 10px;
+.formActions button {
+    padding: 0.65rem 1.25rem;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-weight: 500;
+    font-size: 0.95em;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
-.primaryButton {
-    composes: button; /* Or define directly if not using generic footer */
-    background-color: #007bff;
-    color: white;
-}
-.primaryButton:hover {
-    background-color: #0056b3;
-}
-.primaryButton:disabled {
-    background-color: #a0cfff;
-    cursor: not-allowed;
+.submitButton {
+    background-color: var(--accent-bright-blue);
+    color: var(--primary-white);
 }
 
-.secondaryButton {
-    composes: button; /* Or define directly */
-    background-color: #6c757d;
-    color: white;
+.submitButton:hover {
+    opacity: 0.85;
 }
-.secondaryButton:hover {
-    background-color: #5a6268;
+
+.cancelButton {
+    background-color: var(--secondary-steel-gray);
+    color: var(--primary-white);
 }
-.secondaryButton:disabled {
-    background-color: #adb5bd;
-    cursor: not-allowed;
+
+.cancelButton:hover {
+    opacity: 0.85;
+}
+
+.errorMessage {
+    color: #ff4d4d; /* Consider a variable for error colors */
+    font-size: 0.85em;
+    margin-top: -0.5rem;
 }

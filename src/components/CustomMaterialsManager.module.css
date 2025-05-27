@@ -1,130 +1,87 @@
 /* src/components/CustomMaterialsManager.module.css */
-
 .managerContainer {
-  padding: 20px;
-  border: 1px solid #eee;
-  border-radius: 8px; /* Slightly more rounded corners */
-  background-color: #f9f9f9; /* Light background for the container */
+    padding: 1.5rem;
+    /* background-color: #f0f0f0; */ /* Removed, will inherit body background */
+    border-radius: 8px;
+    /* box-shadow: 0 2px 8px rgba(0,0,0,0.1); */ /* Re-evaluate shadow for dark theme */
 }
 
-.managerContainer h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #333;
-}
-
-/* Base style for all buttons in this manager */
-.button {
-  padding: 8px 15px; /* Slightly more padding */
-  margin: 0 5px 10px 0;
-  cursor: pointer;
-  border: 1px solid transparent; /* Start with transparent border */
-  border-radius: 5px; /* Consistent border-radius */
-  font-weight: 500;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
-  text-align: center;
-  font-size: 0.9em;
-}
-
-.button:hover {
-  transform: translateY(-1px); /* Slight lift on hover */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-/* Main action button (e.g., "+ Add New Material") */
-.button { /* This is the primary add button style */
-  background-color: #007bff; /* Primary blue */
-  color: white;
-  border-color: #007bff;
-}
-.button:hover:not(:disabled) {
-  background-color: #0056b3;
-  border-color: #0056b3;
-}
-
-
-/* Edit button specific styles */
-.editButton {
-  composes: button; /* Inherit base styles from .button */
-  background-color: #ffc107; /* Warning yellow */
-  color: black;
-  border-color: #ffc107;
-}
-.editButton:hover:not(:disabled) {
-  background-color: #e0a800;
-  border-color: #d39e00;
-}
-
-/* Delete button specific styles */
-.deleteButton {
-  composes: button; /* Inherit base styles from .button */
-  background-color: #dc3545; /* Danger red */
-  color: white;
-  border-color: #dc3545;
-}
-.deleteButton:hover:not(:disabled) {
-  background-color: #c82333;
-  border-color: #bd2130;
-}
-
-.itemList {
-  list-style: none;
-  padding: 0;
-  margin-top: 15px; /* Add some space above the list */
-}
-
-.item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 15px; /* More padding for items */
-  border: 1px solid #e0e0e0; /* Lighter border for items */
-  background-color: #fff;
-  border-radius: 4px;
-  margin-bottom: 10px; /* Space between items */
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.itemDetails {
-  flex-grow: 1;
-  margin-right: 15px; /* Space between details and actions */
-}
-.itemDetails strong {
-  color: #222;
-  font-size: 1.05em;
-}
-.itemDetails small {
-  color: #555;
-  font-size: 0.85em;
-  line-height: 1.4;
-  display: block; /* Make small tags take full width for cleaner line breaks */
-  margin-top: 3px;
-}
-
-
-.actions {
-  white-space: nowrap; /* Keep buttons on one line */
-  display: flex; /* Use flex for better alignment if needed */
-  gap: 8px; /* Space between buttons in the actions group */
-}
-.actions button { /* Remove individual margins if using gap */
-    margin: 0;
-}
-
-
-.error { /* For error messages */
-    color: #dc3545;
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 15px;
+.managerContainer h2 {
+    color: var(--primary-light-blue);
+    margin-bottom: 1.5rem;
     text-align: center;
+}
+
+.materialList {
+    display: grid;
+    gap: 1rem;
+}
+
+.materialItem {
+    background-color: var(--primary-deep-charcoal); /* Slightly lighter than main bg for cards */
+    border: 1px solid var(--secondary-steel-gray);
+    padding: 1rem;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--primary-white);
+}
+
+.materialDetails span {
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.materialDetails .name {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.materialDetails .price {
+    font-style: italic;
+}
+
+.itemActions button {
+    margin-left: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+    transition: background-color 0.2s ease;
+}
+
+.itemActions button:hover {
+    background-color: var(--accent-bright-blue);
+}
+
+/* Specifically for delete if we want a different color - e.g., a red accent */
+/* .itemActions .deleteButton {
+    background-color: var(--accent-red); 
+}
+.itemActions .deleteButton:hover {
+    background-color: darkred;
+} */
+
+.addButtonContainer {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.addButton {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.addButton:hover {
+    background-color: var(--accent-bright-blue);
 }

@@ -1,7 +1,41 @@
-.areaSelector .control {
-  border-color: #ccc;
+/* src/components/AreaSelector.module.css */
+.areaSelectorContainer {
+  /* Container for the entire area selector */
+  margin-bottom: 1rem;
 }
 
-.areaSelector .control[aria-disabled="true"] {
-    background-color: #e9ecef;
+.areaSelectorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Responsive grid */
+  gap: 0.75rem; /* Spacing between buttons */
+}
+
+.areaButton {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--secondary-steel-gray);
+  background-color: var(--primary-deep-charcoal);
+  color: var(--primary-white);
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.areaButton:hover {
+  background-color: var(--secondary-steel-gray);
+}
+
+.areaButton.selected {
+  background-color: var(--primary-light-blue);
+  color: var(--primary-white);
+  border-color: var(--accent-bright-blue);
+  font-weight: bold;
+}
+
+/* Specificity for buttons if needed, though the .selected class on .areaButton should suffice */
+.areaSelectorGrid button.selected {
+  background-color: var(--primary-light-blue);
+  color: var(--primary-white);
+  border-color: var(--accent-bright-blue);
 }

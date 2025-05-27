@@ -445,14 +445,19 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         else if (selectedMaterial) baseDisplayName = selectedMaterial.name;
         let lineTotal = inputType === 'price' ? finalRate : (selectedQuantity * finalRate);
         const newQuoteLine: Omit<QuoteLine, 'id'> = {
-            section: activeSection.trim(), taskId, materialId, materialOptionId: optionId,
-            materialOptionName: optionObject?.name ?? null, displayName: baseDisplayName,
-            // --- CORRECTED LINE FOR THE Firestore "undefined" ERROR ---
+            section: activeSection.trim(),
+            taskId,
+            materialId,
+            materialOptionId: optionId,
+            materialOptionName: optionObject?.name ?? null,
+            displayName: baseDisplayName,
             description: selectedDescription.trim() || null,
-            // ---
-            quantity: inputType === 'quantity' ? selectedQuantity : null,
-            price: inputType === 'price' ? finalRate : null, unit,
-            referenceRate: inputType === 'quantity' ? finalRate : null, inputType, lineTotal,
+            quantity: currentItemDetails.inputType === 'quantity' ? selectedQuantity : null, // Use currentItemDetails.inputType here
+            price: currentItemDetails.inputType === 'price' ? finalRate : null, // And here
+            unit: unit || null, // Ensure unit is explicitly null if it's falsy (e.g., empty string, though 'item' is default)
+            referenceRate: currentItemDetails.inputType === 'quantity' ? finalRate : null, // And here
+            inputType: inputType || 'price', // Ensure inputType has a default if somehow null/undefined
+            lineTotal,
             order: quoteLines.reduce((max, line) => Math.max(max, line.order ?? -1), -1) + 1,
         };
         setQuoteLines(prev => [...prev, { ...newQuoteLine, id: uuidv4() } as QuoteLine]);
@@ -527,149 +532,216 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     };
 
     const handleSaveQuote = async () => {
-        if (!userId || !jobTitle.trim() || (quoteLines.length === 0 && !existingQuoteId)) {
-            alert("User, Job Title, and at least one line item (for new quotes) are required."); return;
+        if (!userId) {
+            alert("User not logged in.");
+            console.error('[SAVE QUOTE] Aborted: User not logged in.');
+            return;
         }
-        setIsLoadingQuote(true); setErrorQuote(null);
+        if (!jobTitle.trim()) {
+            alert("Job Title is required.");
+            console.error('[SAVE QUOTE] Aborted: Job Title is required.');
+            return;
+        }
+        if (quoteLines.length === 0 && !existingQuoteId) {
+            alert("At least one line item is required for a new quote.");
+            console.error('[SAVE QUOTE] Aborted: New quote has no line items.');
+            return;
+        }
+    
+        console.log('[SAVE QUOTE] Initiated. ExistingQuoteId:', existingQuoteId);
+        setIsLoadingQuote(true);
+        setErrorQuote(null);
+    
         const calculatedTotal = quoteLines.reduce((sum, line) => sum + (line.lineTotal || 0), 0);
         let quoteIdToUse = existingQuoteId;
-        let finalQuoteNumber = quoteData?.quoteNumber;
-
+        let finalQuoteNumber = quoteData?.quoteNumber; // Use existing quote number for updates initially
+    
+        console.log('[SAVE QUOTE] Line items in state before save attempt:', JSON.parse(JSON.stringify(quoteLines)));
+        console.log('[SAVE QUOTE] User Profile for terms/defaults:', JSON.parse(JSON.stringify(userProfile)));
+    
         try {
             const mainQuotePayload: any = {
+                userId: userId, // Always ensure userId is part of the payload
                 jobTitle: jobTitle.trim(),
-                // Ensure client fields are null if empty, otherwise use the trimmed value
                 clientName: clientName.trim() || null,
                 clientAddress: clientAddress.trim() || null,
                 clientEmail: clientEmail.trim() || null,
                 clientPhone: clientPhone.trim() || null,
-                // Ensure terms are null if empty, otherwise use trimmed userProfile.defaultQuoteTerms or null
                 terms: terms.trim() || userProfile.defaultQuoteTerms?.trim() || null,
                 status: quoteData?.status || 'Draft',
                 totalAmount: calculatedTotal,
                 updatedAt: serverTimestamp(),
-
-                // Corrected handling for optional fields:
-                // If these fields come from quoteData (e.g., when editing an existing quote)
-                // and might be empty or not yet defined for new quotes, set to null.
-                // Assuming projectDescription, additionalDetails, generalNotes will eventually come from their own state variables (Part 2)
-                // For now, if they are still intended to be sourced from quoteData:
-                projectDescription: (quoteData?.projectDescription && typeof quoteData.projectDescription === 'string' && quoteData.projectDescription.trim() !== "") 
-                                      ? quoteData.projectDescription.trim() 
-                                      : null,
-                additionalDetails: (quoteData?.additionalDetails && typeof quoteData.additionalDetails === 'string' && quoteData.additionalDetails.trim() !== "") 
-                                     ? quoteData.additionalDetails.trim() 
-                                     : null,
-                generalNotes: (quoteData?.generalNotes && typeof quoteData.generalNotes === 'string' && quoteData.generalNotes.trim() !== "") 
-                                ? quoteData.generalNotes.trim() 
-                                : null,
+                projectDescription: projectDescription.trim() || null,
+                additionalDetails: additionalDetails.trim() || null,
+                generalNotes: generalNotes.trim() || null,
+                validUntil: validUntilDate ? Timestamp.fromDate(validUntilDate) : null,
             };
-
-            // Handle validUntil specifically
-            if (quoteData?.validUntil instanceof Timestamp) {
-                mainQuotePayload.validUntil = quoteData.validUntil;
-            } else {
-                mainQuotePayload.validUntil = null; // Default to null if not a valid Timestamp
-                if (quoteData?.validUntil) { // If it existed but wasn't a Timestamp
-                    console.warn("validUntil was present in quoteData but not a Firebase Timestamp object. Setting to null for save.", quoteData.validUntil);
-                }
-            }
-            
-            // This part of your existing code for new vs existing quotes looks fine:
+    
             const userQuotesCollectionRef = collection(db, 'users', userId, 'quotes');
             let quoteDocRef;
-
+    
             if (!existingQuoteId) {
-                mainQuotePayload.userId = userId; 
+                console.log('[SAVE QUOTE] Creating new quote.');
                 mainQuotePayload.createdAt = serverTimestamp();
-                
-                // Transaction for quote numbering (seems okay, but ensure profile exists and has values)
+    
                 finalQuoteNumber = await runTransaction(db, async (transaction) => {
                     const profileRef = doc(db, `users/${userId}`);
                     const profileSnap = await transaction.get(profileRef);
-                    if (!profileSnap.exists()) { 
-                        console.warn("User profile not found during quote number generation."); 
-                        // Fallback quote number if profile is missing, though ideally profile should always exist
-                        return `TEMP-${Date.now().toString().slice(-6)}`; 
+                    if (!profileSnap.exists()) {
+                        console.warn("[SAVE QUOTE TRANSACTION] User profile not found for quote numbering. Using fallback.");
+                        // Consider how to handle this - maybe throw error to prevent quote creation without profile
+                        return `TEMP-${Date.now().toString().slice(-6)}`;
                     }
                     const profile = profileSnap.data() as UserProfile;
                     const prefix = profile.quotePrefix || 'QT-';
                     const nextNum = profile.nextQuoteSequence || 1;
-                    const padding = profile.quoteNumberPadding || 4;
+                    const padding = profile.quoteNumberPadding || 4; // Default padding
                     const newNumStr = nextNum.toString().padStart(padding, '0');
                     transaction.update(profileRef, { nextQuoteSequence: nextNum + 1 });
+                    console.log(`[SAVE QUOTE TRANSACTION] Generated quote number: ${prefix}${newNumStr}`);
                     return `${prefix}${newNumStr}`;
                 });
-
+    
                 if (!finalQuoteNumber) {
-                    // This error will be caught by the main try-catch
-                    throw new Error("Failed to generate quote number.");
+                    throw new Error("Failed to generate quote number from transaction.");
                 }
                 mainQuotePayload.quoteNumber = finalQuoteNumber;
+    
+                console.log('[SAVE QUOTE] Main payload for new quote:', JSON.parse(JSON.stringify(mainQuotePayload)));
                 quoteDocRef = await addDoc(userQuotesCollectionRef, mainQuotePayload);
                 quoteIdToUse = quoteDocRef.id;
+                console.log('[SAVE QUOTE] New quote document created with ID:', quoteIdToUse);
             } else {
+                console.log(`[SAVE QUOTE] Updating existing quote: ${existingQuoteId}`);
                 if (!quoteIdToUse) { // Should be existingQuoteId
-                    throw new Error("Quote ID missing for update.");
+                    throw new Error("Quote ID missing for update (existingQuoteId was set).");
                 }
                 quoteDocRef = doc(userQuotesCollectionRef, quoteIdToUse);
-                // Only include quoteNumber in payload if it was already on quoteData (for existing quotes)
-                // It's generally safer not to allow quoteNumber to be easily changed during a simple update
-                // unless specifically intended. The current code adds it if quoteData.quoteNumber exists.
-                if (quoteData?.quoteNumber) {
-                     mainQuotePayload.quoteNumber = quoteData.quoteNumber;
-                }
-                // If quoteNumber is NOT in quoteData (e.g. an older quote before numbering scheme),
-                // you might decide if it should be generated here or left as is.
-                // For now, following your existing logic for `finalQuoteNumber` which is already
-                // initialized with `quoteData?.quoteNumber`.
-                // If `finalQuoteNumber` is a new number from a transaction (which won't happen for existing quotes here)
-                // or from `quoteData?.quoteNumber`, it will be set.
-                if (finalQuoteNumber) mainQuotePayload.quoteNumber = finalQuoteNumber;
-
-
-                await setDoc(quoteDocRef, mainQuotePayload, { merge: true });
+                // Ensure quoteNumber is preserved or correctly handled for existing quotes
+                mainQuotePayload.quoteNumber = finalQuoteNumber || 'N/A'; // Use existing or fallback
+    
+                console.log('[SAVE QUOTE] Main payload for updating quote:', JSON.parse(JSON.stringify(mainQuotePayload)));
+                await setDoc(quoteDocRef, mainQuotePayload, { merge: true }); // Use setDoc with merge for updates
+                console.log('[SAVE QUOTE] Existing quote document updated for ID:', quoteIdToUse);
             }
-
-            if (!quoteIdToUse) throw new Error("Quote ID for line items is undefined.");
-
+    
+            if (!quoteIdToUse) {
+                throw new Error("Critical: quoteIdToUse is undefined before processing line items.");
+            }
+    
+            console.log(`[SAVE QUOTE] Preparing to process ${quoteLines.length} line items for quote ID: ${quoteIdToUse}`);
+    
             const batch = writeBatch(db);
             const linesSubColRef = collection(db, 'users', userId, 'quotes', quoteIdToUse, 'quoteLines');
-
-            if (existingQuoteId) { // If editing, clear old lines first
+    
+            if (existingQuoteId) {
+                console.log('[SAVE QUOTE] Deleting existing line items...');
                 const oldLinesSnap = await getDocs(query(linesSubColRef));
-                oldLinesSnap.forEach(lineDoc => batch.delete(lineDoc.ref));
+                if (oldLinesSnap.empty) {
+                    console.log('[SAVE QUOTE] No existing lines found to delete.');
+                } else {
+                    oldLinesSnap.forEach(lineDoc => batch.delete(lineDoc.ref));
+                    console.log(`[SAVE QUOTE] ${oldLinesSnap.size} existing line items added to delete batch.`);
+                }
             }
+    
+            if (quoteLines.length > 0) {
+                quoteLines.forEach((line, index) => {
+                    const { id, ...dataToSave } = line; // Exclude client-side 'id'
+    
+                    // Start with the base object without kitTemplateId
+                    // Ensure this type correctly reflects all fields from QuoteLine except 'id',
+                    // and that kitTemplateId is string | undefined.
+                    const sanitizedDataToSave: Omit<QuoteLine, 'id'> = {
+                        section: dataToSave.section || "Default Section",
+                        taskId: dataToSave.taskId || null,
+                        materialId: dataToSave.materialId || null,
+                        materialOptionId: dataToSave.materialOptionId || null,
+                        materialOptionName: dataToSave.materialOptionName || null,
+                        displayName: dataToSave.displayName || "Unnamed Item",
+                        description: dataToSave.description || null,
+                        quantity: dataToSave.quantity === undefined || dataToSave.quantity === null ? null : Number(dataToSave.quantity),
+                        price: dataToSave.price === undefined || dataToSave.price === null ? null : Number(dataToSave.price),
+                        unit: dataToSave.unit || null,
+                        referenceRate: dataToSave.referenceRate === undefined || dataToSave.referenceRate === null ? null : Number(dataToSave.referenceRate),
+                        inputType: dataToSave.inputType || 'price',
+                        lineTotal: dataToSave.lineTotal === undefined || dataToSave.lineTotal === null ? 0 : Number(dataToSave.lineTotal),
+                        order: dataToSave.order !== undefined ? Number(dataToSave.order) : index,
+                        // kitTemplateId is initially omitted, will be added if valid
+                    };
+    
+                    // Conditionally add kitTemplateId if it's a valid string
+                    if (dataToSave.kitTemplateId && typeof dataToSave.kitTemplateId === 'string' && dataToSave.kitTemplateId.trim() !== "") {
+                        sanitizedDataToSave.kitTemplateId = dataToSave.kitTemplateId.trim();
+                    }
+                    // If the condition above is false, sanitizedDataToSave.kitTemplateId remains undefined (as it was never added),
+                    // which aligns with the Omit<QuoteLine, 'id'> type if kitTemplateId is optional.
+    
+                    // Declare newLineDocRef here, before it's used
+                    const newLineDocRef = doc(linesSubColRef); // This is correct for generating a new doc ref
+    
+                    console.log(`[SAVE QUOTE] Line item ${index} - kitTemplateId on dataToSave (original):`, dataToSave.kitTemplateId, 'SANITIZED (final object being saved):', JSON.parse(JSON.stringify(sanitizedDataToSave)));
+                    batch.set(newLineDocRef, sanitizedDataToSave);
+                });
 
-            quoteLines.forEach(line => {
-                const { id, ...dataToSave } = line; // Exclude client-side 'id'
-                const newLineDocRef = doc(linesSubColRef); // Let Firestore generate ID for new line items
-                batch.set(newLineDocRef, dataToSave);
-            });
+                console.log('[SAVE QUOTE] All line items added to batch.');
+            } else {
+                console.log('[SAVE QUOTE] No line items to add to this quote.');
+            }
+    
+            console.log('[SAVE QUOTE] Committing batch operations...');
             await batch.commit();
-
+            console.log('[SAVE QUOTE] Batch commit successful!');
+    
             alert(`Quote ${existingQuoteId ? 'updated' : 'saved'}! Number: ${finalQuoteNumber}`);
-            if (onSaveSuccess) onSaveSuccess(quoteIdToUse);
-
-            if (!existingQuoteId) { // Reset form for next new quote
-                setJobTitle(''); setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
+            if (onSaveSuccess) {
+                onSaveSuccess(quoteIdToUse);
+            } else if (!existingQuoteId) {
+                 navigate(`/existing-quotes`); // Navigate to edit mode for the new quote
+            }
+    
+    
+            // Resetting form for new quote or re-fetching for existing
+            if (!existingQuoteId) {
+                console.log('[SAVE QUOTE] Resetting form for new quote entry.');
+                setJobTitle('');
+                setSelectedClientId(''); // Also reset selected client ID
+                setClientName(''); setClientAddress(''); setClientEmail(''); setClientPhone('');
                 setTerms(userProfile.defaultQuoteTerms || '');
                 setProjectDescription(''); setAdditionalDetails(''); setGeneralNotes(''); setValidUntilDate(null);
-                setQuoteLines([]); setSelectedClientId(''); setQuoteData({});
+                setQuoteLines([]);
+                setQuoteData({}); // Clear any old quote data
                 setActiveSection(globalAreas.length > 0 ? globalAreas[0].name : 'Main Area');
                 clearSelections();
-            } else { // Re-fetch data if editing to ensure consistency
+            } else {
+                // Optionally re-fetch data for the edited quote to ensure UI consistency,
+                // though the batch write should mean Firestore data is now current.
+                // Forcing a re-fetch can be good if there are complex states.
+                console.log('[SAVE QUOTE] Re-fetching data for updated quote:', quoteIdToUse);
                 const updatedSnap = await getDoc(doc(db, 'users', userId, 'quotes', quoteIdToUse));
-                if (updatedSnap.exists()) setQuoteData(updatedSnap.data() as Quote);
+                if (updatedSnap.exists()) {
+                    setQuoteData(updatedSnap.data() as Quote);
+                }
                 const updatedLines = await getDocs(query(collection(db, 'users', userId, 'quotes', quoteIdToUse, 'quoteLines'), orderBy('order')));
                 setQuoteLines(updatedLines.docs.map(d => ({ id: d.id, ...d.data() } as QuoteLine)));
+                console.log('[SAVE QUOTE] Fetched updated lines:', updatedLines.docs.map(d => d.data()));
+    
             }
+    
         } catch (error: any) {
-            console.error("Error saving quote:", error);
-            setErrorQuote(`Failed to save quote: ${error.message || "Unknown error"}`);
-            alert(`Failed to save quote: ${error.message || "Unknown error"}`);
+            console.error("[SAVE QUOTE] CRITICAL ERROR in handleSaveQuote:", error);
+            console.error("[SAVE QUOTE] Error Name:", error.name);
+            console.error("[SAVE QUOTE] Error Message:", error.message);
+            console.error("[SAVE QUOTE] Error Stack:", error.stack);
+            let userMessage = `Failed to save quote: ${error.message || "Unknown error"}`;
+            if (error.code) { // Firestore error codes
+                userMessage += ` (Code: ${error.code})`;
+            }
+            setErrorQuote(userMessage);
+            alert(userMessage);
         } finally {
             setIsLoadingQuote(false);
+            console.log('[SAVE QUOTE] Process finished.');
         }
     };
 

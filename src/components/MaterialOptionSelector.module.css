@@ -1,87 +1,64 @@
 /* src/components/MaterialOptionSelector.module.css */
-
 .selectorContainer {
-    margin-top: 10px;
-    /* Add any container-specific styles if needed */
-  }
-  
-  .selectorLabel { /* If you have a label like "Select Option for..." */
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    font-size: 0.9em;
-    color: #333;
-  }
-  
-  .optionsList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 150px; /* Example max height */
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background-color: #fff;
-  }
-  
-  .optionItem {
-    padding: 8px 12px;
+    /* Styles for the main container of the selector */
+    margin-bottom: 1rem;
+}
+
+.optionsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Responsive grid */
+    gap: 0.75rem;
+}
+
+.optionButton {
+    padding: 1rem;
+    border: 1px solid var(--secondary-steel-gray);
+    background-color: var(--primary-deep-charcoal);
+    color: var(--primary-white);
     cursor: pointer;
-    border-bottom: 1px solid #eee;
-    font-size: 0.95em;
-    transition: background-color 0.15s ease-in-out;
-  }
-  
-  .optionItem:last-child {
-    border-bottom: none;
-  }
-  
-  .optionItem:hover {
-    background-color: #f0f8ff; /* Light blue hover */
-  }
-  
-  .optionItemActive { /* Style for the currently selected option, if you want to highlight it */
-    background-color: #e0efff;
+    border-radius: 4px;
+    text-align: left;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.optionButton:hover {
+    background-color: var(--secondary-steel-gray);
+    /* border-color: var(--primary-light-blue); */
+}
+
+.optionButton.selected {
+    background-color: var(--primary-light-blue);
+    color: var(--primary-white);
+    border-color: var(--accent-bright-blue);
     font-weight: bold;
-  }
-  
-  
-  .optionDescription {
-    color: #777;
-    margin-left: 8px;
-    font-size: 0.9em;
-  }
-  
-  .rateModifier {
-    color: #007bff; /* Blue for positive, or make it conditional */
-    margin-left: 8px;
-    font-size: 0.9em;
-  }
-  
-  .loadingText,
-  .errorText,
-  .noOptionsText {
-    padding: 8px 10px;
-    color: #777;
-    font-style: italic;
-  }
-  
-  .errorText {
-    color: #dc3545; /* Red for errors */
-  }
-  
-  .clearButton {
-    margin-top: 8px;
-    padding: 6px 10px;
+}
+
+.optionName {
+    font-weight: bold;
+    font-size: 1.05em;
+}
+
+.optionDetails {
     font-size: 0.85em;
-    background-color: #f8f9fa;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #495057;
-  }
-  
-  .clearButton:hover {
-    background-color: #e9ecef;
-  }
-  
+    color: var(--secondary-steel-gray);
+    /* Additional styling for price, supplier etc. if needed */
+}
+
+.optionButton.selected .optionName {
+    /* Ensure name is prominent if needed, but parent color should be fine */
+}
+
+.optionButton.selected .optionDetails {
+    color: var(--primary-white); /* Ensure details are readable on selected background */
+}
+
+.loadingMessage, .noOptionsMessage {
+    padding: 1rem;
+    text-align: center;
+    color: var(--secondary-steel-gray);
+    font-style: italic;
+}
