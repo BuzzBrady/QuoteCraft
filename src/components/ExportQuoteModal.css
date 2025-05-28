@@ -1,78 +1,109 @@
 /* src/components/ExportQuoteModal.css */
+
+/* Consider using global .modal-backdrop class in TSX if styling matches */
 .modalBackground {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.6); /* Specific opacity for this modal */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000; /* Ensure it's above other content */
+    z-index: var(--z-index-modal); /* Or higher if it can stack */
 }
 
+/* Consider using global .modal-content class in TSX if styling matches */
 .modalContent {
-    background-color: var(--primary-deep-charcoal);
-    color: var(--primary-white);
-    padding: 2rem;
-    border-radius: 8px;
-    border: 1px solid var(--secondary-steel-gray);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    background-color: var(--theme-primary-deep-charcoal);
+    color: var(--theme-primary-white);
+    padding: var(--space-xl);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--border-color); /* Global .modal-content has this */
+    box-shadow: var(--box-shadow-lg);
     width: 90%;
     max-width: 600px;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-md);
 }
 
 .modalContent h2 {
-    color: var(--primary-light-blue);
+    /* Global h2 styles are applied for font-family, weight */
+    color: var(--theme-primary-light-blue);
     margin-top: 0;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-md); /* Adjusted from 0.5rem */
     text-align: center;
+    /* font-size: 1.6em; */ /* Default h2 is 1.875rem, adjust if smaller is needed */
 }
 
 .modalContent textarea {
-    width: 100%;
+    /* Inherits some global styles for textarea */
     min-height: 200px;
-    padding: 0.75rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.9em;
-    background-color: var(--primary-deep-charcoal); /* Or a slightly lighter shade for contrast if needed */
-    color: var(--primary-white);
-    resize: vertical; /* Allow vertical resizing */
+    padding: var(--space-sm);
+    /* border, background-color, color already set by global textarea styles */
+    border-radius: var(--border-radius-md); /* Global is md */
+    font-family: monospace; /* Specific font for this textarea */
+    font-size: 0.9em;   /* Specific font size */
+    resize: vertical;
 }
 
 .modalActions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1rem;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
 }
 
-.modalActions button {
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 4px;
+/* These buttons can be replaced by <button className="btn btn-accent"> or <button className="btn btn-secondary"> in TSX */
+.modalActions button { /* Base style for buttons in this modal */
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
     cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: var(--space-sm) var(--space-md);
     font-size: 0.95em;
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
-    transition: background-color 0.2s ease;
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-fast);
 }
 
-.modalActions button:hover {
-    background-color: var(--accent-bright-blue);
+/* Default button in modal actions (e.g., Copy to Clipboard) */
+.modalActions button:not(.closeButton) {
+    color: var(--theme-primary-white);
+    background-color: var(--theme-primary-light-blue);
+    border-color: var(--theme-primary-light-blue);
 }
 
-/* If you want the close button to be styled differently, e.g., more subdued */
+.modalActions button:not(.closeButton):hover,
+.modalActions button:not(.closeButton):focus {
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.modalActions button:not(.closeButton):focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
+}
+
 .closeButton {
-    background-color: var(--secondary-steel-gray); /* Example: A more subdued color */
+    /* Extends .modalActions button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-secondary-steel-gray);
+    border-color: var(--theme-secondary-steel-gray);
 }
 
-.closeButton:hover {
-    background-color: var(--primary-light-blue); /* Lighten or change on hover */
+.closeButton:hover,
+.closeButton:focus {
+    background-color: #8e989f; /* Darker steel gray */
+    border-color: #8e989f;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.closeButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }

@@ -1,41 +1,30 @@
 // src/components/LoginPage.tsx
 import React, { useState, FormEvent } from 'react';
-import { auth } from '../config/firebaseConfig.ts'; // Import the auth instance
-import { signInWithEmailAndPassword, AuthError } from 'firebase/auth'; // Import the sign-in function
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
+import { auth } from '../config/firebaseConfig.ts';
+import { signInWithEmailAndPassword, AuthError } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
+// import styles from './LoginPage.module.css'; // Assuming no CSS module as per current file structure
 
 function LoginPage() {
-    // State for form inputs
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-
-    // State for loading and error messages
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Hook to enable navigation
     const navigate = useNavigate();
 
-    // Function to handle form submission
     const handleLogin = async (event: FormEvent) => {
-        event.preventDefault(); // Prevent default page reload
+        event.preventDefault();
         setLoading(true);
         setError(null);
 
         try {
             console.log(`Attempting login for: ${email}`);
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            // Login successful!
             console.log('Login successful:', userCredential.user);
-
-            // Navigate to the dashboard route after successful login
-            navigate('/dashboard'); // <-- Redirects to the dashboard
-
+            navigate('/dashboard');
         } catch (err) {
-            const authError = err as AuthError; // Type assertion for specific error codes
+            const authError = err as AuthError;
             console.error('Login failed:', authError.code, authError.message);
-
-            // Set user-friendly error messages
             let errorMessage = 'Login failed. Please check your credentials.';
             if (authError.code === 'auth/invalid-credential' || authError.code === 'auth/wrong-password' || authError.code === 'auth/user-not-found') {
                 errorMessage = 'Invalid email or password.';
@@ -44,57 +33,60 @@ function LoginPage() {
             } else if (authError.code === 'auth/too-many-requests') {
                 errorMessage = 'Too many login attempts. Please try again later.';
             }
-            // Consider adding more specific Firebase Auth error codes if needed
-            // e.g., 'auth/user-disabled'
-
             setError(errorMessage);
-
         } finally {
-            setLoading(false); // Re-enable button
+            setLoading(false);
         }
     };
 
     return (
-        // Add a className for styling via CSS file
-        <div className="login-container" style={styles.container}>
-            <h2 style={styles.title}>Login to QuoteCraft</h2>
-            <form onSubmit={handleLogin} style={styles.form}>
-                <div style={styles.inputGroup}>
-                    <label htmlFor="email" style={styles.label}>Email:</label>
+        // Added utility classes for layout. Assumes 'login-container' might provide some base styles or is a marker.
+        // Specific background color, shadow, and border-radius from original inline styles would ideally
+        // be part of a 'login-container' class defined in a global or page-specific CSS file.
+        <div 
+            className="login-container d-flex flex-column align-items-center p-lg mx-auto" 
+            style={{ maxWidth: '400px', marginTop: 'var(--space-xxxl)' }} // Retaining max-width and top margin as critical layout
+        >
+            <h2 className="text-center mb-lg">Login to QuoteCraft</h2>
+            <form onSubmit={handleLogin} className="d-flex flex-column w-100">
+                <div className="mb-md">
+                    <label htmlFor="email">Email:</label>
                     <input
                         type="email"
                         id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        style={styles.input}
                         placeholder="Enter your email"
+                        // Global input styles will apply
                     />
                 </div>
-                <div style={styles.inputGroup}>
-                    <label htmlFor="password" style={styles.label}>Password:</label>
+                <div className="mb-md">
+                    <label htmlFor="password">Password:</label>
                     <input
                         type="password"
                         id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        style={styles.input}
                         placeholder="Enter your password"
+                        // Global input styles will apply
                     />
                 </div>
 
-                {/* Display Error Message if login fails */}
                 {error && (
-                    <p style={styles.errorText}>{error}</p>
+                    // Using text-danger for color. Specific background/border for errors would need dedicated CSS.
+                    <p className="text-danger p-sm mb-md text-center rounded">
+                        {error}
+                    </p>
                 )}
 
-                <button type="submit" disabled={loading} style={styles.button}>
+                <button type="submit" disabled={loading} className="btn btn-primary w-100 mt-sm">
                     {loading ? 'Logging in...' : 'Login'}
                 </button>
 
                 {/* Optional: Link to Signup Page */}
-                {/* <p style={styles.linkText}>
+                {/* <p className="text-center mt-md">
                     Don't have an account? <Link to="/signup">Sign Up</Link>
                 </p> */}
             </form>
@@ -102,62 +94,6 @@ function LoginPage() {
     );
 }
 
-// Basic inline styles (consider moving to your main CSS file)
-const styles: { [key: string]: React.CSSProperties } = {
-    container: {
-        maxWidth: '400px',
-        margin: '40px auto',
-        padding: '30px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
-        backgroundColor: 'var(--card-bg, #2f2f2f)', // Use CSS variable
-    },
-    title: {
-        textAlign: 'center',
-        marginBottom: '25px',
-        color: 'rgba(255, 255, 255, 0.95)',
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    inputGroup: {
-        marginBottom: '15px',
-    },
-    label: {
-        display: 'block',
-        marginBottom: '5px',
-        fontWeight: '500',
-        fontSize: '0.9em',
-        color: 'rgba(255, 255, 255, 0.7)',
-    },
-    input: {
-        // Inherits base styles from index.css, ensures full width
-        width: '100%',
-        boxSizing: 'border-box',
-    },
-    button: {
-        // Inherits base styles from index.css
-        width: '100%',
-        padding: '10px 15px',
-        fontSize: '1.1em',
-        marginTop: '10px',
-    },
-    errorText: {
-        color: '#ff6b6b', // Reddish color for errors
-        backgroundColor: 'rgba(255, 107, 107, 0.1)', // Slight background
-        border: '1px solid rgba(255, 107, 107, 0.3)',
-        borderRadius: '4px',
-        padding: '8px',
-        textAlign: 'center',
-        fontSize: '0.9em',
-        marginBottom: '10px',
-    },
-    linkText: { // Style for optional signup link
-        textAlign: 'center',
-        marginTop: '15px',
-        fontSize: '0.9em',
-    }
-};
+// Removed inline styles object
 
 export default LoginPage;

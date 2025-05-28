@@ -1,26 +1,24 @@
 // src/components/ExportQuoteModal.tsx
 import React from 'react';
-import { QuoteExportLevel } from '../types'; // Adjust path if your types.ts is elsewhere
-import './ExportQuoteModal.css';
+import { QuoteExportLevel } from '../types';
+import './ExportQuoteModal.css'; // Regular CSS import
 
-// ---- THIS IS THE INTERFACE TO UPDATE ----
 interface ExportQuoteModalProps {
     isOpen: boolean;
     onClose: () => void;
     onExport: (exportLevel: QuoteExportLevel) => void;
-    quoteNumber?: string; // Make sure this is optional if it might not always be passed
-    quoteId: string;      // Add this if it's missing
-    isExporting: Record<string, boolean>; // Add this if it's missing
+    quoteNumber?: string;
+    quoteId: string;
+    isExporting: Record<string, boolean>;
 }
-// ---- END OF INTERFACE UPDATE ----
 
 const ExportQuoteModal: React.FC<ExportQuoteModalProps> = ({
     isOpen,
     onClose,
     onExport,
-    quoteNumber, // Now this prop is recognized
-    isExporting, // And this one
-    quoteId,     // And this one
+    quoteNumber,
+    isExporting,
+    quoteId,
 }) => {
     if (!isOpen) {
         return null;
@@ -32,42 +30,44 @@ const ExportQuoteModal: React.FC<ExportQuoteModalProps> = ({
         }
     };
 
-    // Helper to create a unique key for the isExporting state
     const createLoadingKey = (level: QuoteExportLevel) => `${quoteId}-${level}`;
 
     return (
-        <div className="export-quote-modal-overlay" onClick={handleOverlayClick} role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
-            <div className="export-quote-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="export-quote-modal-overlay modal-backdrop" onClick={handleOverlayClick} role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+            {/* Added global .modal-backdrop utility class to overlay */}
+            <div className="export-quote-modal-content modal-content" onClick={(e) => e.stopPropagation()}>
+                {/* Added global .modal-content utility class */}
                 <div className="export-quote-modal-header">
-                    <h3 id="export-modal-title">Export Quote: #{quoteNumber || 'N/A'}</h3>
+                    <h3 id="export-modal-title" className="text-primary">Export Quote: #{quoteNumber || 'N/A'}</h3> {/* Used text-primary utility */}
                     <button onClick={onClose} className="export-quote-modal-close-button" aria-label="Close modal">&times;</button>
+                    {/* .export-quote-modal-close-button to be styled by ExportQuoteModal.css using vars */}
                 </div>
                 <div className="export-quote-modal-body">
-                    <p>Choose the level of detail for your PDF export:</p>
+                    <p className="mb-md">Choose the level of detail for your PDF export:</p> {/* Used margin utility */}
                     <button
                         onClick={() => onExport('summary')}
-                        className="export-quote-modal-option-button"
+                        className="btn btn-primary w-100 mb-sm" /* Updated to global btn classes */
                         disabled={isExporting[createLoadingKey('summary')]}
                     >
                         {isExporting[createLoadingKey('summary')] ? 'Generating...' : 'Summary PDF'}
                     </button>
                     <button
                         onClick={() => onExport('standardDetail')}
-                        className="export-quote-modal-option-button"
+                        className="btn btn-primary w-100 mb-sm" /* Updated to global btn classes */
                         disabled={isExporting[createLoadingKey('standardDetail')]}
                     >
                         {isExporting[createLoadingKey('standardDetail')] ? 'Generating...' : 'Standard Detail PDF'}
                     </button>
                     <button
                         onClick={() => onExport('fullDetail')}
-                        className="export-quote-modal-option-button"
+                        className="btn btn-primary w-100" /* Updated to global btn classes */
                         disabled={isExporting[createLoadingKey('fullDetail')]}
                     >
                         {isExporting[createLoadingKey('fullDetail')] ? 'Generating...' : 'Full Detailed PDF'}
                     </button>
                 </div>
-                <div className="export-quote-modal-footer">
-                    <button onClick={onClose} className="export-quote-modal-option-button cancel">
+                <div className="export-quote-modal-footer mt-lg"> {/* Used margin utility */}
+                    <button onClick={onClose} className="btn btn-secondary">
                         Cancel
                     </button>
                 </div>

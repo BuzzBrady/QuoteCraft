@@ -1,59 +1,72 @@
 /* src/components/KitSelector.module.css */
 .kitSelectorContainer {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-md);
 }
 
 .kitGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.75rem;
+    gap: var(--space-sm);
 }
 
 .kitButton {
-    padding: 1rem;
-    border: 1px solid var(--secondary-steel-gray);
-    background-color: var(--primary-deep-charcoal);
-    color: var(--primary-white);
+    padding: var(--space-md);
+    border: 1px solid var(--border-color-input); /* Was secondary-steel-gray */
+    background-color: var(--background-color-sections);
+    color: var(--theme-primary-white);
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--border-radius-md);
     text-align: left;
     font-size: 0.95em;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: var(--transition-fast);
     display: flex;
-    flex-direction: column; /* Stack name and description */
-    gap: 0.3rem;
+    flex-direction: column;
+    gap: var(--space-xxs);
 }
 
-.kitButton:hover {
-    background-color: var(--secondary-steel-gray);
-    /* border-color: var(--primary-light-blue); */ /* Optional: highlight border on hover */
+.kitButton:hover, .kitButton:focus {
+    border-color: var(--theme-secondary-steel-gray); /* Using theme variable */
+    background-color: var(--background-color-light);
+    outline: none;
+}
+.kitButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }
 
 .kitButton.selected {
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
-    border-color: var(--accent-bright-blue);
+    background-color: var(--theme-primary-light-blue);
+    color: var(--theme-primary-white);
+    border-color: var(--theme-accent-bright-blue);
     font-weight: bold;
 }
 
+.kitButton.selected:hover, .kitButton.selected:focus {
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
+}
+.kitButton.selected:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
+}
+
 .kitName {
-    font-weight: bold;
+    font-weight: bold; /* Or 600 */
     font-size: 1.05em;
-    margin-bottom: 0.25rem; /* Space between name and description */
+    margin-bottom: var(--space-xxs);
+    color: inherit;
 }
 
 .kitDescription {
     font-size: 0.85em;
-    color: var(--secondary-steel-gray); /* Subtler color for description */
+    color: var(--text-color-muted);
 }
 
 .kitButton.selected .kitDescription {
-    color: var(--primary-white); /* Ensure description is readable on selected background */
+    color: var(--theme-primary-white);
 }
 
 .loadingKits, .noKitsMessage {
-    padding: 1rem;
+    padding: var(--space-md);
     text-align: center;
-    color: var(--secondary-steel-gray);
+    color: var(--text-color-muted);
     font-style: italic;
 }

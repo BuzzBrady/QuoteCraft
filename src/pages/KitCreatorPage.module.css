@@ -1,46 +1,44 @@
 /* src/pages/KitCreatorPage.module.css */
 .pageContainer {
-    padding: 1.5rem;
+    padding: var(--space-lg);
     max-width: 1200px;
     margin: 0 auto;
 }
 
 .title {
+    /* Global h1 styles for font-family, weight. Specific color/size */
     font-size: 2em;
-    color: var(--primary-light-blue);
+    color: var(--theme-primary-light-blue);
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-xl);
 }
 
 .formSection {
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background-color: var(--primary-deep-charcoal); /* Slightly lighter shade for section bg */
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 6px;
+    margin-bottom: var(--space-xl);
+    padding: var(--space-lg);
+    background-color: var(--background-color-sections);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
 }
 
 .formGroup {
-    margin-bottom: 1.25rem;
+    margin-bottom: var(--space-lg);
 }
 
 .formGroup label {
+    /* Global label styles */
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-xs);
     font-weight: bold;
-    color: var(--secondary-steel-gray);
+    color: var(--theme-secondary-steel-gray);
 }
 
 .formGroup input[type="text"],
 .formGroup textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
-    font-size: 1em;
-    background-color: var(--primary-deep-charcoal);
-    color: var(--primary-white);
-    box-sizing: border-box;
+    /* Inherits global input/textarea styles */
+    padding: var(--space-sm);
+    /* font-size: 1em; is global default */
+    /* border-radius: var(--border-radius-md); is global default */
 }
 
 .formGroup textarea {
@@ -49,32 +47,33 @@
 }
 
 .sectionTitle {
+    /* Could be h3 or h4 semantically */
     font-size: 1.4em;
-    color: var(--primary-light-blue);
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--secondary-steel-gray);
+    color: var(--theme-primary-light-blue);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--border-color-light);
 }
 
 .itemsListContainer {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-md);
 }
 
 .addedItemsGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem;
+    gap: var(--space-md);
 }
 
 .addedItem {
-    background-color: var(--primary-deep-charcoal); /* Card background for items */
-    padding: 1rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
+    background-color: var(--background-color-sections); /* Changed from deep-charcoal */
+    padding: var(--space-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: var(--primary-white);
+    color: var(--theme-primary-white);
 }
 
 .addedItemName {
@@ -83,65 +82,97 @@
 
 .itemControls {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-xs);
 }
 
-.buttonSmall, .removeButton {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.85em;
-    border-radius: 4px;
+/* Base for buttons on this page */
+.button {
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
     cursor: pointer;
-    border: none;
-    transition: background-color 0.2s ease;
+    user-select: none;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-fast);
+}
+
+.buttonSmall {
+    composes: button;
+    padding: var(--space-xxs) var(--space-xs);
+    font-size: 0.85em;
 }
 
 .removeButton {
-    background-color: var(--secondary-steel-gray);
-    color: var(--primary-white);
+    composes: buttonSmall; /* Extends small button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-secondary-steel-gray);
+    border-color: var(--theme-secondary-steel-gray);
 }
 
-.removeButton:hover {
-    opacity: 0.8;
+.removeButton:hover, .removeButton:focus {
+    background-color: #8e989f; /* Darker steel gray */
+    border-color: #8e989f;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.removeButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }
 
 .totalPriceDisplay {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--secondary-steel-gray);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-color-light);
     text-align: right;
     font-size: 1.3em;
     font-weight: bold;
-    color: var(--accent-bright-blue);
+    color: var(--theme-accent-bright-blue);
 }
 
 .pageActions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
-}
-
-.buttonPrimary, .buttonSecondary {
-    padding: 0.8rem 1.5rem;
-    font-size: 1em;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
 }
 
 .buttonPrimary {
-    background-color: var(--accent-bright-blue);
-    color: var(--primary-white);
+    composes: button;
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 1em;
+    color: var(--theme-primary-white);
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
 }
-.buttonPrimary:hover {
-    opacity: 0.85;
+
+.buttonPrimary:hover, .buttonPrimary:focus {
+    background-color: #00a6d8; /* Darker accent */
+    border-color: #00a6d8;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.buttonPrimary:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
 }
 
 .buttonSecondary {
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
+    composes: button;
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 1em;
+    color: var(--theme-primary-white);
+    background-color: var(--theme-primary-light-blue);
+    border-color: var(--theme-primary-light-blue);
 }
-.buttonSecondary:hover {
-    background-color: var(--accent-bright-blue);
+
+.buttonSecondary:hover, .buttonSecondary:focus {
+    background-color: var(--theme-accent-bright-blue); /* Hover to accent, as per original logic */
+    border-color: var(--theme-accent-bright-blue);
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.buttonSecondary:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
 }

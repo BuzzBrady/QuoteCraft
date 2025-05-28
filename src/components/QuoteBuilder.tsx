@@ -9,26 +9,26 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
-import { useAuth } from '../contexts/AuthContext';
-import { db } from '../config/firebaseConfig';
+import { useAuth } from '../contexts/AuthContext'; //
+import { db } from '../config/firebaseConfig'; //
 import {
     UserProfile, UserRateTemplate, Quote, QuoteLine, CombinedTask, CombinedMaterial, Task, CustomTask,
     Material, CustomMaterial, MaterialOption, KitTemplate, Area, KitLineItemTemplate,
     Client
-} from '../types';
+} from '../types'; //
 
-import { formatCurrency, findMatchingRate, groupLinesBySection } from '../utils/utils';
+import { formatCurrency, findMatchingRate, groupLinesBySection } from '../utils/utils'; //
 
-import TaskSelector from './TaskSelector';
-import MaterialSelector from './MaterialSelector';
-import MaterialOptionSelector from './MaterialOptionSelector';
-import KitSelector from './KitSelector';
-import QuoteLineItemDisplay from './QuoteLineItemDisplay';
-import AreaSelector from './AreaSelector';
-import TaskFormModal from './TaskFormModal';
-import MaterialFormModal from './MaterialFormModal';
+import TaskSelector from './TaskSelector'; //
+import MaterialSelector from './MaterialSelector'; //
+import MaterialOptionSelector from './MaterialOptionSelector'; //
+import KitSelector from './KitSelector'; //
+import QuoteLineItemDisplay from './QuoteLineItemDisplay'; //
+import AreaSelector from './AreaSelector'; //
+import TaskFormModal from './TaskFormModal'; //
+import MaterialFormModal from './MaterialFormModal'; //
 
-import styles from './QuoteBuilder.module.css';
+import styles from './QuoteBuilder.module.css'; //
 
 interface QuoteBuilderProps {
     existingQuoteId?: string;
@@ -37,7 +37,7 @@ interface QuoteBuilderProps {
 
 function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const itemSelectorRef = useRef<HTMLDivElement>(null);
-    const { currentUser } = useAuth();
+    const { currentUser } = useAuth(); //
     const userId = currentUser?.uid;
     const navigate = useNavigate();
 
@@ -119,7 +119,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     }, [jobTitle, quoteLines, existingQuoteId]);
 
     const isSaveDisabled = isLoadingQuote || validationIssues.length > 0 || !userId;
-    const saveDisabledMessage = (validationIssues.length > 0 && !isLoadingQuote) ? `Cannot save: ${validationIssues.join(' ')}` : '';
+    // Save disabled message will use global text-warning or text-muted if applied directly to the span/p tag
 
     useEffect(() => { setOverrideRateInput(currentItemDetails.rate.toString()); }, [currentItemDetails.rate]);
 
@@ -697,7 +697,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             if (onSaveSuccess) {
                 onSaveSuccess(quoteIdToUse);
             } else if (!existingQuoteId) {
-                 navigate(`/existing-quotes`); // Navigate to edit mode for the new quote
+                 navigate(`/existing-quotes`); // Navigate to existing quotes page after new save
             }
     
     
@@ -753,30 +753,33 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
 
     return (
         <div className={styles.quoteBuilderContainer}>
-            <h2 className={styles.mainHeading}>
+            {/* --- Main Heading --- */}
+            <h2 className="mb-lg"> {/* Applied global margin, removed styles.mainHeading */}
                 {existingQuoteId ? `Edit Quote (#${quoteData?.quoteNumber || '...'})` : 'Create New Quote'}
             </h2>
 
-            {isLoadingOverall && !isTaskFormModalOpen && !isMaterialFormModalOpen && <div className={styles.loadingMessage}>Loading essential data...</div>}
-            {errorQuote && <p className={styles.errorMessage}>Quote Error: {errorQuote}</p>}
-            {errorRates && <p className={styles.errorMessage}>Rates Error: {errorRates}</p>}
+            {/* --- Loading / Error Messages --- */}
+            {isLoadingOverall && !isTaskFormModalOpen && !isMaterialFormModalOpen && <div className="text-info">Loading essential data...</div>} {/* Applied global text-info */}
+            {errorQuote && <p className="text-danger">Quote Error: {errorQuote}</p>} {/* Applied global text-danger */}
+            {errorRates && <p className="text-danger">Rates Error: {errorRates}</p>} {/* Applied global text-danger */}
 
             {!isLoadingOverall && (
                 <>
+                     {/* --- Header Section (Quote Metadata) --- */}
                      <div className={styles.headerSection}>
                          <div className={styles.headerInputGroup}>
-                            <label htmlFor="jobTitle" className={styles.headerLabel}>Job Title:*</label>
-                            <input id="jobTitle" type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} required className={styles.headerInput}/>
+                            <label htmlFor="jobTitle">Job Title:*</label> {/* Removed styles.headerLabel */}
+                            <input id="jobTitle" type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} required /> {/* Removed styles.headerInput */}
                          </div>
 
                          <div className={styles.headerInputGroup}>
-                            <label htmlFor="clientSelector" className={styles.headerLabel}>Select Client (or type new):</label>
+                            <label htmlFor="clientSelector">Select Client (or type new):</label> {/* Removed styles.headerLabel */}
                             <select
                                 id="clientSelector"
                                 value={selectedClientId}
                                 onChange={(e) => setSelectedClientId(e.target.value)}
-                                className={styles.headerInput}
                                 disabled={isLoadingClients}
+                                // className removed assuming global select styles apply
                             >
                                 <option value="">-- Select Existing Client --</option>
                                 {clients.map(client => (
@@ -787,71 +790,72 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                          </div>
 
                          <div className={styles.headerInputGroup}>
-                            <label htmlFor="clientName" className={styles.headerLabel}>Client Name:</label>
-                            <input id="clientName" type="text" value={clientName} onChange={(e) => {setClientName(e.target.value); if(selectedClientId) setSelectedClientId('');}} placeholder="Or type new client name" className={styles.headerInput} />
+                            <label htmlFor="clientName">Client Name:</label> {/* Removed styles.headerLabel */}
+                            <input id="clientName" type="text" value={clientName} onChange={(e) => {setClientName(e.target.value); if(selectedClientId) setSelectedClientId('');}} placeholder="Or type new client name" /> {/* Removed styles.headerInput */}
                          </div>
                          <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
-                            <label htmlFor="clientAddress" className={styles.headerLabel}>Client Address:</label>
-                            <textarea id="clientAddress" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} rows={2} className={styles.headerTextarea} />
+                            <label htmlFor="clientAddress">Client Address:</label> {/* Removed styles.headerLabel */}
+                            <textarea id="clientAddress" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} rows={2} /> {/* Removed styles.headerTextarea */}
                          </div>
                          <div className={styles.headerInputGroup}>
-                            <label htmlFor="clientEmail" className={styles.headerLabel}>Client Email:</label>
-                            <input id="clientEmail" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className={styles.headerInput} />
+                            <label htmlFor="clientEmail">Client Email:</label> {/* Removed styles.headerLabel */}
+                            <input id="clientEmail" type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} /> {/* Removed styles.headerInput */}
                          </div>
                          <div className={styles.headerInputGroup}>
-                            <label htmlFor="clientPhone" className={styles.headerLabel}>Client Phone:</label>
-                            <input id="clientPhone" type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className={styles.headerInput} />
+                            <label htmlFor="clientPhone">Client Phone:</label> {/* Removed styles.headerLabel */}
+                            <input id="clientPhone" type="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /> {/* Removed styles.headerInput */}
                          </div>
                          <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
-                            <label htmlFor="terms" className={styles.headerLabel}>Terms:</label>
-                            <textarea id="terms" value={terms} onChange={(e) => setTerms(e.target.value)} rows={3} className={styles.headerTextarea} placeholder="Default terms are loaded from your profile if set..." />
+                            <label htmlFor="terms">Terms:</label> {/* Removed styles.headerLabel */}
+                            <textarea id="terms" value={terms} onChange={(e) => setTerms(e.target.value)} rows={3} placeholder="Default terms are loaded from your profile if set..." /> {/* Removed styles.headerTextarea */}
                          </div>
                          {/* New Input Fields */}
                          <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
-                            <label htmlFor="projectDescription" className={styles.headerLabel}>Project Description / Scope:</label>
+                            <label htmlFor="projectDescription">Project Description / Scope:</label> {/* Removed styles.headerLabel */}
                             <textarea
                                 id="projectDescription"
                                 value={projectDescription}
                                 onChange={(e) => setProjectDescription(e.target.value)}
                                 rows={4}
-                                className={styles.headerTextarea}
                                 placeholder="Detailed description of the project or scope of works..."
+                                // className removed
                             />
                         </div>
                         <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
-                            <label htmlFor="additionalDetails" className={styles.headerLabel}>Additional Details / Inclusions:</label>
+                            <label htmlFor="additionalDetails">Additional Details / Inclusions:</label> {/* Removed styles.headerLabel */}
                             <textarea
                                 id="additionalDetails"
                                 value={additionalDetails}
                                 onChange={(e) => setAdditionalDetails(e.target.value)}
                                 rows={3}
-                                className={styles.headerTextarea}
                                 placeholder="E.g., Specific materials included, site conditions, access notes..."
+                                // className removed
                             />
                         </div>
                         <div className={`${styles.headerInputGroup} ${styles.headerFullSpan}`}>
-                            <label htmlFor="generalNotes" className={styles.headerLabel}>General Notes for Client:</label>
+                            <label htmlFor="generalNotes">General Notes for Client:</label> {/* Removed styles.headerLabel */}
                             <textarea
                                 id="generalNotes"
                                 value={generalNotes}
                                 onChange={(e) => setGeneralNotes(e.target.value)}
                                 rows={3}
-                                className={styles.headerTextarea}
                                 placeholder="Any other notes for the client relevant to this quote..."
+                                // className removed
                             />
                         </div>
                         <div className={styles.headerInputGroup}>
-                            <label htmlFor="validUntilDate" className={styles.headerLabel}>Quote Valid Until:</label>
+                            <label htmlFor="validUntilDate">Quote Valid Until:</label> {/* Removed styles.headerLabel */}
                             <input
                                 id="validUntilDate"
                                 type="date"
                                 value={validUntilDate ? validUntilDate.toISOString().split('T')[0] : ''}
                                 onChange={(e) => setValidUntilDate(e.target.value ? new Date(e.target.value) : null)}
-                                className={styles.headerInput}
+                                // className removed
                             />
                         </div>
                     </div>
 
+                    {/* --- Active Section Selector --- */}
                     <div className={styles.activeSectionContainer}>
                         <label className={styles.activeSectionLabel}>Working Area/Section:</label>
                         <AreaSelector
@@ -863,8 +867,9 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                         <span className={styles.activeSectionNote}>(Items added below go here)</span>
                     </div>
 
+                    {/* --- Item Selector Section --- */}
                     <div ref={itemSelectorRef} className={styles.itemSelector}>
-                         <h3 className={styles.itemSelectorHeading}>Add New Item to "{activeSection || 'Default Section'}"</h3>
+                         <h3 className="mb-md">Add New Item to "{activeSection || 'Default Section'}"</h3> {/* Applied global margin, removed styles.itemSelectorHeading */}
                          <div className={styles.selectorsGrid}>
                             <div className={styles.selectorWrapper}>
                                 <TaskSelector
@@ -874,7 +879,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                     isLoading={isLoadingGlobals || isLoadingRates}
                                     allTasks={allTasks}
                                 />
-                                <button onClick={() => handleOpenNewTaskModal()} className={styles.quickAddButton}>+ Task</button>
+                                <button onClick={() => handleOpenNewTaskModal()} className="btn btn-success btn-sm">+ Task</button> {/* Applied global classes */}
                             </div>
                             <div className={styles.selectorWrapper}>
                                 <MaterialSelector
@@ -884,7 +889,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                     isLoading={isLoadingGlobals || isLoadingRates}
                                     allMaterials={allMaterials}
                                 />
-                                <button onClick={() => handleOpenNewMaterialModal()} className={styles.quickAddButton}>+ Material</button>
+                                <button onClick={() => handleOpenNewMaterialModal()} className="btn btn-success btn-sm">+ Material</button> {/* Applied global classes */}
                             </div>
                             {selectedMaterial && selectedMaterial.optionsAvailable && (
                                 <MaterialOptionSelector
@@ -898,7 +903,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                             <KitSelector userId={userId} onSelect={handleKitSelected} />
                             <button
                                 onClick={handleNavigateToKitCreator}
-                                className={styles.manageKitsButton}
+                                className="btn btn-info btn-sm" // Applied global classes
                                 title="Create or Edit Kits"
                             >
                                 Create & Edit Kits
@@ -921,34 +926,35 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                          <div className={styles.inputsGrid}>
                             {currentItemDetails.inputType === 'quantity' && (
                             <div className={styles.inputColumn}>
-                                <label htmlFor="quantityInput" className={styles.inputLabel}>{currentItemDetails.isHourly ? 'Hours: ' : 'Quantity: '}</label>
-                                <input id="quantityInput" type="number" value={selectedQuantity} onChange={e => setSelectedQuantity(Number(e.target.value) || 0)} min="0" step="any" className={styles.formInput} />
+                                <label htmlFor="quantityInput">{currentItemDetails.isHourly ? 'Hours: ' : 'Quantity: '}</label> {/* Removed styles.inputLabel */}
+                                <input id="quantityInput" type="number" value={selectedQuantity} onChange={e => setSelectedQuantity(Number(e.target.value) || 0)} min="0" step="any" /> {/* Removed styles.formInput */}
                             </div>
                             )}
                             {(currentItemDetails.inputType === 'quantity' || currentItemDetails.inputType === 'price') && (
                             <div className={styles.inputColumn}>
-                                <label htmlFor="rateInput" className={styles.inputLabel}>{currentItemDetails.inputType === 'quantity' ? 'Override Rate ($):' : 'Price ($):'}</label>
-                                <input id="rateInput" type="number" placeholder={currentItemDetails.inputType === 'quantity' ? `Calc: ${currentItemDetails.rate.toFixed(2)}` : ''} value={overrideRateInput} onChange={e => setOverrideRateInput(e.target.value)} min="0" step="any" className={styles.formInput} />
+                                <label htmlFor="rateInput">{currentItemDetails.inputType === 'quantity' ? 'Override Rate ($):' : 'Price ($):'}</label> {/* Removed styles.inputLabel */}
+                                <input id="rateInput" type="number" placeholder={currentItemDetails.inputType === 'quantity' ? `Calc: ${currentItemDetails.rate.toFixed(2)}` : ''} value={overrideRateInput} onChange={e => setOverrideRateInput(e.target.value)} min="0" step="any" /> {/* Removed styles.formInput */}
                                 {currentItemDetails.inputType === 'quantity' && <span className={styles.rateUnitSpan}> per {currentItemDetails.unit}</span>}
                             </div>
                             )}
                             <div className={styles.descriptionInputGroup}>
-                                <label htmlFor="descriptionInput" className={styles.inputLabel}>Line Item Description/Notes:</label>
-                                <textarea id="descriptionInput" value={selectedDescription} onChange={e => setSelectedDescription(e.target.value)} rows={2} className={styles.formTextarea}/>
+                                <label htmlFor="descriptionInput">Line Item Description/Notes:</label> {/* Removed styles.inputLabel */}
+                                <textarea id="descriptionInput" value={selectedDescription} onChange={e => setSelectedDescription(e.target.value)} rows={2} />{/* Removed styles.formTextarea */}
                             </div>
                          </div>
                          <button
                             onClick={handleAddLineItem}
                             disabled={(!selectedTask && !selectedMaterial) || isLoadingQuote || !activeSection.trim()}
-                            className={styles.addLineItemButton}
+                            className="btn btn-primary" // Applied global classes
                             title={!activeSection.trim() ? "Please select an active section first" : ""}
                           >
                             Add Line Item
                           </button>
                     </div>
 
-                    <div className="quote-builder__line-items">
-                        <h3 className={styles.lineItemsSectionHeading}>Current Quote Items</h3>
+                    {/* --- Line Items Section --- */}
+                    <div className="quote-builder__line-items"> {/* This class might be global or from App.css, kept as is */}
+                        <h3 className="mb-md">Current Quote Items</h3> {/* Applied global margin, removed styles.lineItemsSectionHeading */}
                         {quoteLines.length === 0 && <p>No items added yet.</p>}
                         {sortedSectionNames.map(sectionName => {
                             const linesInSection = groupedQuoteLines[sectionName];
@@ -956,17 +962,17 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                             const isCollapsed = collapsedSections[sectionName] ?? false;
                             const sectionSubtotal = linesInSection.reduce((sum, line) => sum + (line.lineTotal || 0), 0);
                             return (
-                                <div key={sectionName} className={styles.quoteSection}>
+                                <div key={sectionName} className={styles.quoteSection}> {/* styles.quoteSection kept for layout */}
                                     <h4
-                                        className={`${styles.sectionToggleHeader} ${isCollapsed ? styles.collapsed : ''}`}
+                                        className={`${styles.sectionToggleHeader} ${isCollapsed ? styles.collapsed : ''}`} // Kept for specific toggle styling
                                         onClick={() => toggleSectionCollapse(sectionName)}
                                     >
                                         <span> {isCollapsed ? '▶' : '▼'} {sectionName} ({linesInSection.length} items) </span>
                                         <span className={styles.sectionSubtotal}>Subtotal: {formatCurrency(sectionSubtotal)}</span>
                                     </h4>
                                     {!isCollapsed && (
-                                        <div className={styles.sectionContent}>
-                                            <ul className={styles.sectionLineItemsList}>
+                                        <div className={styles.sectionContent}> {/* Kept for layout */}
+                                            <ul className={styles.sectionLineItemsList}> {/* Kept for layout */}
                                                 {linesInSection.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((line) => (
                                                     <QuoteLineItemDisplay
                                                         key={line.id}
@@ -977,8 +983,11 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                                 ))}
                                             </ul>
                                             <button
-                                                onClick={() => handleSetActiveSection(sectionName)}
-                                                className={styles.addItemToSectionButton}
+                                                onClick={() => {
+                                                    handleSetActiveSection(sectionName);
+                                                    itemSelectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                }}
+                                                className="btn btn-secondary btn-sm mt-sm" // Applied global classes
                                             >
                                                 + Add another item to {sectionName}
                                             </button>
@@ -989,19 +998,21 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                          })}
                     </div>
 
-                    <div className={styles.actionsContainer}>
+                    {/* --- Save Actions --- */}
+                    <div className={styles.actionsContainer}> {/* Kept for layout */}
                          <button
                             onClick={handleSaveQuote}
                             disabled={isSaveDisabled}
-                            className={`${styles.saveButton} ${isSaveDisabled ? styles.saveButtonDisabled : ''}`}
+                            className="btn btn-primary btn-lg" // Applied global classes, disabled state handled by global .btn:disabled
                          >
                              {isLoadingQuote ? 'Saving...' : (existingQuoteId ? 'Update Quote' : 'Save New Quote')}
                          </button>
-                         {saveDisabledMessage && ( <span className={styles.saveDisabledMessage}>{saveDisabledMessage}</span> )}
+                         {validationIssues.length > 0 && !isLoadingQuote && ( <span className="text-warning">{validationIssues.join(' ')}</span> )} {/* Applied global text-warning, updated message source */}
                      </div>
                 </>
             )}
 
+            {/* --- Modals --- */}
             {userId && (
                 <>
                     <TaskFormModal

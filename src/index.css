@@ -1,171 +1,528 @@
-/* Example CSS for QuoteBuilder Layout - Add to App.css or index.css */
+/* src/index.css */
 
-/* Basic page container */
-.page-container {
-  padding: 1rem 2rem; /* Example padding */
-  max-width: 1400px; /* Example max width */
-  margin: 0 auto; /* Center page content */
-}
-
-.quote-builder-container h2,
-.quote-builder-container h3 {
-  /* Add spacing or styling for headings */
-  margin-bottom: 0.75rem;
-}
-
-/* --- Top Section --- */
-.quote-builder-top-section {
-  margin-bottom: 1.5rem;
-  /* Add styles for quote name input, area selector alignment if needed */
-  display: flex;
-  flex-wrap: wrap; /* Allow items to wrap */
-  align-items: center;
-  gap: 1rem;
-}
-.quote-builder-top-section label {
-  margin-right: 0.5rem;
-}
-.quote-builder-top-section input[type="text"] {
-    padding: 0.5rem;
-    min-width: 250px; /* Example width */
-}
-
-
-/* --- Main Content Layout --- */
-.quote-builder-main-content {
-  display: flex;
-  flex-direction: row; /* Columns side-by-side */
-  gap: 1.5rem; /* Space between columns */
-  margin-bottom: 1.5rem;
-  /* Adjust alignment if needed, e.g., align-items: flex-start; */
-}
-
-.quote-builder-column {
-  /* Basic column styling */
-  padding: 1rem;
-  border: 1px solid #444; /* Example border - remove later */
-  border-radius: 4px;
-  min-height: 200px; /* Example minimum height */
-}
-
-/* Specific column widths (adjust as needed) */
-.category-column,
-.task-column {
-  flex: 0 0 200px; /* Don't grow, don't shrink, base width 200px */
-}
-
-.material-column {
-  flex: 1; /* Allow material column to grow */
-  /* This will later hold the material list + details */
-}
-
-
-/* --- Vertical Button Lists (Used inside Selectors) --- */
-.button-list-vertical {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem; /* Space between buttons vertically */
-  align-items: stretch; /* Make buttons fill width */
-}
-
-/* --- General Button Styling --- */
-.selector-button {
-  padding: 0.6rem 1rem;
-  border: 1px solid #555;
-  background-color: #333;
-  color: #eee;
-  cursor: pointer;
-  border-radius: 4px;
-  text-align: left;
-  transition: background-color 0.2s ease;
-}
-
-.selector-button:hover {
-  background-color: #444;
-}
-
-.selector-button.selected {
-  background-color: #5a5aee; /* Example selected color */
-  border-color: #7a7aff;
-  color: white;
-  font-weight: bold;
-}
-
-/* Placeholder Text */
-.selector-placeholder {
-  color: #888;
-  font-style: italic;
-  padding: 1rem;
-  text-align: center;
-}
-
-
-/* --- Bottom Section --- */
-.quote-builder-bottom-section {
-  margin-top: 2rem;
-  border-top: 1px solid #444;
-  padding-top: 1.5rem;
-}
-.quote-builder-bottom-section button {
-    /* Style save button */
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    cursor: pointer;
-}
-
-/* Add more specific styles, responsive adjustments etc. as needed */
+/* -------------------------------------------------------------------------- */
+/* 1. ROOT VARIABLES                             */
+/* -------------------------------------------------------------------------- */
 
 :root {
-  --primary-deep-charcoal: #2C2C2C;
-  --primary-light-blue: #4DA8DA;
-  --primary-white: #FFFFFF;
-  --secondary-steel-gray: #A9B1B7;
-  --accent-bright-blue: #00BFFF;
+  /* Primary Font Family */
+  --font-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
+  /* Color Palette - Custom Theme */
+  --theme-primary-deep-charcoal: #2C2C2C;
+  --theme-primary-light-blue: #4DA8DA;
+  --theme-primary-light-blue-rgb: 77, 168, 218; /* For RGBA */
+  --theme-primary-white: #FFFFFF;
+  --theme-secondary-steel-gray: #A9B1B7;
+  --theme-secondary-steel-gray-rgb: 169, 177, 183; /* For RGBA */
+  --theme-accent-bright-blue: #00BFFF;
+  --theme-accent-bright-blue-rgb: 0, 191, 255; /* For RGBA */
+
+  /* Aliases to existing convention if helpful, or use theme colors directly */
+  --primary-color: var(--theme-primary-light-blue);
+  --primary-color-rgb: var(--theme-primary-light-blue-rgb);
+  --primary-color-darker: #3a8bb9;  /* Consider deriving from theme-primary-light-blue or defining explicitly */
+  --primary-color-lighter: #6dc0ef;
+  --primary-text-color: var(--theme-primary-white);
+
+  --secondary-color: var(--theme-secondary-steel-gray);
+  --secondary-color-rgb: var(--theme-secondary-steel-gray-rgb);
+  --secondary-color-darker: #8e989f;
+  --secondary-color-lighter: #c9d0d5;
+  --secondary-text-color: var(--theme-primary-deep-charcoal);
+
+  --accent-color: var(--theme-accent-bright-blue);
+  --accent-color-rgb: var(--theme-accent-bright-blue-rgb);
+  --accent-color-darker: #00a6d8;
+  --accent-color-lighter: #33caff;
+  --accent-text-color: var(--theme-primary-white);
+
+  --text-color-main: var(--theme-primary-white);
+  --text-color-light: #F8F9FA;
+  --text-color-muted: var(--theme-secondary-steel-gray);
+  --text-color-dark: #212529;
+  --text-color-headings: var(--theme-primary-white);
+
+  --background-color-main: var(--theme-primary-deep-charcoal);
+  --background-color-sections: #3a3a3a; /* Keep or adjust based on theme */
+  --background-color-light: #474747;
+  --background-color-dark: #1e1e1e;
+
+  --border-color: #5a5a5a;
+  --border-color-light: #757575;
+  --border-color-input: var(--theme-secondary-steel-gray); /* Using theme color */
+
+  /* Semantic Colors */
+  --color-success: #28a745;
+  --color-success-text: #FFFFFF;
+  --color-error: #dc3545;
+  --color-error-text: #FFFFFF;
+  --color-warning: #ffc107;
+  --color-warning-text: #212529;
+  --color-info: #17a2b8;
+  --color-info-text: #FFFFFF;
+
+  /* Spacing System (8px grid) */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-xxxl: 64px;
+
+  /* Border Radius */
+  --border-radius-sm: 3px;
+  --border-radius-md: 5px;
+  --border-radius-lg: 8px;
+
+  /* Transitions */
+  --transition-fast: all 0.15s ease-in-out;
+  --transition-smooth: all 0.3s ease-in-out;
+
+  /* Box Shadows */
+  --box-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --box-shadow-md: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  --box-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+  --focus-ring-shadow: 0 0 0 0.2rem; /* Base for focus rings */
+
+  /* Z-Indexes */
+  --z-index-dropdown: 1000;
+  --z-index-modal-backdrop: 1030;
+  --z-index-modal: 1040;
+  --z-index-popover: 1050;
+  --z-index-tooltip: 1060;
+  --z-index-toast: 1070;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 2. CSS RESET                                 */
+/* -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
 }
 
 body {
-  background-color: var(--primary-deep-charcoal);
-  color: var(--primary-white);
-  font-family: sans-serif; /* Example font */
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  line-height: 1.6;
+  background-color: var(--background-color-main);
+  color: var(--text-color-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
+#root {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 3. GLOBAL ELEMENT STYLES                           */
+/* -------------------------------------------------------------------------- */
+
+/* --- Typography --- */
 h1, h2, h3, h4, h5, h6 {
-  color: var(--primary-light-blue);
+  font-family: var(--font-primary);
+  color: var(--text-color-headings);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 0;
+  margin-bottom: var(--space-md);
+}
+
+h1 { font-size: 2.25rem; font-weight: 800; color: var(--theme-primary-light-blue); } /* Adjusted to theme */
+h2 { font-size: 1.875rem; font-weight: 700; color: var(--theme-primary-light-blue); } /* Adjusted to theme */
+h3 { font-size: 1.5rem; font-weight: 600; color: var(--theme-primary-light-blue); }   /* Adjusted to theme */
+h4 { font-size: 1.25rem; font-weight: 600; color: var(--theme-secondary-steel-gray); } /* Adjusted to theme for less emphasis */
+h5 { font-size: 1.125rem; font-weight: 500; color: var(--theme-secondary-steel-gray); } /* Adjusted to theme */
+h6 { font-size: 1rem; font-weight: 500; color: var(--theme-secondary-steel-gray); }     /* Adjusted to theme */
+
+p {
+  margin-bottom: var(--space-md);
 }
 
 a {
-  color: var(--primary-light-blue);
+  color: var(--theme-primary-light-blue);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+a:hover, a:focus {
+  color: var(--theme-accent-bright-blue);
+  text-decoration: underline;
 }
 
-a:hover {
-  color: var(--accent-bright-blue);
+small {
+  font-size: 0.875em;
+  color: var(--text-color-muted);
 }
 
-button {
-  background-color: var(--primary-light-blue);
-  color: var(--primary-white);
-  border: none;
-  padding: 10px 20px;
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+  color: var(--text-color-light);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border-color);
+  margin: var(--space-lg) 0;
+}
+
+/* --- Forms --- */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  display: block;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-color-main);
+  background-color: var(--background-color-sections); /* Or var(--theme-primary-deep-charcoal) if inputs match main bg */
+  background-clip: padding-box;
+  border: 1px solid var(--border-color-input);
+  border-radius: var(--border-radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--theme-primary-light-blue);
+  outline: 0;
+  box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.25);
+}
+
+::placeholder {
+  color: var(--text-color-muted);
+  opacity: 1;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  margin-right: var(--space-xs);
+  accent-color: var(--theme-primary-light-blue);
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23A9B1B7' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right var(--space-md) center;
+  background-size: 16px 12px;
+  padding-right: calc(var(--space-md) * 2.5);
+}
+
+/* --- Buttons --- */
+.btn {
+  display: inline-block;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
   cursor: pointer;
-  border-radius: 4px;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-fast);
+  text-decoration: none;
 }
 
-button:hover {
-  background-color: var(--accent-bright-blue);
+.btn:hover, .btn:focus {
+  text-decoration: none;
 }
 
-/* Example of using in a hypothetical .some-element */
-.some-element {
-  background-color: var(--primary-deep-charcoal);
-  color: var(--primary-white);
-  border: 1px solid var(--secondary-steel-gray);
+.btn:focus {
+  outline: 0;
+  box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.25);
 }
 
-.some-element h2 {
-  color: var(--primary-light-blue);
+.btn:disabled,
+.btn.disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-.some-element .important-button {
-  background-color: var(--accent-bright-blue);
-  color: var(--primary-white);
+.btn-primary {
+  color: var(--theme-primary-white);
+  background-color: var(--theme-primary-light-blue);
+  border-color: var(--theme-primary-light-blue);
 }
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--theme-accent-bright-blue); /* Using accent for hover on primary buttons */
+  border-color: var(--theme-accent-bright-blue);
+  color: var(--theme-primary-white);
+}
+.btn-primary:focus {
+  box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
+}
+
+.btn-secondary {
+  color: var(--theme-primary-white);
+  background-color: var(--theme-secondary-steel-gray);
+  border-color: var(--theme-secondary-steel-gray);
+}
+.btn-secondary:hover, .btn-secondary:focus {
+  background-color: #8e989f; /* Darker steel gray */
+  border-color: #8e989f;
+  color: var(--theme-primary-white);
+}
+.btn-secondary:focus {
+  box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
+}
+
+.btn-accent {
+  color: var(--theme-primary-white);
+  background-color: var(--theme-accent-bright-blue);
+  border-color: var(--theme-accent-bright-blue);
+}
+.btn-accent:hover, .btn-accent:focus {
+  background-color: #00a6d8; /* Darker bright blue */
+  border-color: #00a6d8;
+  color: var(--theme-primary-white);
+}
+.btn-accent:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
+}
+
+.btn-danger {
+  color: var(--color-error-text);
+  background-color: var(--color-error);
+  border-color: var(--color-error);
+}
+.btn-danger:hover, .btn-danger:focus {
+  background-color: #c82333; /* Darker shade of #dc3545 */
+  border-color: #bd2130;
+  color: var(--color-error-text);
+}
+
+/* --- Tables --- */
+table {
+  width: 100%;
+  margin-bottom: var(--space-lg);
+  color: var(--text-color-main);
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: var(--space-sm) var(--space-md);
+  vertical-align: top;
+  border-top: 1px solid var(--border-color);
+  text-align: left;
+}
+
+thead th {
+  vertical-align: bottom;
+  border-bottom: 2px solid var(--border-color-light);
+  font-weight: 600;
+  color: var(--text-color-light);
+}
+
+/* --- Modals --- */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-index-modal-backdrop);
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.65); /* Slightly darker backdrop */
+}
+
+.modal-content {
+  background-color: var(--background-color-sections);
+  border-radius: var(--border-radius-lg);
+  padding: var(--space-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow-lg);
+}
+
+/* -------------------------------------------------------------------------- */
+/* 4. UTILITY CLASSES                              */
+/* -------------------------------------------------------------------------- */
+.mt-xs { margin-top: var(--space-xs) !important; }
+.mt-sm { margin-top: var(--space-sm) !important; }
+.mt-md { margin-top: var(--space-md) !important; }
+.mt-lg { margin-top: var(--space-lg) !important; }
+.mt-xl { margin-top: var(--space-xl) !important; }
+
+.mb-xs { margin-bottom: var(--space-xs) !important; }
+.mb-sm { margin-bottom: var(--space-sm) !important; }
+.mb-md { margin-bottom: var(--space-md) !important; }
+.mb-lg { margin-bottom: var(--space-lg) !important; }
+.mb-xl { margin-bottom: var(--space-xl) !important; }
+
+.ml-xs { margin-left: var(--space-xs) !important; }
+.ml-sm { margin-left: var(--space-sm) !important; }
+.ml-md { margin-left: var(--space-md) !important; }
+.ml-lg { margin-left: var(--space-lg) !important; }
+.ml-xl { margin-left: var(--space-xl) !important; }
+
+.mr-xs { margin-right: var(--space-xs) !important; }
+.mr-sm { margin-right: var(--space-sm) !important; }
+.mr-md { margin-right: var(--space-md) !important; }
+.mr-lg { margin-right: var(--space-lg) !important; }
+.mr-xl { margin-right: var(--space-xl) !important; }
+
+.m-0 { margin: 0 !important; }
+.m-xs { margin: var(--space-xs) !important; }
+.m-sm { margin: var(--space-sm) !important; }
+.m-md { margin: var(--space-md) !important; }
+.m-lg { margin: var(--space-lg) !important; }
+.m-xl { margin: var(--space-xl) !important; }
+
+.p-xs { padding: var(--space-xs) !important; }
+.p-sm { padding: var(--space-sm) !important; }
+.p-md { padding: var(--space-md) !important; }
+.p-lg { padding: var(--space-lg) !important; }
+.p-xl { padding: var(--space-xl) !important; }
+/* etc. */
+
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+
+.text-primary { color: var(--theme-primary-light-blue) !important; }
+.text-secondary { color: var(--theme-secondary-steel-gray) !important; }
+.text-accent { color: var(--theme-accent-bright-blue) !important; }
+.text-success { color: var(--color-success) !important; }
+.text-danger { color: var(--color-error) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-info { color: var(--color-info) !important; }
+.text-white { color: var(--theme-primary-white) !important; }
+.text-muted { color: var(--text-color-muted) !important;}
+
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-inline { display: inline !important; }
+.d-inline-block { display: inline-block !important; }
+.d-flex { display: flex !important; }
+.d-inline-flex { display: inline-flex !important; }
+
+.flex-column { flex-direction: column !important; }
+.flex-row { flex-direction: row !important; }
+.justify-content-start { justify-content: flex-start !important; }
+.justify-content-end { justify-content: flex-end !important; }
+.justify-content-center { justify-content: center !important; }
+.justify-content-between { justify-content: space-between !important; }
+.justify-content-around { justify-content: space-around !important; }
+.align-items-start { align-items: flex-start !important; }
+.align-items-end { align-items: flex-end !important; }
+.align-items-center { align-items: center !important; }
+.align-items-baseline { align-items: baseline !important; }
+.align-items-stretch { align-items: stretch !important; }
+
+.w-100 { width: 100% !important; }
+.h-100 { height: 100% !important; }
+
+.rounded { border-radius: var(--border-radius-md) !important; }
+.rounded-sm { border-radius: var(--border-radius-sm) !important; }
+.rounded-lg { border-radius: var(--border-radius-lg) !important; }
+.rounded-circle { border-radius: 50% !important; }
+.rounded-pill { border-radius: 50rem !important; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.clearfix::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 5. APPLICATION-SPECIFIC STYLES                        */
+/* -------------------------------------------------------------------------- */
+
+/* Using theme colors for global styles that were previously missed or for adjustments */
+body {
+  background-color: var(--theme-primary-deep-charcoal);
+  color: var(--theme-primary-white);
+}
+
+h1, h2, h3 {
+  color: var(--theme-primary-light-blue);
+}
+
+h4, h5, h6 {
+  color: var(--theme-secondary-steel-gray);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  background-color: var(--theme-primary-deep-charcoal); /* Ensuring input backgrounds align with theme */
+  color: var(--theme-primary-white);
+  border: 1px solid var(--theme-secondary-steel-gray);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--theme-primary-light-blue);
+  box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.35); /* Slightly stronger focus */
+}
+
+/* Any other global overrides or very specific base styles for QuoteCraftv6 */

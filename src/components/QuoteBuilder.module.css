@@ -1,15 +1,16 @@
 /* src/components/QuoteBuilder.module.css */
 .quoteBuilderContainer {
-    padding: 1.5rem;
-    /* background-color: #f8f9fa; */ /* Removed - will inherit from body */
-    border-radius: 8px;
-    /* box-shadow: 0 0 15px rgba(0,0,0,0.05); */ /* Re-evaluate shadow */
+    padding: var(--space-lg);
+    border-radius: var(--border-radius-lg);
+    /* background-color: var(--background-color-sections); */ /* Optional: if page needs distinct bg */
+    /* box-shadow: var(--box-shadow-md); */
 }
 
 .title {
-    color: var(--primary-light-blue);
+    /* Global h1/h2 styles for font-family, weight. Specific color/size */
+    color: var(--theme-primary-light-blue);
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-xl);
     font-size: 2em;
 }
 
@@ -17,112 +18,124 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
     flex-wrap: wrap;
 }
 
 .quoteNameInput input[type="text"] {
-    padding: 0.6rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
-    font-size: 1em;
-    background-color: var(--primary-deep-charcoal);
-    color: var(--primary-white);
+    /* Inherits global input styles */
+    padding: var(--space-sm) var(--space-md); /* Global default */
+    /* border-radius: var(--border-radius-md); from global */
     min-width: 250px;
 }
 
 .mainLayout {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
 }
 
-/* For wider screens, perhaps a multi-column layout */
-@media (min-width: 992px) { /* Large devices (desktops, 992px and up) */
+@media (min-width: 992px) {
     .mainLayout {
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-         /* Adjust based on typical content: e.g., 250px 1fr 250px for 3 columns */
     }
 }
 
 .column {
-    /* background-color: var(--primary-deep-charcoal); */ /* Can be slightly lighter than body bg for card effect */
-    padding: 1rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 6px;
+    background-color: var(--background-color-sections);
+    padding: var(--space-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
 }
 
 .sectionTitle {
+    /* Could be h3 or h4 semantically */
     font-size: 1.3em;
-    color: var(--primary-light-blue);
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--secondary-steel-gray);
+    color: var(--theme-primary-light-blue);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--border-color-light);
 }
 
 .summaryBox {
-    /* background-color: #e9ecef; */ /* Old color */
-    background-color: var(--primary-deep-charcoal); /* Or a slightly lighter shade */
-    padding: 1.5rem;
-    border-radius: 6px;
-    border: 1px solid var(--secondary-steel-gray);
-    margin-top: 1rem; /* Space above summary if it's in its own column/section */
-    color: var(--primary-white);
+    background-color: var(--background-color-sections);
+    padding: var(--space-lg);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    margin-top: var(--space-md);
+    color: var(--theme-primary-white);
 }
 
 .summaryItem, .summaryTotal {
     display: flex;
     justify-content: space-between;
-    padding: 0.5rem 0;
+    padding: var(--space-xs) 0;
 }
 
 .summaryTotal {
     font-weight: bold;
     font-size: 1.2em;
-    margin-top: 0.5rem;
-    border-top: 1px solid var(--secondary-steel-gray);
-    padding-top: 1rem;
+    margin-top: var(--space-xs);
+    border-top: 1px solid var(--border-color-light);
+    padding-top: var(--space-md);
 }
 
 .totalPrice {
-    color: var(--accent-bright-blue);
+    color: var(--theme-accent-bright-blue);
 }
 
 .actionsContainer {
     display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--secondary-steel-gray);
+    justify-content: flex-end;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color-light);
+}
+
+/* Base for buttons in actionsContainer */
+.buttonBase {
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 1em;
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-fast);
 }
 
 .actionButton, .saveQuoteButton, .exportQuoteButton {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1em;
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
-    transition: background-color 0.2s ease;
+    composes: buttonBase;
+    color: var(--theme-primary-white);
+    background-color: var(--theme-primary-light-blue);
+    border-color: var(--theme-primary-light-blue);
 }
 
-.actionButton:hover, .saveQuoteButton:hover, .exportQuoteButton:hover {
-    background-color: var(--accent-bright-blue);
+.actionButton:hover, .saveQuoteButton:hover, .exportQuoteButton:hover,
+.actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
 }
 
-/* Placeholder styling */
 .placeholder {
-    color: var(--secondary-steel-gray);
+    color: var(--text-color-muted);
     text-align: center;
-    padding: 2rem;
+    padding: var(--space-xl);
     font-style: italic;
 }
 
-/* Styling for selectors within QuoteBuilder if not handled by their own modules */
 .taskSelectorContainer, .materialSelectorContainer, .areaSelectorContainer {
-    margin-bottom: 1rem; /* Add space below selectors */
+    margin-bottom: var(--space-md);
 }

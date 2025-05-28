@@ -1,51 +1,64 @@
 /* src/pages/ManageCustomItemsPage.css */
 .manageItemsContainer {
     max-width: 900px;
-    margin: 2rem auto;
-    padding: 1.5rem;
-    /* background-color: #f8f9fa; */ /* Removed, inherit from body */
-    border-radius: 8px;
-    /* box-shadow: 0 2px 10px rgba(0,0,0,0.07); */ /* Re-evaluate shadow */
+    margin: var(--space-xl) auto;
+    padding: var(--space-lg);
+    border-radius: var(--border-radius-lg);
+    /* background-color: var(--background-color-sections); */ /* Optional card-like bg for the page */
+    /* box-shadow: var(--box-shadow-md); */
 }
 
 .manageItemsContainer h1 {
-    color: var(--primary-light-blue);
+    /* Global h1 styles for font-family, weight. Specific color/size for this page */
+    color: var(--theme-primary-light-blue);
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-xl);
     font-size: 2em;
 }
 
 .tabNavigation {
     display: flex;
     justify-content: center;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid var(--secondary-steel-gray);
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--theme-secondary-steel-gray); /* Main underline for the tab bar */
 }
 
 .tabNavigation button {
-    padding: 0.75rem 1.5rem;
-    margin: 0 0.25rem; /* Small gap between buttons */
+    padding: var(--space-sm) var(--space-lg);
+    margin: 0 var(--space-xxs);
     cursor: pointer;
     background-color: transparent;
-    border: none; /* Remove default border */
-    border-bottom: 3px solid transparent; /* Placeholder for active indicator */
-    color: var(--primary-light-blue);
-    font-size: 1.1em;
-    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+    border: none;
+    border-bottom: 3px solid transparent; /* Active indicator placeholder */
+    color: var(--theme-primary-light-blue);
+    font-size: 1.1em; /* Specific font size for tabs */
+    font-weight: 500; /* Slightly less bold than default buttons */
+    transition: var(--transition-fast);
+    line-height: 1.5; /* Consistency with buttons */
 }
 
-.tabNavigation button:hover {
-    color: var(--accent-bright-blue);
+.tabNavigation button:hover,
+.tabNavigation button:focus {
+    color: var(--theme-accent-bright-blue);
+    /* border-bottom-color: var(--theme-accent-bright-blue); Optional: show indicator on hover too */
+    outline: none;
 }
 
 .tabNavigation button.active {
-    color: var(--accent-bright-blue);
-    border-bottom-color: var(--accent-bright-blue);
-    font-weight: bold;
+    color: var(--theme-accent-bright-blue);
+    border-bottom-color: var(--theme-accent-bright-blue);
+    font-weight: 700; /* Bolder for active tab */
 }
 
 .tabContent {
     /* Content is styled by CustomMaterialsManager.module.css and CustomTasksManager.module.css */
-    /* No specific styling needed here unless there's a container around them */
-    padding-top: 1rem; /* Add some space if needed */
+    padding-top: var(--space-lg); /* Adjusted from 1rem */
+    /* background-color: var(--background-color-sections); */ /* If tab content needs a distinct bg */
+    /* border: 1px solid var(--border-color); */
+    /* border-top: none; */
+    /* border-radius: 0 0 var(--border-radius-md) var(--border-radius-md); */
 }
+
+/* Note: Styles for .tab-button, .tabs-container etc. that were in App.css should be reviewed.
+   If those are meant for *this* page, they should be consolidated here or into a reusable Tab component CSS.
+   The styles above are based on what was already in ManageCustomItemsPage.css. */

@@ -1,14 +1,9 @@
 // src/components/QuickAddMaterialModal.tsx
-// Modal for quickly adding a new custom material, now with option management.
-// Imported formatCurrency utility.
-
 import React, { useState, useEffect } from 'react';
 import styles from './QuickAddMaterialModal.module.css'; 
 import { MaterialOption } from '../types'; 
 import { v4 as uuidv4 } from 'uuid';
-
-// --- IMPORT SHARED UTILITY ---
-import { formatCurrency } from '../utils/utils'; // Adjust path if your utils.ts is elsewhere
+import { formatCurrency } from '../utils/utils';
 
 interface QuickAddMaterialModalProps {
     isOpen: boolean;
@@ -117,27 +112,27 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
                 <h2 className={styles.modalTitle}>Quick Add New Material</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="materialName" className={styles.label}>Material Name*:</label>
-                        <input type="text" id="materialName" value={name} onChange={(e) => setName(e.target.value)} required className={styles.input} />
+                <form onSubmit={handleSubmit} className={styles.materialFormContainer}>
+                    <div className="form-group mb-md">
+                        <label htmlFor="materialName">Material Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
+                        <input type="text" id="materialName" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Enter material name" />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="materialDescription" className={styles.label}>Description:</label>
-                        <textarea id="materialDescription" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={styles.textarea}></textarea>
+                    <div className="form-group mb-md">
+                        <label htmlFor="materialDescription">Description:</label>
+                        <textarea id="materialDescription" value={description} onChange={(e) => setDescription(e.target.value)} rows={2}></textarea>
                     </div>
-                    <div className={styles.formGroupRow}>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="defaultRate" className={styles.label}>Default Rate ($):</label>
-                            <input type="number" id="defaultRate" value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} step="any" className={styles.input} />
+                    <div className={`${styles.formGroupRow} mb-md`}>
+                        <div className="form-group">
+                            <label htmlFor="defaultRate">Default Rate ($):</label>
+                            <input type="number" id="defaultRate" value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} step="any" />
                         </div>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="defaultUnit" className={styles.label}>Default Unit:</label>
-                            <input type="text" id="defaultUnit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} className={styles.input} />
+                        <div className="form-group">
+                            <label htmlFor="defaultUnit">Default Unit:</label>
+                            <input type="text" id="defaultUnit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="e.g. item" />
                         </div>
                     </div>
-                    <div className={styles.formGroup}>
-                        <label className={styles.checkboxLabel}>
+                    <div className="form-group mb-md">
+                        <label className={styles.checkboxLabel}> {/* Retain styles.checkboxLabel for specific flex/alignment if needed */}
                             <input type="checkbox" checked={optionsAvailable} onChange={handleOptionsAvailableChange} />
                             Has Options?
                         </label>
@@ -148,42 +143,42 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
                             <h4 className={styles.optionsTitle}>Manage Options</h4>
                             {currentOptions.length > 0 && (
                                 <ul className={styles.optionsListPreview}>
-                                    {currentOptions.map((opt) => ( // Removed index as opt.id is unique client-side
+                                    {currentOptions.map((opt) => (
                                         <li key={opt.id} className={styles.optionPreviewItem}>
                                             <span>{opt.name} {opt.rateModifier ? `(${opt.rateModifier >=0 ? '+' : ''}${formatCurrency(opt.rateModifier)})` : ''}</span>
-                                            <button type="button" onClick={() => handleRemoveTempOption(opt.id)} className={styles.removeOptionButton}>Remove</button>
+                                            <button type="button" onClick={() => handleRemoveTempOption(opt.id)} className="btn btn-danger btn-sm">Remove</button>
                                         </li>
                                     ))}
                                 </ul>
                             )}
                             
-                            <button type="button" onClick={() => {setShowOptionSubForm(prev => !prev); setTempOption({...initialTempOptionData, id:uuidv4()});}} className={styles.toggleOptionFormButton}>
+                            <button type="button" onClick={() => {setShowOptionSubForm(prev => !prev); setTempOption({...initialTempOptionData, id:uuidv4()});}} className="btn btn-secondary mb-sm">
                                 {showOptionSubForm ? 'Hide Option Form' : '+ Add New Option'}
                             </button>
 
                             {showOptionSubForm && (
                                 <div className={styles.optionSubForm}>
-                                    <div className={styles.formGroup}>
-                                        <label htmlFor="optionName" className={styles.label}>Option Name*:</label>
-                                        <input type="text" id="optionName" name="name" value={tempOption.name} onChange={handleTempOptionChange} className={styles.input} />
+                                    <div className="form-group mb-sm">
+                                        <label htmlFor="optionName">Option Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
+                                        <input type="text" id="optionName" name="name" value={tempOption.name} onChange={handleTempOptionChange} />
                                     </div>
-                                    <div className={styles.formGroup}>
-                                        <label htmlFor="optionRateModifier" className={styles.label}>Rate Modifier ($):</label>
-                                        <input type="number" id="optionRateModifier" name="rateModifier" value={tempOption.rateModifier} onChange={handleTempOptionChange} step="any" className={styles.input} />
+                                    <div className="form-group mb-sm">
+                                        <label htmlFor="optionRateModifier">Rate Modifier ($):</label>
+                                        <input type="number" id="optionRateModifier" name="rateModifier" value={tempOption.rateModifier} onChange={handleTempOptionChange} step="any" />
                                     </div>
-                                    <div className={styles.formGroup}>
-                                        <label htmlFor="optionDescription" className={styles.label}>Option Description:</label>
-                                        <textarea id="optionDescription" name="description" value={tempOption.description} onChange={handleTempOptionChange} rows={2} className={styles.textarea}></textarea>
+                                    <div className="form-group mb-sm">
+                                        <label htmlFor="optionDescription">Option Description:</label>
+                                        <textarea id="optionDescription" name="description" value={tempOption.description} onChange={handleTempOptionChange} rows={2}></textarea>
                                     </div>
-                                    <button type="button" onClick={handleAddTempOption} className={styles.addOptionButton}>Add Option to List</button>
+                                    <button type="button" onClick={handleAddTempOption} className="btn btn-primary w-100">Add Option to List</button>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    <div className={styles.buttonGroup}>
-                        <button type="submit" className={styles.saveButton}>Save Material</button>
-                        <button type="button" onClick={onClose} className={styles.cancelButton}>Cancel</button>
+                    <div className={`${styles.buttonGroup} mt-lg`}>
+                        <button type="submit" className="btn btn-accent">Save Material</button>
+                        <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
                     </div>
                 </form>
             </div>

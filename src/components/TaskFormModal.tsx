@@ -26,7 +26,7 @@ function TaskFormModal({ isOpen, onClose, onSave, initialData, mode }: TaskFormM
     const [defaultUnit, setDefaultUnit] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [formError, setFormError] = useState<string | null>(null);
-    const [isSaving, setIsSaving] = useState(false); // Added for button state
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -38,7 +38,7 @@ function TaskFormModal({ isOpen, onClose, onSave, initialData, mode }: TaskFormM
                 setDescription(initialData.description || '');
             } else {
                 setName('');
-                setDefaultUnit('item'); // Default for new tasks
+                setDefaultUnit('item');
                 setDescription('');
             }
         }
@@ -59,7 +59,6 @@ function TaskFormModal({ isOpen, onClose, onSave, initialData, mode }: TaskFormM
                 defaultUnit: defaultUnit.trim() || 'item',
                 description: description.trim(),
             });
-            // onClose will be called by the parent (CustomTasksManager) after successful save
         } catch (error) {
             console.error("Error in TaskFormModal onSave:", error);
             setFormError("Failed to save task. Please try again.");
@@ -70,10 +69,10 @@ function TaskFormModal({ isOpen, onClose, onSave, initialData, mode }: TaskFormM
 
     const footerContent = (
         <>
-            <button type="button" className={styles.secondaryButton} onClick={onClose} disabled={isSaving}>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSaving}>
                 Cancel
             </button>
-            <button type="submit" form="task-form" className={styles.primaryButton} disabled={isSaving}>
+            <button type="submit" form="task-form" className="btn btn-accent" disabled={isSaving}>
                 {isSaving ? 'Saving...' : (mode === 'add' ? 'Add Task' : 'Save Changes')}
             </button>
         </>
@@ -86,25 +85,24 @@ function TaskFormModal({ isOpen, onClose, onSave, initialData, mode }: TaskFormM
             title={mode === 'add' ? 'Add New Custom Task' : 'Edit Custom Task'}
             footerContent={footerContent}
         >
-            <form onSubmit={handleSubmit} id="task-form">
-                <div className={styles.formGroup}>
-                    <label htmlFor="taskName" className={styles.label}>Task Name<span style={{color: 'red'}}>*</span>:</label>
+            <form onSubmit={handleSubmit} id="task-form" className={styles.taskFormContainer}>
+                <div className="form-group mb-md"> {/* Using global form-group and margin utility */}
+                    <label htmlFor="taskName">Task Name<span style={{color: 'var(--color-error)'}}>*</span>:</label> {/* Label styled globally, color from var */}
                     <input
                         type="text"
                         id="taskName"
-                        className={styles.input}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
                         autoFocus
-                    />
+                        placeholder="Enter task name"
+                    /> {/* Input styled globally */}
                 </div>
-                <div className={styles.formGroup}>
-                    <label htmlFor="defaultUnit" className={styles.label}>Default Unit:</label>
+                <div className="form-group mb-md">
+                    <label htmlFor="defaultUnit">Default Unit:</label>
                     <input
                         type="text"
                         id="defaultUnit"
-                        className={styles.input}
                         value={defaultUnit}
                         onChange={(e) => setDefaultUnit(e.target.value)}
                         placeholder="e.g., item, hour, m², kg"
@@ -116,16 +114,16 @@ function TaskFormModal({ isOpen, onClose, onSave, initialData, mode }: TaskFormM
                         ))}
                     </datalist>
                 </div>
-                <div className={styles.formGroup}>
-                    <label htmlFor="description" className={styles.label}>Description:</label>
+                <div className="form-group mb-md">
+                    <label htmlFor="description">Description:</label>
                     <textarea
                         id="description"
-                        className={styles.textarea}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                    />
+                        rows={3} /* Example: control height */
+                    /> {/* Textarea styled globally */}
                 </div>
-                {formError && <p className={styles.errorMessage}>{formError}</p>}
+                {formError && <p className="text-danger mt-sm">{formError}</p>} {/* Using global text-danger and margin utility */}
             </form>
         </GenericFormModal>
     );

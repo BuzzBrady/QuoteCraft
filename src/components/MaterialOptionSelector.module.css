@@ -1,64 +1,72 @@
 /* src/components/MaterialOptionSelector.module.css */
 .selectorContainer {
-    /* Styles for the main container of the selector */
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-md);
 }
 
 .optionsGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Responsive grid */
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-sm);
 }
 
 .optionButton {
-    padding: 1rem;
-    border: 1px solid var(--secondary-steel-gray);
-    background-color: var(--primary-deep-charcoal);
-    color: var(--primary-white);
+    padding: var(--space-md);
+    border: 1px solid var(--border-color-input); /* Was secondary-steel-gray, using input border for consistency */
+    background-color: var(--background-color-sections); /* For a slight card-like appearance */
+    color: var(--theme-primary-white);
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--border-radius-md);
     text-align: left;
     font-size: 0.9em;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: var(--transition-fast);
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: var(--space-xxs);
 }
 
-.optionButton:hover {
-    background-color: var(--secondary-steel-gray);
-    /* border-color: var(--primary-light-blue); */
+.optionButton:hover, .optionButton:focus {
+    border-color: var(--theme-secondary-steel-gray-rgb); /* Using a slightly different hover border */
+    background-color: var(--background-color-light); /* Lighten background on hover */
+    outline: none;
+}
+.optionButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }
 
 .optionButton.selected {
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
-    border-color: var(--accent-bright-blue);
-    font-weight: bold;
+    background-color: var(--theme-primary-light-blue);
+    color: var(--theme-primary-white);
+    border-color: var(--theme-accent-bright-blue);
+    font-weight: bold; /* Global .btn has 600, bold is fine too */
 }
 
+.optionButton.selected:hover, .optionButton.selected:focus {
+    background-color: var(--theme-accent-bright-blue); /* Selected items hover to accent */
+    border-color: var(--theme-accent-bright-blue);
+}
+.optionButton.selected:focus {
+     box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
+}
+
+
 .optionName {
-    font-weight: bold;
+    font-weight: bold; /* Or 600 to match .btn */
     font-size: 1.05em;
+    color: inherit; /* Inherit from .optionButton or .optionButton.selected */
 }
 
 .optionDetails {
     font-size: 0.85em;
-    color: var(--secondary-steel-gray);
-    /* Additional styling for price, supplier etc. if needed */
-}
-
-.optionButton.selected .optionName {
-    /* Ensure name is prominent if needed, but parent color should be fine */
+    color: var(--text-color-muted); /* Default state */
 }
 
 .optionButton.selected .optionDetails {
-    color: var(--primary-white); /* Ensure details are readable on selected background */
+    color: var(--theme-primary-white); /* Ensure details are readable on selected background */
 }
 
 .loadingMessage, .noOptionsMessage {
-    padding: 1rem;
+    padding: var(--space-md);
     text-align: center;
-    color: var(--secondary-steel-gray);
+    color: var(--text-color-muted);
     font-style: italic;
 }

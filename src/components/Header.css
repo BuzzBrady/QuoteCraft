@@ -1,19 +1,20 @@
 /* src/components/Header.css */
 .header {
-    background-color: var(--primary-deep-charcoal); /* Should match body or be a distinct header color */
-    color: var(--primary-white);
-    padding: 1rem 2rem;
+    background-color: var(--theme-primary-deep-charcoal);
+    color: var(--theme-primary-white);
+    padding: var(--space-md) var(--space-xl);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* box-shadow: 0 2px 5px rgba(0,0,0,0.2); */ /* Re-evaluate shadow for dark theme */
-    border-bottom: 1px solid var(--secondary-steel-gray); /* Subtle separator */
+    border-bottom: 1px solid var(--theme-secondary-steel-gray);
+    /* box-shadow: var(--box-shadow-sm); */ /* Uncomment to add a subtle shadow */
 }
 
 .logo h1 {
-    margin: 0;
-    font-size: 1.8em;
-    color: var(--primary-light-blue); /* Logo text color */
+    margin: 0; /* Handled by global h1 reset */
+    font-size: 1.8em; /* Specific size for logo, overrides global h1 if needed */
+    color: var(--theme-primary-light-blue); /* Logo text color */
+    font-weight: 700; /* Explicitly set if different from global h1's 800 */
 }
 
 .navLinks {
@@ -21,7 +22,7 @@
     padding: 0;
     margin: 0;
     display: flex;
-    gap: 1.5rem; /* Spacing between nav items */
+    gap: var(--space-lg);
 }
 
 .navLinks li {
@@ -30,46 +31,65 @@
 
 .navLinks a {
     text-decoration: none;
-    color: var(--primary-white);
+    color: var(--theme-primary-white);
     font-size: 1em;
-    padding-bottom: 0.3rem; /* Space for border-bottom on active/hover */
-    border-bottom: 2px solid transparent; /* Placeholder for active/hover */
-    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+    padding-bottom: var(--space-xxs);
+    border-bottom: 2px solid transparent;
+    transition: var(--transition-fast);
 }
 
-.navLinks a:hover {
-    color: var(--primary-light-blue);
-    border-bottom-color: var(--primary-light-blue);
+.navLinks a:hover,
+.navLinks a:focus {
+    color: var(--theme-primary-light-blue);
+    border-bottom-color: var(--theme-primary-light-blue);
+    text-decoration: none; /* Override global a:hover underline if not desired here */
 }
 
 .navLinks a.active {
-    color: var(--accent-bright-blue);
-    border-bottom-color: var(--accent-bright-blue);
+    color: var(--theme-accent-bright-blue);
+    border-bottom-color: var(--theme-accent-bright-blue);
     font-weight: bold;
 }
 
 .userActions {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-md);
 }
 
 .welcomeMessage {
     font-size: 0.9em;
-    color: var(--secondary-steel-gray); /* Subtler text for welcome message */
+    color: var(--theme-secondary-steel-gray);
 }
 
+/* Option 1: Keep custom logout button styles using variables */
 .logoutButton {
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 4px;
+    background-color: var(--theme-primary-light-blue);
+    color: var(--theme-primary-white);
+    border: 1px solid var(--theme-primary-light-blue); /* Added for consistency with .btn */
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--border-radius-md);
     cursor: pointer;
     font-size: 0.9em;
-    transition: background-color 0.2s ease;
+    font-weight: 600; /* Match .btn */
+    line-height: 1.5; /* Match .btn */
+    text-align: center; /* Match .btn */
+    transition: var(--transition-fast);
 }
 
-.logoutButton:hover {
-    background-color: var(--accent-bright-blue);
+.logoutButton:hover,
+.logoutButton:focus {
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
+    color: var(--theme-primary-white);
+    outline: 0;
 }
+
+.logoutButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
+}
+
+/* Option 2: If Header.tsx is modified to use className="btn btn-primary btn-sm" (or similar)
+   then the .logoutButton class above could be removed or simplified. 
+   A .btn-sm class would need to be defined in index.css for smaller padding if desired.
+*/

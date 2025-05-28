@@ -1,73 +1,93 @@
 /* src/components/AreaMultiSelector.module.css */
 .areaMultiSelectorContainer {
     position: relative;
-    font-family: sans-serif;
-    width: 100%; /* Take full width of its parent */
-    max-width: 400px; /* Or a specific max-width */
+    /* font-family: var(--font-primary); Inherited */
+    width: 100%;
+    max-width: 400px;
 }
 
 .selectedAreasPills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+    border: 1px solid var(--border-color-input);
+    border-radius: var(--border-radius-md);
     cursor: pointer;
-    min-height: 2.5rem; /* Ensure it has some height even when empty */
+    min-height: 2.5rem; /* Or calc(var(--space-lg) + 2 * var(--space-xs)) approx */
+    background-color: var(--background-color-main); /* Or sections, if input-like */
 }
 
 .selectedPill {
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
-    padding: 0.4rem 0.8rem;
-    border-radius: 1rem;
+    background-color: var(--theme-primary-light-blue);
+    color: var(--theme-primary-white);
+    padding: var(--space-xxs) var(--space-sm); /* Adjusted padding */
+    border-radius: var(--border-radius-pill);
     font-size: 0.9em;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--space-xs); /* Adjusted gap */
 }
 
 .removePillButton {
     background: none;
     border: none;
-    color: var(--primary-white);
+    color: var(--theme-primary-white);
     cursor: pointer;
     font-size: 1.1em;
-    padding: 0;
+    padding: 0 var(--space-xxs); /* Add a little padding for click area */
+    line-height: 1; /* Ensure tight fit */
+    transition: var(--transition-fast);
+    opacity: 0.7;
+}
+
+.removePillButton:hover,
+.removePillButton:focus {
+    color: var(--theme-primary-white);
+    opacity: 1;
+    outline: none;
 }
 
 .dropdownContent {
     display: block;
     position: absolute;
-    background-color: var(--primary-deep-charcoal);
-    border: 1px solid var(--secondary-steel-gray);
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1000;
+    top: 100%; /* Position below the input area */
+    left: 0;
+    right: 0;
+    background-color: var(--background-color-sections);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--box-shadow-lg);
+    z-index: var(--z-index-dropdown);
     width: 100%;
-    max-height: 200px; /* Limit height and make scrollable */
+    max-height: 200px;
     overflow-y: auto;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+    margin-top: var(--space-xxs); /* Small gap between input and dropdown */
 }
 
 .dropdownItem {
-    padding: 0.75rem 1rem;
+    padding: var(--space-sm) var(--space-md);
     cursor: pointer;
-    color: var(--primary-white);
-    border-bottom: 1px solid var(--secondary-steel-gray);
+    color: var(--theme-primary-white);
+    border-bottom: 1px solid var(--border-color-light);
+    transition: var(--transition-fast);
 }
 
 .dropdownItem:last-child {
     border-bottom: none;
 }
 
-.dropdownItem:hover {
-    /* background-color: #f0f0f0; */ /* Old color */
-    color: var(--accent-bright-blue);
+.dropdownItem:hover,
+.dropdownItem:focus {
+    background-color: var(--background-color-light);
+    color: var(--theme-accent-bright-blue);
+    outline: none;
 }
 
 .placeholderText {
-    color: var(--secondary-steel-gray);
-    padding: 0.5rem; /* Match padding of selectedAreasPills */
+    color: var(--text-color-muted);
+    padding: var(--space-xs);
     font-style: italic;
+    line-height: 1.5; /* Ensure placeholder text has similar height to a pill */
+    min-height: calc(0.9em + 2 * var(--space-xxs)); /* Approx height of a pill if needed */
 }

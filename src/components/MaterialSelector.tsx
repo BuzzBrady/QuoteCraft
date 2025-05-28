@@ -2,177 +2,187 @@
 // Uses CreatableSelect to allow selecting existing materials
 // or triggering the creation of a new custom material.
 
-import { useState, useEffect, useMemo } from 'react'; // Added React import
+import { useState, useEffect, useMemo } from 'react';
 import CreatableSelect from 'react-select/creatable';
-import { ActionMeta, OnChangeValue } from 'react-select';
+import { ActionMeta, OnChangeValue, StylesConfig } from 'react-select';
 import { collection, query, getDocs, orderBy, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
-import { Material, CustomMaterial, CombinedMaterial, MaterialOption, Task, CustomTask } from '../types'; // Adjust path if needed
+import { Material, CustomMaterial, CombinedMaterial } from '../types';
 
 // Option structure for react-select
-interface MaterialSelectOptionType { // Renamed for clarity within this component
+interface MaterialSelectOptionType {
     label: string;
     value: string; // Material ID for existing, or the new name for creation
-    __isNew__?: boolean; 
-    originalMaterial: CombinedMaterial | null; // Store the full material object
+    __isNew__?: boolean;
+    originalMaterial: CombinedMaterial | null;
 }
 
 interface MaterialSelectorProps {
     userId: string | null | undefined;
-    onSelect: (material: CombinedMaterial | null) => void; // Allow null for clearing selection
-    onCreateCustomMaterial: (materialName: string) => Promise<CombinedMaterial | null>; 
-    isLoading?: boolean; 
-    allMaterials: CombinedMaterial[]; // Add the allMaterials prop
-    // currentMaterialId?: string | null; // Optional: For controlled selection from parent
+    onSelect: (material: CombinedMaterial | null) => void;
+    onCreateCustomMaterial: (materialName: string) => Promise<CombinedMaterial | null>;
+    isLoading?: boolean;
+    allMaterials: CombinedMaterial[];
+    error?: string | null; // Added error prop
+    // currentMaterialId?: string | null;
 }
 
+// Factory function for react-select custom styles
+const getCustomSelectStyles = (error?: string | null): StylesConfig<MaterialSelectOptionType, false> => ({
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: 'var(--background-color-sections)',
+    borderColor: error 
+                 ? 'var(--color-error)' 
+                 : state.isFocused ? 'var(--theme-primary-light-blue)' : 'var(--border-color-input)',
+    borderRadius: 'var(--border-radius-md)',
+    padding: 'calc(var(--space-xs) / 2)',
+    boxShadow: state.isFocused 
+               ? error 
+                 ? `0 0 0 0.2rem var(--color-error)` // Using error color for focus ring
+                 : `var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.25)`
+               : 'none',
+    '&:hover': {
+      borderColor: error ? 'var(--color-error)' : 'var(--theme-primary-light-blue)',
+    },
+    minHeight: '38px',
+    fontSize: '1rem',
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    padding: `0 calc(var(--space-sm) - var(--space-xxs))`,
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: 'var(--background-color-sections)',
+    borderRadius: 'var(--border-radius-md)',
+    border: '1px solid var(--border-color)',
+    marginTop: 'var(--space-xs)',
+    boxShadow: 'var(--box-shadow-lg)',
+    zIndex: 'var(--z-index-dropdown)',
+    fontSize: '1rem',
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected ? 'var(--theme-primary-light-blue)' : state.isFocused ? 'var(--background-color-light)' : 'var(--background-color-sections)',
+    color: state.isSelected ? 'var(--theme-primary-white)' : state.isFocused ? 'var(--theme-accent-bright-blue)' : 'var(--text-color-main)',
+    padding: 'var(--space-sm) var(--space-md)',
+    cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: 'var(--background-color-light)',
+      color: 'var(--theme-accent-bright-blue)',
+    },
+  }),
+  singleValue: (base) => ({
+    ...base,
+    color: 'var(--text-color-main)',
+  }),
+  placeholder: (base) => ({
+    ...base,
+    color: 'var(--text-color-muted)',
+  }),
+  input: (base) => ({
+    ...base,
+    color: 'var(--text-color-main)',
+  }),
+  indicatorSeparator: (base) => ({
+    ...base,
+    backgroundColor: 'var(--border-color-input)',
+    marginTop: 'var(--space-xs)',
+    marginBottom: 'var(--space-xs)',
+  }),
+  dropdownIndicator: (base) => ({
+    ...base,
+    padding: 'var(--space-xs)',
+    color: 'var(--text-color-muted)',
+    '&:hover': {
+      color: 'var(--theme-primary-light-blue)',
+    }
+  }),
+  clearIndicator: (base) => ({
+    ...base,
+    color: 'var(--text-color-muted)',
+    padding: 'var(--space-xs)',
+    '&:hover': {
+      color: 'var(--theme-accent-bright-blue)',
+    }
+  }),
+});
 
-function MaterialSelector({ 
-    userId, 
-    onSelect, 
-    onCreateCustomMaterial, 
+function MaterialSelector({
+    userId,
+    onSelect,
+    onCreateCustomMaterial,
     isLoading: isLoadingProp,
-    // currentMaterialId 
+    allMaterials: materialsFromProps,
+    error, // Consuming the error prop
+    // currentMaterialId
 }: MaterialSelectorProps) {
-    const [allMaterials, setAllMaterials] = useState<CombinedMaterial[]>([]);
-    const [isLoadingInternal, setIsLoadingInternal] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [selectedOption, setSelectedOption] = useState<MaterialSelectOptionType | null>(null);
-
-    const isLoading = isLoadingProp !== undefined ? isLoadingProp : isLoadingInternal;
-
-    useEffect(() => {
-        if (!userId) { 
-            setAllMaterials([]); 
-            // If userId becomes null/undefined after being set, clear selection
-            // setSelectedOption(null); 
-            // onSelect(null);
-            return; 
-        }
-        const fetchMaterials = async () => {
-            setIsLoadingInternal(true); setError(null);
-            try {
-                const globalMaterialsRef = collection(db, 'materials');
-                const globalQuery = query(globalMaterialsRef, orderBy('name_lowercase'));
-                const globalPromise = getDocs(globalQuery);
-
-                const customMaterialsRef = collection(db, `users/${userId}/customMaterials`);
-                const customQuery = query(customMaterialsRef, orderBy('name_lowercase'));
-                const customPromise = getDocs(customQuery);
-
-                const [globalSnapshot, customSnapshot] = await Promise.all([globalPromise, customPromise]);
-                const fetchedMaterials: CombinedMaterial[] = [];
-
-                globalSnapshot.forEach((doc: QueryDocumentSnapshot) => {
-                    fetchedMaterials.push({ id: doc.id, ...doc.data(), isCustom: false } as CombinedMaterial);
-                });
-                customSnapshot.forEach((doc: QueryDocumentSnapshot) => {
-                    fetchedMaterials.push({ id: doc.id, ...doc.data(), isCustom: true } as CombinedMaterial);
-                });
-                
-                fetchedMaterials.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-                setAllMaterials(fetchedMaterials);
-
-            } catch (err: any) {
-                console.error("MaterialSelector: Error fetching materials:", err);
-                setError(err.code === 'permission-denied' ? "Permission denied fetching materials." : "Failed to load materials.");
-                setAllMaterials([]);
-            } finally {
-                setIsLoadingInternal(false);
-            }
-        };
-        fetchMaterials();
-    }, [userId]);
-
-    // // Effect to set selectedOption if currentMaterialId changes from parent
-    // useEffect(() => {
-    //     if (currentMaterialId) {
-    //         const material = allMaterials.find(m => m.id === currentMaterialId);
-    //         if (material) {
-    //             setSelectedOption({
-    //                 label: `${material.name}${material.isCustom ? ' (Custom)' : ''}${material.optionsAvailable ? ' (Options)' : ''}`,
-    //                 value: material.id,
-    //                 originalMaterial: material,
-    //             });
-    //         } else {
-    //             setSelectedOption(null);
-    //         }
-    //     } else {
-    //         setSelectedOption(null);
-    //     }
-    // }, [currentMaterialId, allMaterials]);
-
+    const isLoading = isLoadingProp !== undefined ? isLoadingProp : false;
 
     const materialOptions: MaterialSelectOptionType[] = useMemo(() => {
-        return allMaterials.map(material => ({
+        return materialsFromProps.map(material => ({
             label: `${material.name}${material.isCustom ? ' (Custom)' : ''}${material.optionsAvailable ? ' (Options)' : ''}`,
             value: material.id,
             originalMaterial: material,
         }));
-    }, [allMaterials]);
+    }, [materialsFromProps]);
 
     const handleChange = async (
-        newValue: OnChangeValue<MaterialSelectOptionType, false>, // react-select type for single select
+        newValue: OnChangeValue<MaterialSelectOptionType, false>,
         actionMeta: ActionMeta<MaterialSelectOptionType>
     ) => {
-        console.log("MaterialSelector handleChange:", actionMeta.action, newValue); // For debugging
-
         if (actionMeta.action === 'select-option') {
-            const selectedVal = newValue as MaterialSelectOptionType; // newValue is not null here
+            const selectedVal = newValue as MaterialSelectOptionType;
             if (selectedVal && selectedVal.originalMaterial) {
-                console.log("Selected existing material:", selectedVal.originalMaterial);
                 setSelectedOption(selectedVal);
                 onSelect(selectedVal.originalMaterial);
-            } else { // Should not happen if originalMaterial is always set for existing options
+            }
+        } else if (actionMeta.action === 'create-option') {
+            const typedValue = (newValue as MaterialSelectOptionType)?.label || (newValue as any)?.value;
+            if (typedValue) {
+                const newMaterialName = typedValue;
+                const createdMaterial = await onCreateCustomMaterial(newMaterialName);
+                if (createdMaterial) {
+                    const newOption: MaterialSelectOptionType = {
+                        label: `${createdMaterial.name} (Custom)${createdMaterial.optionsAvailable ? ' (Options)' : ''}`,
+                        value: createdMaterial.id,
+                        originalMaterial: createdMaterial
+                    };
+                    setSelectedOption(newOption);
+                    onSelect(createdMaterial);
+                } else {
+                    setSelectedOption(null);
+                }
+            }
+        } else if (actionMeta.action === 'clear' || actionMeta.action === 'pop-value' || actionMeta.action === 'remove-value') {
+            setSelectedOption(null);
+            onSelect(null);
+        }
+    };
+    
+    // Added useEffect to clear selection when allMaterials prop is empty or changes significantly,
+    // or if the currently selected material is no longer in the list.
+    useEffect(() => {
+        if (selectedOption && selectedOption.originalMaterial) {
+            const stillExists = materialsFromProps.some(m => m.id === selectedOption.originalMaterial?.id);
+            if (!stillExists) {
                 setSelectedOption(null);
                 onSelect(null);
             }
-        } else if (actionMeta.action === 'create-option') {
-            const typedValue = (newValue as MaterialSelectOptionType)?.label || (newValue as any)?.value; // Creatable can pass it as value sometimes
-            if (typedValue) {
-                const newMaterialName = typedValue;
-                console.log("Attempting to create new material:", newMaterialName);
-                
-                setIsLoadingInternal(true); // Indicate loading during creation
-                try {
-                    const createdMaterial = await onCreateCustomMaterial(newMaterialName);
-                    if (createdMaterial) {
-                        const newOption: MaterialSelectOptionType = {
-                            label: `${createdMaterial.name} (Custom)${createdMaterial.optionsAvailable ? ' (Options)' : ''}`,
-                            value: createdMaterial.id,
-                            originalMaterial: createdMaterial
-                        };
-                        // Add to local list for immediate display in dropdown (optional, parent might refresh anyway)
-                        setAllMaterials(prev => [...prev, createdMaterial].sort((a,b) => (a.name ?? '').localeCompare(b.name ?? '')));
-                        setSelectedOption(newOption);
-                        onSelect(createdMaterial);
-                    } else {
-                        // Creation was cancelled or failed in parent (e.g., modal closed)
-                        console.log("Material creation cancelled or failed for:", newMaterialName);
-                        setSelectedOption(null); // Clear any optimistic selection
-                        // Optionally, inform parent that creation didn't complete if onSelect(null) isn't enough
-                    }
-                } catch (creationError) {
-                    console.error("Error during onCreateCustomMaterial call:", creationError);
-                    setError(`Failed to initiate creation for "${newMaterialName}".`);
-                    setSelectedOption(null);
-                } finally {
-                    setIsLoadingInternal(false);
-                }
-            }
-        } else if (actionMeta.action === 'clear') {
-            console.log("Material selection cleared");
-            setSelectedOption(null);
-            onSelect(null); // Notify parent that selection is cleared
-        } else if (actionMeta.action === 'pop-value' || actionMeta.action === 'remove-value') {
+        } else if (materialsFromProps.length === 0 && selectedOption) {
+            // Clear selection if options are wiped and something was selected
              setSelectedOption(null);
              onSelect(null);
         }
-    };
+    }, [materialsFromProps, selectedOption, onSelect]);
+
+    const selectStyles = getCustomSelectStyles(error); // Get styles, passing current error state
 
     return (
-        <div className="material-selector creatable-selector">
-            <label htmlFor="material-select-input">Select or Create Material</label> {/* Changed id to avoid conflict if multiple instances */}
+        <div className="material-selector creatable-selector mb-md">
+            <label htmlFor="material-select-input">Select or Create Material</label>
             <CreatableSelect
                 inputId="material-select-input"
                 isClearable
@@ -183,18 +193,9 @@ function MaterialSelector({
                 onChange={handleChange}
                 placeholder="Type or select a material..."
                 formatCreateLabel={(inputValue) => `Create material: "${inputValue}"`}
-                styles={{ // Basic error styling example
-                    control: (base, state) => ({ 
-                        ...base, 
-                        borderColor: error ? 'red' : state.isFocused ? '#80bdff' : '#ced4da',
-                        boxShadow: state.isFocused ? '0 0 0 0.2rem rgba(0,123,255,.25)' : base.boxShadow,
-                        '&:hover': {
-                            borderColor: state.isFocused ? '#80bdff' : '#adb5bd'
-                        }
-                    }),
-                }}
+                styles={selectStyles} // Apply dynamic custom styles
             />
-            {error && <p style={{ color: 'red', fontSize: '0.8em', marginTop: '4px' }}>{error}</p>}
+            {error && <p className="text-danger mt-xs">{error}</p>} {/* Display error message */}
         </div>
     );
 }

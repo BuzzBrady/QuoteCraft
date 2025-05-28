@@ -21,19 +21,21 @@ function GenericFormModal({
         return null;
     }
 
-    // Prevent clicks inside the modal from closing it
     const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
     };
 
     return (
-        <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="generic-modal-title">
-            <div className={styles.modalContent} onClick={handleContentClick}>
+        // Use global .modal-backdrop for the overlay
+        <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="generic-modal-title">
+            {/* Use global .modal-content for the main modal structure */}
+            <div className="modal-content" onClick={handleContentClick}>
+                {/* Retain module styles for internal structure if they are more specific */}
                 <div className={styles.modalHeader}>
                     <h3 id="generic-modal-title" className={styles.modalTitle}>{title}</h3>
                     <button
                         onClick={onClose}
-                        className={styles.closeButton}
+                        className={styles.closeButton} // Keep using module style for close button for now
                         aria-label="Close modal"
                     >
                         &times;

@@ -1,115 +1,145 @@
 /* src/pages/ExistingQuotesPage.css */
 .quotesContainer {
     max-width: 1000px;
-    margin: 2rem auto;
-    padding: 1.5rem;
-    /* background-color: #f9f9f9; */ /* Removed - inherit from body */
-    border-radius: 8px;
-    /* box-shadow: 0 2px 10px rgba(0,0,0,0.08); */ /* Re-evaluate shadow */
+    margin: var(--space-xl) auto;
+    padding: var(--space-lg);
+    border-radius: var(--border-radius-lg); /* From 8px */
+    /* background-color: var(--background-color-sections); Optional: if page needs distinct bg */
+    /* box-shadow: var(--box-shadow-md); */
 }
 
 .quotesContainer h1 {
-    color: var(--primary-light-blue);
+    /* Global h1 styles for font-family, weight. Specific color/size for this page */
+    color: var(--theme-primary-light-blue);
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-xl);
     font-size: 2em;
 }
 
 .quoteList {
     display: grid;
-    gap: 1.5rem;
+    gap: var(--space-lg);
 }
 
 .quoteItem {
-    background-color: var(--primary-deep-charcoal); /* Or slightly lighter for card */
-    border: 1px solid var(--secondary-steel-gray);
-    padding: 1.5rem;
-    border-radius: 6px;
-    color: var(--primary-white);
-    /* box-shadow: 0 1px 4px rgba(0,0,0,0.05); */ /* Re-evaluate shadow */
-    transition: box-shadow 0.2s ease;
+    background-color: var(--background-color-sections); /* Explicitly set for card effect */
+    border: 1px solid var(--border-color);
+    padding: var(--space-lg);
+    border-radius: var(--border-radius-md);
+    color: var(--theme-primary-white);
+    /* box-shadow: var(--box-shadow-sm); */
+    transition: var(--transition-smooth); /* For slightly slower hover effects if any */
 }
 
 /* .quoteItem:hover {
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1); 
-}*/
+    box-shadow: var(--box-shadow-md);
+    transform: translateY(-2px);
+} */
 
 .quoteItemHeader {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--secondary-steel-gray); /* Subtle separator */
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--border-color-light);
 }
 
 .quoteItemHeader h2 {
-    color: var(--primary-light-blue);
+    /* Global h2 styles for font-family, weight. Specific color/size for this page */
+    color: var(--theme-primary-light-blue);
     font-size: 1.4em;
     margin: 0;
 }
 
 .quoteDate {
     font-size: 0.85em;
-    color: var(--secondary-steel-gray);
+    color: var(--text-color-muted);
 }
 
 .quoteDetails p {
-    margin: 0.5rem 0;
+    margin: var(--space-xs) 0;
     font-size: 0.95em;
     line-height: 1.5;
+    color: var(--text-color-light);
 }
 
 .quoteDetails strong {
-    color: var(--primary-white); /* Ensure strong text is prominent */
+    color: var(--theme-primary-white);
+    font-weight: 600; /* from global .btn */
 }
 
 .quoteTotal {
-    margin-top: 1rem;
+    margin-top: var(--space-md);
     font-size: 1.1em;
     font-weight: bold;
-    color: var(--accent-bright-blue);
+    color: var(--theme-accent-bright-blue);
     text-align: right;
 }
 
 .quoteActions {
-    margin-top: 1.5rem;
+    margin-top: var(--space-lg);
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
+    gap: var(--space-sm);
 }
 
+/* Base for buttons in quoteActions, can be replaced by global .btn in TSX */
 .quoteActions button {
-    padding: 0.6rem 1.2rem;
-    border: none;
-    border-radius: 4px;
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
     cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: var(--space-sm) var(--space-md);
     font-size: 0.9em;
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-fast);
 }
 
 .viewButton {
-    background-color: var(--primary-light-blue);
-    color: var(--primary-white);
+    /* Extends .quoteActions button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-primary-light-blue);
+    border-color: var(--theme-primary-light-blue);
 }
 
-.viewButton:hover {
-    background-color: var(--accent-bright-blue);
+.viewButton:hover,
+.viewButton:focus {
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.viewButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
 }
 
 .deleteButton {
-    background-color: var(--secondary-steel-gray); /* More subdued for delete */
-    color: var(--primary-white);
+    /* Extends .quoteActions button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-secondary-steel-gray);
+    border-color: var(--theme-secondary-steel-gray);
 }
 
-.deleteButton:hover {
-    opacity: 0.8; /* Darken or lighten depending on base */
+.deleteButton:hover,
+.deleteButton:focus {
+    background-color: #8e989f; /* Darker steel gray */
+    border-color: #8e989f;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.deleteButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }
 
 .loadingMessage, .noQuotesMessage {
     text-align: center;
-    padding: 2rem;
+    padding: var(--space-xl);
     font-size: 1.1em;
-    color: var(--secondary-steel-gray);
+    color: var(--text-color-muted);
     font-style: italic;
 }

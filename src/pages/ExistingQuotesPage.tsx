@@ -4,12 +4,12 @@ import { Link } from 'react-router-dom';
 import { collection, query, getDocs, orderBy, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import { db, app } from '../config/firebaseConfig';
-import { Quote, QuoteExportLevel } from '../types'; // Ensure QuoteExportLevel is imported
+import { Quote, QuoteExportLevel } from '../types';
 import { getFunctions, httpsCallable, HttpsCallableResult } from "firebase/functions";
 
 import { formatCurrency, formatFirestoreTimestamp } from '../utils/utils';
-import './ExistingQuotesPage.css'; // Import the regular CSS file
-import ExportQuoteModal from '../components/ExportQuoteModal'; // Import the new modal
+import './ExistingQuotesPage.css'; // Regular CSS import
+import ExportQuoteModal from '../components/ExportQuoteModal';
 
 interface PdfFunctionSuccessResult {
     pdfBase64: string;
@@ -38,7 +38,6 @@ export const downloadPdfClientSide = async (
             quoteId,
             exportLevel
         });
-        console.log("[Client] Cloud Function result received.");
         const pdfBase64 = result.data.pdfBase64;
         if (pdfBase64) {
             const byteCharacters = atob(pdfBase64);
@@ -55,7 +54,6 @@ export const downloadPdfClientSide = async (
             linkElement.click();
             document.body.removeChild(linkElement);
             URL.revokeObjectURL(linkElement.href);
-            console.log("[Client] PDF download initiated for:", linkElement.download);
             return true;
         } else {
             const errorMessage = "PDF data was not returned from the function. Check Cloud Function logs.";
@@ -66,19 +64,18 @@ export const downloadPdfClientSide = async (
     } catch (error: any) {
         console.error(`[Client] Error calling generateQuotePdf Cloud Function for level ${exportLevel}:`, error);
         let displayMessage = `An error occurred while generating the ${exportLevel} PDF.`;
-
         if (error.code && error.message) {
             displayMessage = `Error: ${error.message} (Code: ${error.code})`;
         } else {
             displayMessage = `An unexpected error occurred: ${error.message || 'Unknown error'}`;
         }
-        // Corrected alert concatenation from previous error
-        alert(displayMessage + "\nCheck the browser console and Cloud Function logs for more details.");
+        alert(displayMessage + "Check the browser console and Cloud Function logs for more details.");
         return false;
     }
 };
 
 const getStatusClassName = (status?: Quote['status']): string => {
+    // This local .css might have specific status styles
     switch (status?.toLowerCase()) {
         case 'draft': return 'status-style-draft';
         case 'sent': return 'status-style-sent';
@@ -133,7 +130,7 @@ function ExistingQuotesPage() {
 
     const handleCloseExportModal = () => {
         setIsExportModalOpen(false);
-        setQuoteForExport(null); // Clear the quote selection when modal closes
+        setQuoteForExport(null);
     };
 
     const handleExportQuote = async (exportLevel: QuoteExportLevel) => {
@@ -141,18 +138,11 @@ function ExistingQuotesPage() {
             console.error("No quote selected for export.");
             return;
         }
-
         const { id: quoteId, quoteNumber } = quoteForExport;
         const loadingKey = `${quoteId}-${exportLevel}`;
-
         setIsExporting(prev => ({ ...prev, [loadingKey]: true }));
-        // setIsExportModalOpen(false); // Keep modal open during export, disable button instead
-
         await downloadPdfClientSide(quoteId, quoteNumber, exportLevel);
-
         setIsExporting(prev => ({ ...prev, [loadingKey]: false }));
-        // Optionally close modal on success, or let user close it manually
-        // handleCloseExportModal();
     };
 
     const handleStatusChange = async (quoteId: string, newStatus: Quote['status']) => {
@@ -171,17 +161,17 @@ function ExistingQuotesPage() {
     };
 
     if (isLoading) {
-        return <div className="existing-quotes-container"><p>Loading quotes...</p></div>;
+        return <div className="existing-quotes-container"><p className="text-muted text-center">Loading quotes...</p></div>;
     }
     if (error) {
-        return <div className="existing-quotes-container"><p style={{ color: 'red' }}>Error: {error}</p></div>;
+        return <div className="existing-quotes-container"><p className="text-danger text-center">Error: {error}</p></div>;
     }
 
     return (
         <div className="existing-quotes-container">
             <h1 className="existing-quotes-heading">My Quotes</h1>
             {quotes.length === 0 ? (
-                <p>You haven't created any quotes yet. <Link to="/quote-builder">Create one now!</Link></p>
+                <p className="text-center text-muted">You haven't created any quotes yet. <Link to="/quote-builder">Create one now!</Link></p>
             ) : (
                 <table className="quotes-table">
                     <thead className="quotes-table-head">
@@ -206,21 +196,22 @@ function ExistingQuotesPage() {
                                     {formatCurrency(quote.totalAmount)}
                                 </td>
                                 <td className="quotes-td center">
+                                    {/* Specific status styling from ExistingQuotesPage.css */}
                                     <span className={getStatusClassName(quote.status)}>{quote.status || 'N/A'}</span>
                                 </td>
                                 <td className="quotes-td actions">
-                                    <Link to={`/quote-builder/${quote.id}`} className="action-link">Edit</Link>
+                                    <Link to={`/quote-builder/${quote.id}`} className="btn btn-primary btn-sm mr-xs">Edit</Link>
                                     <button
                                         onClick={() => handleOpenExportModal(quote)}
-                                        className="action-button"
+                                        className="btn btn-secondary btn-sm mr-xs"
                                         title="Export Quote Options"
                                     >
-                                        Export Quote
+                                        Export
                                     </button>
                                     <select
                                         value={quote.status || 'Draft'}
                                         onChange={(e) => handleStatusChange(quote.id, e.target.value as Quote['status'])}
-                                        className="status-select"
+                                        className="status-select" /* Assuming global select styles cover appearance, this for layout */
                                         title="Change Status"
                                     >
                                         <option value="Draft">Draft</option>
@@ -234,15 +225,17 @@ function ExistingQuotesPage() {
                     </tbody>
                 </table>
             )}
-            <Link to="/dashboard" style={{ marginTop: '30px', display: 'inline-block' }}>
-                <button className="back-to-dashboard-button">Back to Dashboard</button>
-            </Link>
+            <div className="text-center mt-lg">
+                <Link to="/dashboard">
+                    <button className="btn btn-secondary">Back to Dashboard</button>
+                </Link>
+            </div>
 
             {quoteForExport && (
                 <ExportQuoteModal
                     isOpen={isExportModalOpen}
                     onClose={handleCloseExportModal}
-                    onExport={handleExportQuote} // Pass the modified handler
+                    onExport={handleExportQuote}
                     quoteNumber={quoteForExport.quoteNumber}
                     quoteId={quoteForExport.id}
                     isExporting={isExporting}

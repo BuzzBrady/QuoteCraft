@@ -1,140 +1,92 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-
-/* Add/Modify these rules in your main CSS file (e.g., index.css) */
-
-/* Ensure the main summary container has a default light text color */
+/* Styles for .quote-summary-container - consider moving to its own component CSS if applicable */
 .quote-summary-container {
-  /* ... keep existing styles like padding, background-color, border ... */
-  background-color: var(--card-bg, #2f2f2f); /* Make sure background is defined */
-  color: rgba(255, 255, 255, 0.87); /* Default light text for this box */
+  background-color: var(--background-color-sections);
+  color: var(--text-color-light); /* Default light text for this box */
+  padding: var(--space-lg);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
 }
 
-/* Ensure headings inside the summary are visible */
 .quote-summary-container h3,
 .quote-summary-container h4 {
-    color: rgba(255, 255, 255, 0.95); /* Slightly brighter white for headings */
-    margin-bottom: 0.75rem; /* Add some space below headings */
+    color: var(--text-color-headings); /* Using theme heading color */
+    margin-bottom: var(--space-sm);
 }
 
-/* Ensure text in category total list items is visible */
 .category-total-list li {
-    /* ... keep existing styles like padding, display, justify-content, border ... */
-    color: inherit; /* Inherit from .quote-summary-container */
+    color: inherit;
 }
 
-/* Make category totals stand out */
 .category-total-list li strong {
-    color: #ffffff; /* Pure white */
+    color: var(--theme-primary-white);
 }
 
-/* Ensure text in detailed item list items is visible */
 .detailed-item-list li {
-     /* ... keep existing styles like padding, display, justify-content, border ... */
-     color: inherit; /* Inherit from .quote-summary-container */
+     color: inherit;
 }
 
-/* Ensure item display name is visible */
-.detailed-item-list .item-details .item-name { /* Assumes you added these classes */
+.detailed-item-list .item-details .item-name {
      font-weight: 500;
-     color: rgba(255, 255, 255, 0.9); /* Make name slightly prominent */
-     margin-bottom: 3px;
+     color: var(--text-color-main);
+     margin-bottom: var(--space-xxs);
 }
 
-/* Ensure sub-details (Qty/Price/Unit) are visible */
-.detailed-item-list .item-details .item-sub-details { /* Assumes you added these classes */
-    font-size: 0.85em;
-    color: #bbb; /* Use the lighter grey color */
+.detailed-item-list .item-details .item-sub-details {
+    font-size: 0.875em;
+    color: var(--text-color-muted);
 }
 
-/* Ensure line totals and overall total are visible */
-.detailed-item-list .item-total, /* Assumes className="item-total" */
+.detailed-item-list .item-total,
 .quote-overall-total strong {
-    color: #ffffff; /* Pure white for emphasis */
+    color: var(--theme-primary-white);
 }
 
-/* Ensure the main text part of the overall total line is visible */
 .quote-overall-total {
-     color: inherit; /* Inherit from .quote-summary-container */
+     color: inherit;
 }
 
-/* src/pages/ManageCustomItemsPage.css */
-.manage-custom-items-page {
-  padding: 20px;
+/* Styles for tab interface - ideally move to ManageCustomItemsPage.module.css or a Tab component CSS */
+.manage-custom-items-page { /* This class might be on a container in ManageCustomItemsPage.tsx */
+  padding: var(--space-lg);
 }
 
 .tabs-container {
-  margin-bottom: 20px;
-  border-bottom: 1px solid #ccc;
+  margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-color-input);
 }
 
 .tab-button {
-  padding: 10px 15px;
+  padding: var(--space-sm) var(--space-md);
   cursor: pointer;
   border: 1px solid transparent;
   border-bottom: none;
-  background-color: #f0f0f0;
+  background-color: var(--background-color-light);
   font-size: 1em;
-  margin-right: 5px;
-  border-radius: 4px 4px 0 0;
+  margin-right: var(--space-xs);
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+  color: var(--text-color-main);
+  transition: var(--transition-fast);
 }
 
 .tab-button.active {
-  background-color: #fff;
-  border-color: #ccc;
-  border-bottom: 1px solid #fff; /* To make it look connected to content */
+  background-color: var(--background-color-sections);
+  border-color: var(--border-color-input);
+  border-bottom: 1px solid var(--background-color-sections); /* To make it look connected to content */
   position: relative;
-  top: 1px; /* Align with the content border */
+  top: 1px; 
+  color: var(--theme-primary-light-blue); /* Active tab text color */
+  font-weight: 600;
 }
 
 .tab-button:hover:not(.active) {
-  background-color: #e7e7e7;
+  background-color: var(--theme-secondary-steel-gray); /* Using steel gray for hover */
+  color: var(--theme-primary-white);
 }
 
 .tab-content {
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-top: none; /* Tabs already have bottom border appearing as top for content */
-  border-radius: 0 0 4px 4px;
+  padding: var(--space-lg);
+  border: 1px solid var(--border-color-input);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+  background-color: var(--background-color-sections);
 }

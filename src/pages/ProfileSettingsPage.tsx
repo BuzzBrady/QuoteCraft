@@ -1,16 +1,15 @@
 // src/pages/ProfileSettingsPage.tsx
-import React, { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../config/firebaseConfig';
 import { doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { UserProfile } from '../types';
-import styles from './ProfileSettingsPage.module.css'; // Import the CSS module
+import styles from './ProfileSettingsPage.module.css';
 
 function ProfileSettingsPage() {
     const { currentUser } = useAuth();
     const [profileData, setProfileData] = useState<Partial<UserProfile>>({});
 
-    // Form state
     const [businessName, setBusinessName] = useState('');
     const [companyAddress, setCompanyAddress] = useState('');
     const [companyPhone, setCompanyPhone] = useState('');
@@ -26,7 +25,6 @@ function ProfileSettingsPage() {
     const [companyWebsite, setCompanyWebsite] = useState('');
     const [taxRate, setTaxRate] = useState<string>('0');
 
-    // New PDF settings states
     const [showUnitPricesInPdf, setShowUnitPricesInPdf] = useState(true);
     const [showFullItemizedTableInPdf, setShowFullItemizedTableInPdf] = useState(true);
 
@@ -60,7 +58,7 @@ function ProfileSettingsPage() {
                     setAcceptanceInstructions(data.acceptanceInstructions || '');
                     setSalesContactPerson(data.salesContactPerson || '');
                     setCompanyWebsite(data.companyWebsite || '');
-                    setTaxRate((data.taxRate ? data.taxRate * 100 : 0).toString()); // Convert decimal to percentage string
+                    setTaxRate((data.taxRate ? data.taxRate * 100 : 0).toString());
 
                     setShowUnitPricesInPdf(data.showUnitPricesInPdf === undefined ? true : data.showUnitPricesInPdf);
                     setShowFullItemizedTableInPdf(data.showFullItemizedTableInPdf === undefined ? true : data.showFullItemizedTableInPdf);
@@ -97,7 +95,6 @@ function ProfileSettingsPage() {
         const paddingValue = parseInt(quoteNumberPadding, 10);
         const parsedTaxRate = parseFloat(taxRate);
 
-
         const settingsToSave: Partial<UserProfile> = {
             businessName: businessName.trim(),
             companyAddress: companyAddress.trim(),
@@ -112,11 +109,9 @@ function ProfileSettingsPage() {
             acceptanceInstructions: acceptanceInstructions.trim(),
             salesContactPerson: salesContactPerson.trim(),
             companyWebsite: companyWebsite.trim(),
-            taxRate: isNaN(parsedTaxRate) ? 0 : parsedTaxRate / 100, // Save as decimal
-
+            taxRate: isNaN(parsedTaxRate) ? 0 : parsedTaxRate / 100,
             showUnitPricesInPdf: showUnitPricesInPdf,
             showFullItemizedTableInPdf: showFullItemizedTableInPdf,
-
             updatedAt: serverTimestamp() as Timestamp,
         };
 
@@ -127,16 +122,14 @@ function ProfileSettingsPage() {
         try {
             await setDoc(userProfileRef, settingsToSave, { merge: true });
             setSuccessMessage("Settings saved successfully!");
-            // Optimistically update local state to reflect saved data, including the potentially converted taxRate
             const displayTaxRate = (settingsToSave.taxRate ? settingsToSave.taxRate * 100 : 0).toString();
             setProfileData(prev => ({
                 ...prev, 
                 ...settingsToSave, 
-                taxRate: settingsToSave.taxRate, // Store decimal in profileData
+                taxRate: settingsToSave.taxRate,
                 updatedAt: Timestamp.now()
             }));
-            setTaxRate(displayTaxRate); // Keep UI input as percentage string
-
+            setTaxRate(displayTaxRate);
         } catch (err: any) {
             console.error("Error saving settings:", err);
             setError(`Failed to save settings: ${err.message}`);
@@ -146,99 +139,98 @@ function ProfileSettingsPage() {
     };
 
     if (isLoading) {
-        return <div className={styles.page}><p className={styles.loadingText}>Loading profile...</p></div>;
+        return <div className={styles.page}><p className="text-muted text-center p-xl">Loading profile...</p></div>;
     }
 
     return (
-        <div className={styles.page}>
-            <h2>Profile & Settings</h2>
+        <div className={styles.pageContainer}> {/* Renamed for clarity, if styles.page was just for container */}
+            <h2 className="text-center mb-lg">Profile & Settings</h2> {/* Use global h2 and utilities */}
             <form onSubmit={handleSaveSettings}>
-                <fieldset className={styles.fieldset}>
+                <fieldset className={`${styles.fieldset} mb-lg`}>
                     <legend className={styles.legend}>Company Information</legend>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="businessName" className={styles.label}>Business Name:</label>
-                        <input type="text" id="businessName" className={styles.input} value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+                    <div className="form-group mb-md">
+                        <label htmlFor="businessName">Business Name:</label>
+                        <input type="text" id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="companyEmail" className={styles.label}>Company Email:</label>
-                        <input type="email" id="companyEmail" className={styles.input} value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
+                    <div className="form-group mb-md">
+                        <label htmlFor="companyEmail">Company Email:</label>
+                        <input type="email" id="companyEmail" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="companyPhone" className={styles.label}>Company Phone:</label>
-                        <input type="tel" id="companyPhone" className={styles.input} value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} />
+                    <div className="form-group mb-md">
+                        <label htmlFor="companyPhone">Company Phone:</label>
+                        <input type="tel" id="companyPhone" value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="companyAddress" className={styles.label}>Company Address:</label>
-                        <textarea id="companyAddress" className={styles.textarea} value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder="Street, City, State, Postcode, Country" />
+                    <div className="form-group mb-md">
+                        <label htmlFor="companyAddress">Company Address:</label>
+                        <textarea id="companyAddress" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder="Street, City, State, Postcode, Country" rows={3}/>
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="companyWebsite" className={styles.label}>Company Website:</label>
-                        <input type="url" id="companyWebsite" className={styles.input} value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://example.com" />
+                    <div className="form-group mb-md">
+                        <label htmlFor="companyWebsite">Company Website:</label>
+                        <input type="url" id="companyWebsite" value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://example.com" />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="abnOrTaxId" className={styles.label}>ABN / Tax ID:</label>
-                        <input type="text" id="abnOrTaxId" className={styles.input} value={abnOrTaxId} onChange={(e) => setAbnOrTaxId(e.target.value)} />
+                    <div className="form-group mb-md">
+                        <label htmlFor="abnOrTaxId">ABN / Tax ID:</label>
+                        <input type="text" id="abnOrTaxId" value={abnOrTaxId} onChange={(e) => setAbnOrTaxId(e.target.value)} />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="logoUrl" className={styles.label}>Logo URL (Direct link to image):</label>
-                        <input type="url" id="logoUrl" className={styles.input} value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
+                    <div className="form-group mb-md">
+                        <label htmlFor="logoUrl">Logo URL (Direct link to image):</label>
+                        <input type="url" id="logoUrl" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
                     </div>
-                     <div className={styles.formGroup}>
-                        <label htmlFor="salesContactPerson" className={styles.label}>Sales Contact Person (Optional):</label>
-                        <input type="text" id="salesContactPerson" className={styles.input} value={salesContactPerson} onChange={(e) => setSalesContactPerson(e.target.value)} />
+                     <div className="form-group mb-md">
+                        <label htmlFor="salesContactPerson">Sales Contact Person (Optional):</label>
+                        <input type="text" id="salesContactPerson" value={salesContactPerson} onChange={(e) => setSalesContactPerson(e.target.value)} />
                     </div>
                 </fieldset>
 
-                <fieldset className={styles.fieldset}>
+                <fieldset className={`${styles.fieldset} mb-lg`}>
                     <legend className={styles.legend}>Quote Settings</legend>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="defaultQuoteTerms" className={styles.label}>Default Quote Terms & Conditions:</label>
-                        <textarea id="defaultQuoteTerms" className={styles.textarea} value={defaultQuoteTerms} onChange={(e) => setDefaultQuoteTerms(e.target.value)} />
+                    <div className="form-group mb-md">
+                        <label htmlFor="defaultQuoteTerms">Default Quote Terms & Conditions:</label>
+                        <textarea id="defaultQuoteTerms" value={defaultQuoteTerms} onChange={(e) => setDefaultQuoteTerms(e.target.value)} rows={4}/>
                     </div>
-                     <div className={styles.formGroup}>
-                        <label htmlFor="acceptanceInstructions" className={styles.label}>Quote Acceptance Instructions:</label>
-                        <textarea id="acceptanceInstructions" className={styles.textarea} value={acceptanceInstructions} onChange={(e) => setAcceptanceInstructions(e.target.value)} placeholder="e.g., To accept this quote, please sign and return..." />
+                     <div className="form-group mb-md">
+                        <label htmlFor="acceptanceInstructions">Quote Acceptance Instructions:</label>
+                        <textarea id="acceptanceInstructions" value={acceptanceInstructions} onChange={(e) => setAcceptanceInstructions(e.target.value)} placeholder="e.g., To accept this quote, please sign and return..." rows={3}/>
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="quotePrefix" className={styles.label}>Quote Number Prefix:</label>
-                        <input type="text" id="quotePrefix" className={styles.input} value={quotePrefix} onChange={(e) => setQuotePrefix(e.target.value)} placeholder="e.g., QT- or INV-" />
+                    <div className="form-group mb-md">
+                        <label htmlFor="quotePrefix">Quote Number Prefix:</label>
+                        <input type="text" id="quotePrefix" value={quotePrefix} onChange={(e) => setQuotePrefix(e.target.value)} placeholder="e.g., QT- or INV-" />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="nextQuoteSequenceDisplay" className={styles.label}>Next Quote Number Will Be: (Updates after saving a quote)</label>
-                        <input type="number" id="nextQuoteSequenceDisplay" className={`${styles.input} ${styles.readOnlyInput}`} value={nextQuoteSequence} readOnly />
-                        <small className={styles.fieldDescription}>This number increments automatically when you save a new quote.</small>
+                    <div className="form-group mb-md">
+                        <label htmlFor="nextQuoteSequenceDisplay">Next Quote Number Will Be: <small className="text-muted">(Updates after saving a quote)</small></label>
+                        <input type="number" id="nextQuoteSequenceDisplay" className={styles.readOnlyInput} value={nextQuoteSequence} readOnly />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="quoteNumberPadding" className={styles.label}>Quote Number Padding (Digits, e.g., 5 for 00001):</label>
-                        <input type="number" id="quoteNumberPadding" className={styles.input} value={quoteNumberPadding} onChange={(e) => setQuoteNumberPadding(e.target.value)} placeholder="e.g., 5" min="0" max="10"/>
+                    <div className="form-group mb-md">
+                        <label htmlFor="quoteNumberPadding">Quote Number Padding (Digits):</label>
+                        <input type="number" id="quoteNumberPadding" value={quoteNumberPadding} onChange={(e) => setQuoteNumberPadding(e.target.value)} placeholder="e.g., 5 for QT-00001" min="0" max="10"/>
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="taxRate" className={styles.label}>Tax Rate (%):</label>
-                        <input type="number" id="taxRate" className={styles.input} value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="e.g., 10 for 10%" step="0.01" />
+                    <div className="form-group mb-md">
+                        <label htmlFor="taxRate">Tax Rate (%):</label>
+                        <input type="number" id="taxRate" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="e.g., 10 for 10%" step="0.01" />
                          <small className={styles.fieldDescription}>Enter as a percentage (e.g., 10 for 10%). This will be used to calculate tax on quotes.</small>
                     </div>
                 </fieldset>
 
-                <fieldset className={styles.fieldset}>
+                <fieldset className={`${styles.fieldset} mb-lg`}>
                     <legend className={styles.legend}>PDF & Display Settings</legend>
-                    <div className={styles.formGroup}>
-                        <label className={styles.checkboxLabel}>
+                    <div className="form-group mb-md">
+                        <label className={`${styles.checkboxLabel} d-flex align-items-center`}> {/* Added flex utilities */}
                             <input
                                 type="checkbox"
-                                className={styles.checkboxInput}
                                 checked={showUnitPricesInPdf}
                                 onChange={(e) => setShowUnitPricesInPdf(e.target.checked)}
+                                className="mr-sm" /* Added margin utility */
                             />
                             Show unit prices in PDF line items by default
                         </label>
                     </div>
-                    <div className={styles.formGroup}>
-                        <label className={styles.checkboxLabel}>
+                    <div className="form-group mb-md">
+                        <label className={`${styles.checkboxLabel} d-flex align-items-center`}> {/* Added flex utilities */}
                             <input
                                 type="checkbox"
-                                className={styles.checkboxInput}
                                 checked={showFullItemizedTableInPdf}
                                 onChange={(e) => setShowFullItemizedTableInPdf(e.target.checked)}
+                                className="mr-sm" /* Added margin utility */
                             />
                             Include full itemized table in 'Full Detail' PDF by default
                         </label>
@@ -246,13 +238,13 @@ function ProfileSettingsPage() {
                     </div>
                 </fieldset>
 
-                <button type="submit" className={styles.button} disabled={isSaving}>
+                <button type="submit" className="btn btn-accent w-100 mt-lg" disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save Settings'}
                 </button>
             </form>
 
-            {successMessage && <p className={styles.successMessage}>{successMessage}</p>}
-            {error && <p className={styles.errorMessage}>{error}</p>}
+            {successMessage && <p className="text-success text-center mt-md p-md rounded" style={{border: '1px solid var(--color-success)'}}>{successMessage}</p>}
+            {error && <p className="text-danger text-center mt-md p-md rounded" style={{border: '1px solid var(--color-error)'}}>{error}</p>}
         </div>
     );
 }

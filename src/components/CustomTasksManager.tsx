@@ -1,10 +1,10 @@
 // src/components/CustomTasksManager.tsx
 import { useState, useEffect, useCallback } from 'react';
-import styles from './CustomTasksManager.module.css';
+import styles from './CustomTasksManager.module.css'; // Import CSS module
 import {
     collection,
     query,
-    where,
+    // where, // where was unused
     getDocs,
     addDoc,
     doc,
@@ -12,12 +12,12 @@ import {
     deleteDoc,
     serverTimestamp,
     orderBy,
-    Timestamp
+    // Timestamp // Timestamp was unused directly in this file
 } from 'firebase/firestore';
-import { db } from '../config/firebaseConfig'; // Ensure path is correct
-import { useAuth } from '../contexts/AuthContext'; // Ensure path is correct
-import { CustomTask } from '../types'; // Ensure path is correct
-import TaskFormModal from './TaskFormModal'; // Adjust path if needed
+import { db } from '../config/firebaseConfig';
+import { useAuth } from '../contexts/AuthContext';
+import { CustomTask } from '../types';
+import TaskFormModal from './TaskFormModal';
 
 interface CustomTasksManagerProps {
     // Props, if any, could be passed here
@@ -31,9 +31,8 @@ function CustomTasksManager({}: CustomTasksManagerProps) {
 
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-    const [currentTask, setCurrentTask] = useState<CustomTask | null>(null); // For editing
+    const [currentTask, setCurrentTask] = useState<CustomTask | null>(null);
 
-    // Fetch Tasks
     const fetchTasks = useCallback(async () => {
         if (!currentUser) {
             setTasks([]);
@@ -45,9 +44,9 @@ function CustomTasksManager({}: CustomTasksManagerProps) {
             const tasksCollectionRef = collection(db, `users/${currentUser.uid}/customTasks`);
             const q = query(tasksCollectionRef, orderBy('name_lowercase', 'asc'));
             const querySnapshot = await getDocs(q);
-            const fetchedTasks: CustomTask[] = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
+            const fetchedTasks: CustomTask[] = querySnapshot.docs.map(docSnap => ({
+                id: docSnap.id,
+                ...docSnap.data(),
             } as CustomTask));
             setTasks(fetchedTasks);
         } catch (err: any) {
@@ -62,7 +61,6 @@ function CustomTasksManager({}: CustomTasksManagerProps) {
         fetchTasks();
     }, [fetchTasks]);
 
-    // Modal Handlers
     const handleOpenModalForAdd = () => {
         setCurrentTask(null);
         setModalMode('add');
@@ -80,7 +78,6 @@ function CustomTasksManager({}: CustomTasksManagerProps) {
         setCurrentTask(null);
     };
 
-    // CRUD Operations
     const handleSaveTask = async (taskData: { name: string; defaultUnit: string; description: string }) => {
         if (!currentUser) {
             setError("You must be logged in to save a task.");
@@ -96,7 +93,7 @@ function CustomTasksManager({}: CustomTasksManagerProps) {
             updatedAt: serverTimestamp(),
         };
 
-        setIsLoading(true); // Indicate loading for save operation
+        setIsLoading(true);
         try {
             if (modalMode === 'add') {
                 await addDoc(collection(db, `users/${currentUser.uid}/customTasks`), {
@@ -107,7 +104,7 @@ function CustomTasksManager({}: CustomTasksManagerProps) {
                 const taskDocRef = doc(db, `users/${currentUser.uid}/customTasks`, currentTask.id);
                 await updateDoc(taskDocRef, dataToSave);
             }
-            await fetchTasks(); // Re-fetch tasks to update the list
+            await fetchTasks();
             handleCloseModal();
         } catch (err: any) {
             console.error("Error saving task:", err);
@@ -118,110 +115,64 @@ function CustomTasksManager({}: CustomTasksManagerProps) {
     };
 
     const handleDeleteTask = async (taskId: string) => {
-        console.log("handleDeleteTask CALLED. Task ID:", taskId);
         if (!currentUser) {
-            console.error("No current user found for delete operation.");
             setError("You must be logged in to delete a task.");
             return;
         }
-        console.log("Current User UID for delete:", currentUser.uid);
-    
-        // TEMPORARILY BYPASSING window.confirm for debugging
-        const proceedWithDelete = true; // Forcing confirmation to true
-        console.log("window.confirm SKIPPED for debugging. Proceeding with delete:", proceedWithDelete);
-    
-        if (proceedWithDelete) { // Using our variable instead of window.confirm()
-            // console.log("User CONFIRMED delete."); // This log isn't strictly true anymore but indicates the path taken
-            setIsLoading(true);
-            setError(null);
-            try {
-                const docPath = `users/${currentUser.uid}/customTasks/${taskId}`;
-                console.log("Attempting to delete document at path:", docPath);
-                
-                const taskDocRef = doc(db, docPath);
-                await deleteDoc(taskDocRef);
-                
-                console.log("Document successfully deleted from Firestore. Fetching updated tasks...");
-                await fetchTasks();
-            } catch (err: any) {
-                console.error("ERROR during Firestore delete operation (Task):", err);
-                setError(`Failed to delete task: ${err.message}. Check console for details.`);
-            } finally {
-                setIsLoading(false);
-            }
-        } else {
-            // This 'else' block will not be reached with proceedWithDelete = true
-            // console.log("User CANCELED delete."); 
+        // Bypassing confirmation for non-interactive environments or specific needs.
+        // Ensure this is the desired behavior or implement a custom modal for confirmation.
+        setIsLoading(true);
+        setError(null);
+        try {
+            const taskDocRef = doc(db, `users/${currentUser.uid}/customTasks`, taskId);
+            await deleteDoc(taskDocRef);
+            await fetchTasks();
+        } catch (err: any) {
+            console.error("Error deleting task:", err);
+            setError(`Failed to delete task: ${err.message}. Check console for details.`);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    // Render Logic
     if (!currentUser) {
-        return <p>Please log in to manage your custom tasks.</p>;
+        return <p className="text-warning">Please log in to manage your custom tasks.</p>;
     }
 
-    // Basic styling (replace with CSS classes or styled-components)
-    const styles = {
-        managerContainer: { padding: '20px', border: '1px solid #eee', borderRadius: '4px' },
-        button: {
-            padding: '8px 12px',
-            margin: '0 5px 10px 0',
-            cursor: 'pointer',
-            border: '1px solid #007bff',
-            backgroundColor: '#007bff',
-            color: 'white',
-            borderRadius: '4px'
-        },
-        editButton: { backgroundColor: '#ffc107', borderColor: '#ffc107', color: 'black' },
-        deleteButton: { backgroundColor: '#dc3545', borderColor: '#dc3545'},
-        taskList: { listStyle: 'none', padding: 0 },
-        taskItem: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '10px',
-            borderBottom: '1px solid #f0f0f0',
-            marginBottom: '5px'
-        },
-        taskDetails: { flexGrow: 1 },
-        actions: { whiteSpace: 'nowrap' as 'nowrap' }
-    };
-
-
     return (
-        <div style={styles.managerContainer}>
-            <h3>My Custom Tasks</h3>
-            <button style={styles.button} onClick={handleOpenModalForAdd} disabled={isLoading}>
+        <div className={styles.managerContainer}> {/* Use CSS module style */}
+            <h3 className="mb-lg">My Custom Tasks</h3> {/* Added mb-lg for spacing */}
+            <button className="btn btn-primary mb-lg" onClick={handleOpenModalForAdd} disabled={isLoading}>
                 + Add New Task
             </button>
 
             {isLoading && <p>Loading tasks...</p>}
-            {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+            {error && <p className="text-danger">Error: {error}</p>} {/* Use global text-danger */}
 
             {!isLoading && !error && tasks.length === 0 && (
                 <p>You haven't added any custom tasks yet.</p>
             )}
 
             {!isLoading && !error && tasks.length > 0 && (
-                <ul style={styles.taskList}>
+                <ul className={styles.taskList}> {/* Use CSS module style */}
                     {tasks.map(task => (
-                        <li key={task.id} style={styles.taskItem}>
-                            <div style={styles.taskDetails}>
+                        <li key={task.id} className={styles.taskItem}> {/* Use CSS module style */}
+                            <div className={styles.taskDetails}> {/* Use CSS module style */}
                                 <strong>{task.name}</strong>
                                 <br />
                                 <small>Unit: {task.defaultUnit || 'N/A'}</small>
                                 {task.description && <><br /><small>Desc: {task.description}</small></>}
                             </div>
-                            <div style={styles.actions}>
+                            <div className={styles.actions}> {/* Use CSS module style */}
                                 <button
-                                    style={{...styles.button, ...styles.editButton}}
+                                    className="btn btn-secondary btn-sm" // Global button styles
                                     onClick={() => handleOpenModalForEdit(task)}
                                     disabled={isLoading}
                                 >
                                     Edit
                                 </button>
                                 <button
-                                    style={{...styles.button, ...styles.deleteButton}}
+                                    className="btn btn-danger btn-sm ml-xs" // Global button styles + margin utility
                                     onClick={() => handleDeleteTask(task.id)}
                                     disabled={isLoading}
                                 >

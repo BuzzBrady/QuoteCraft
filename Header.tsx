@@ -1,4 +1,4 @@
-// src/components/Header.tsx
+// Header.tsx (root)
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './src/contexts/AuthContext'; // Ensure this path is correct for your project
@@ -40,8 +40,6 @@ function Header() {
             <NavLink to="/quote-builder" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>New Quote</NavLink>
             <NavLink to="/existing-quotes" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Quotes</NavLink>
             <NavLink to="/my-items" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>My Library</NavLink>
-            {/* <NavLink to="/my-rates" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>My Rates</NavLink> */}
-            {/* <NavLink to="/profile" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Profile</NavLink> */}
         </>
     );
 
@@ -52,7 +50,6 @@ function Header() {
                     QuoteCraft
                 </Link>
 
-                {/* Desktop Navigation (hidden on mobile) */}
                 <nav className="header-nav header-nav--desktop">
                     {renderNavLinks()}
                 </nav>
@@ -61,12 +58,11 @@ function Header() {
                     {currentUser && (
                         <>
                             <span className="user-email">{currentUser.email}</span>
-                            {logout && <button onClick={handleLogout} className="logout-button">Logout</button>}
+                            {logout && <button onClick={handleLogout} className="btn btn-secondary">Logout</button>} {/* Updated class */}
                         </>
                     )}
                 </div>
 
-                {/* Hamburger Button (visible only on mobile) */}
                 <button className="hamburger-button" onClick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={isMobileMenuOpen}>
                     <span></span>
                     <span></span>
@@ -74,23 +70,20 @@ function Header() {
                 </button>
             </div>
 
-            {/* Slide-in Mobile Menu */}
             <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
                  <button className="mobile-menu__close-button" onClick={toggleMobileMenu} aria-label="Close menu">&times;</button>
                  <nav className="mobile-menu__nav">
                      {renderNavLinks()}
                  </nav>
-                 {/* You could also add a logout button specifically for the mobile menu here if desired */}
                  {currentUser && logout && (
-                     <button onClick={handleLogout} className="logout-button mobile-menu__logout-button">
+                     <button onClick={handleLogout} className="btn btn-secondary mobile-menu__logout-button"> {/* Updated class */} 
                          Logout
                      </button>
                  )}
             </div>
-            {/* Optional: Overlay to close menu on click */}
             {isMobileMenuOpen && <div className="mobile-menu__overlay" onClick={toggleMobileMenu}></div>}
         </header>
     );
 }
 
-export default Header; // <-- This makes Header the default export
+export default Header;

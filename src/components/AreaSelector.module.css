@@ -1,41 +1,55 @@
 /* src/components/AreaSelector.module.css */
 .areaSelectorContainer {
-  /* Container for the entire area selector */
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-md);
 }
 
 .areaSelectorGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Responsive grid */
-  gap: 0.75rem; /* Spacing between buttons */
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-sm);
 }
 
 .areaButton {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--secondary-steel-gray);
-  background-color: var(--primary-deep-charcoal);
-  color: var(--primary-white);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-color-input); /* Was secondary-steel-gray */
+  background-color: var(--background-color-sections);
+  color: var(--theme-primary-white);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--border-radius-md);
   text-align: center;
   font-size: 0.9em;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: var(--transition-fast);
+  line-height: 1.5; /* Added for consistency */
+  font-weight: 500; /* Added for consistency */
 }
 
-.areaButton:hover {
-  background-color: var(--secondary-steel-gray);
+.areaButton:hover,
+.areaButton:focus {
+  border-color: var(--theme-secondary-steel-gray);
+  background-color: var(--background-color-light);
+  color: var(--theme-primary-white);
+  outline: none;
+}
+.areaButton:focus {
+  box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }
 
 .areaButton.selected {
-  background-color: var(--primary-light-blue);
-  color: var(--primary-white);
-  border-color: var(--accent-bright-blue);
-  font-weight: bold;
+  background-color: var(--theme-primary-light-blue);
+  color: var(--theme-primary-white);
+  border-color: var(--theme-accent-bright-blue);
+  font-weight: 600; /* Bolder for selected, consistent with .btn */
 }
 
-/* Specificity for buttons if needed, though the .selected class on .areaButton should suffice */
-.areaSelectorGrid button.selected {
-  background-color: var(--primary-light-blue);
-  color: var(--primary-white);
-  border-color: var(--accent-bright-blue);
+.areaButton.selected:hover,
+.areaButton.selected:focus {
+  background-color: var(--theme-accent-bright-blue); /* Selected items hover/focus to accent */
+  border-color: var(--theme-accent-bright-blue);
 }
+.areaButton.selected:focus {
+   box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
+}
+
+/* Redundant rule removed:
+.areaSelectorGrid button.selected {}
+*/

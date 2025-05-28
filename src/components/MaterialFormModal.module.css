@@ -9,26 +9,27 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1050; /* Ensure it's above other modals if any */
+    z-index: var(--z-index-popover); /* Needs to be higher than modal if it can appear on top of another modal */
 }
 
 .modalContent {
-    background: var(--primary-deep-charcoal);
-    color: var(--primary-white);
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    background: var(--theme-primary-deep-charcoal);
+    color: var(--theme-primary-white);
+    padding: var(--space-xl);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--box-shadow-lg);
     width: 90%;
-    max-width: 550px; /* Slightly wider for material forms */
+    max-width: 550px;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: var(--space-lg);
 }
 
 .modalContent h2 {
-    color: var(--primary-light-blue);
+    /* Uses global h2 styles */
     margin-top: 0;
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--space-md);
     text-align: center;
     font-size: 1.6em;
 }
@@ -36,27 +37,22 @@
 .formField {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: var(--space-xs);
 }
 
 .formField label {
-    font-weight: bold;
+    /* Uses global label styles */
     font-size: 0.9em;
-    color: var(--secondary-steel-gray);
 }
 
 .formField input[type="text"],
 .formField input[type="number"],
 .formField textarea,
 .formField select {
-    width: 100%;
-    padding: 0.7rem 0.6rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
+    /* Inherits most styles from global input/textarea/select in index.css */
+    padding: var(--space-sm);
     font-size: 0.95em;
-    background-color: var(--primary-deep-charcoal); /* Or a slightly lighter shade */
-    color: var(--primary-white);
-    box-sizing: border-box;
+    /* border-radius already var(--border-radius-md) from global */
 }
 
 .formField textarea {
@@ -67,51 +63,76 @@
 .checkboxField {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
+    /* color: var(--text-color-light); Ensure label text for checkbox is visible */
 }
 
 .checkboxField input[type="checkbox"] {
-    width: auto;
-    margin-right: 0.5rem;
-    accent-color: var(--primary-light-blue); /* Styles the checkbox color */
+    /* width: auto; */ /* Global input style might handle this if it has width:100% */
+    margin-right: var(--space-xs); /* This can be removed if gap on .checkboxField is enough */
+    /* accent-color is already var(--theme-primary-light-blue) from global */
 }
 
 .formActions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: var(--space-md);
+    margin-top: var(--space-md);
 }
 
+/* Buttons can be refactored to use global .btn classes in TSX */
 .formActions button {
-    padding: 0.65rem 1.25rem;
-    border: none;
-    border-radius: 4px;
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
     cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: var(--space-sm) var(--space-md);
     font-size: 0.95em;
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-fast);
 }
 
 .submitButton {
-    background-color: var(--accent-bright-blue);
-    color: var(--primary-white);
+    /* Extends .formActions button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
 }
 
-.submitButton:hover {
-    opacity: 0.85;
+.submitButton:hover, .submitButton:focus {
+    background-color: #00a6d8; /* Darker bright blue */
+    border-color: #00a6d8;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.submitButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
 }
 
 .cancelButton {
-    background-color: var(--secondary-steel-gray);
-    color: var(--primary-white);
+    /* Extends .formActions button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-secondary-steel-gray);
+    border-color: var(--theme-secondary-steel-gray);
 }
 
-.cancelButton:hover {
-    opacity: 0.85;
+.cancelButton:hover, .cancelButton:focus {
+    background-color: #8e989f; /* Darker steel gray */
+    border-color: #8e989f;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.cancelButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }
 
 .errorMessage {
-    color: #ff4d4d; /* Consider a variable for error colors */
+    color: var(--color-error);
     font-size: 0.85em;
-    margin-top: -0.5rem; /* Adjust spacing */
+    margin-top: calc(-1 * var(--space-sm));
+    margin-bottom: var(--space-sm);
 }

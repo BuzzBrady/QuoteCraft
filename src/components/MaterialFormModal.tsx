@@ -6,10 +6,9 @@ import {
     doc, addDoc, updateDoc, collection, getDocs, getDoc, writeBatch,
     serverTimestamp, query, orderBy, Timestamp
 } from 'firebase/firestore';
-import GenericFormModal from './GenericFormModal'; // Import the generic modal
-import styles from './MaterialFormModal.module.css';   // Import specific styles for this form's content
+import GenericFormModal from './GenericFormModal';
+import styles from './MaterialFormModal.module.css';
 
-// Define common units
 const COMMON_UNITS = [
     "item", "each", "unit", "set",
     "m", "m²", "m³", "lm",
@@ -54,7 +53,7 @@ function MaterialFormModal({
         if (isOpen) {
             setFormError(null);
             setOptionsError(null);
-            setIsSaving(false); // Reset saving state when modal opens
+            setIsSaving(false);
             if (mode === 'edit' && initialData) {
                 setName(initialData.name || '');
                 setDescription(initialData.description || '');
@@ -66,15 +65,14 @@ function MaterialFormModal({
                 } else {
                     setOptions([]);
                 }
-            } else { // Add mode
-                setName(initialData?.name || ''); // Keep initialName if provided (e.g., from QuickAdd)
+            } else {
+                setName(initialData?.name || '');
                 setDescription(initialData?.description || '');
                 setOptionsAvailable(initialData?.optionsAvailable || false);
                 setDefaultRate(initialData?.defaultRate?.toString() || '');
                 setDefaultUnit(initialData?.defaultUnit || 'item');
                 setOptions(initialData && (initialData as any).options ? (initialData as any).options : []);
             }
-            // Reset option form fields
             setCurrentOptionName('');
             setCurrentOptionDescription('');
             setCurrentOptionRateModifier('');
@@ -178,14 +176,14 @@ function MaterialFormModal({
 
             const optionsRef = collection(db, `users/${userId}/customMaterials/${materialId}/options`);
             const batch = writeBatch(db);
-            if (mode === 'edit') { // Clear old options only if editing and options were fetched
+            if (mode === 'edit') { 
                 const existingOptionsSnapshot = await getDocs(optionsRef);
                 existingOptionsSnapshot.forEach(optionDoc => batch.delete(optionDoc.ref));
             }
             if (optionsAvailable && options.length > 0) {
                 options.forEach(option => {
-                    const { id: tempId, ...optionDataForDb } = option; // Exclude tempId
-                    const newOptionRef = doc(optionsRef); // Let Firestore generate ID
+                    const { id: tempId, ...optionDataForDb } = option;
+                    const newOptionRef = doc(optionsRef); 
                     batch.set(newOptionRef, {
                         ...optionDataForDb,
                         name_lowercase: option.name.toLowerCase(),
@@ -196,30 +194,28 @@ function MaterialFormModal({
             }
             await batch.commit();
 
-            // Fetch the saved material to pass back (necessary for 'add' mode to get the ID)
             const savedMaterialDoc = await getDoc(doc(materialCollectionRef, materialId));
             const savedMaterial = savedMaterialDoc.exists() ? { id: savedMaterialDoc.id, ...savedMaterialDoc.data() } as CustomMaterial : null;
 
-            onSaveCallback(savedMaterial); // Call with the saved material
-            onClose(); // Close the modal on success
+            onSaveCallback(savedMaterial);
+            onClose();
 
         } catch (err: any) {
- console.error("Error saving material:", err);
- setFormError(`Failed to save material: ${err.message}`);
- onSaveCallback(null); // Call with null on save failure
+            console.error("Error saving material:", err);
+            setFormError(`Failed to save material: ${err.message}`);
+            onSaveCallback(null);
         } finally {
             setIsSaving(false);
         }
-
     };
 
     const footerContent = (
         <>
-            <button type="button" className={styles.secondaryButton} onClick={() => {
- onSaveCallback(null); // Call with null when cancelled
- onClose();
+            <button type="button" className="btn btn-secondary" onClick={() => {
+                onSaveCallback(null);
+                onClose();
             }} disabled={isSaving}>Cancel</button>
-            <button type="submit" form="material-form" className={styles.primaryButton} disabled={isSaving}>
+            <button type="submit" form="material-form" className="btn btn-accent" disabled={isSaving}>
                 {isSaving ? 'Saving...' : (mode === 'add' ? 'Add Material' : 'Save Changes')}
             </button>
         </>
@@ -232,61 +228,59 @@ function MaterialFormModal({
             title={mode === 'add' ? 'Add New Custom Material' : 'Edit Custom Material'}
             footerContent={footerContent}
         >
-            <form onSubmit={handleSubmit} id="material-form">
-                <div className={styles.formGroup}>
-                    <label htmlFor="materialFormNameInput" className={styles.label}>Material Name<span style={{color: 'red'}}>*</span>:</label>
-                    <input type="text" id="materialFormNameInput" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} required autoFocus/>
+            <form onSubmit={handleSubmit} id="material-form" className={styles.materialFormContainer}>
+                <div className="form-group mb-md">
+                    <label htmlFor="materialFormNameInput">Material Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
+                    <input type="text" id="materialFormNameInput" value={name} onChange={(e) => setName(e.target.value)} required autoFocus placeholder="e.g., Plasterboard Screws"/>
                 </div>
 
-                <div className={styles.formRow}>
-                    <div>
-                        <label htmlFor="materialFormDefaultRate" className={styles.label}>Default Rate ($):</label>
-                        <input type="number" id="materialFormDefaultRate" className={styles.input} value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} placeholder="e.g., 15.50" step="0.01" />
+                <div className={`${styles.formRow} mb-md`}>
+                    <div className="form-group">
+                        <label htmlFor="materialFormDefaultRate">Default Rate ($):</label>
+                        <input type="number" id="materialFormDefaultRate" value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} placeholder="e.g., 15.50" step="0.01" />
                     </div>
-                    <div>
-                        <label htmlFor="materialFormDefaultUnit" className={styles.label}>Default Unit:</label>
-                        <input type="text" id="materialFormDefaultUnit" className={styles.input} value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="e.g., each, m, kg" list="common-material-units-datalist-modal" />
+                    <div className="form-group">
+                        <label htmlFor="materialFormDefaultUnit">Default Unit:</label>
+                        <input type="text" id="materialFormDefaultUnit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="e.g., each, m, kg" list="common-material-units-datalist-modal" />
                         <datalist id="common-material-units-datalist-modal">
                             {COMMON_UNITS.map(unit => (<option key={unit} value={unit} />))}
                         </datalist>
                     </div>
                 </div>
 
-                {/* Moved "Has Options" checkbox before "Description" */}
-                <div className={styles.formGroup}>
-                    <label className={styles.checkboxLabel}>
-                        <input type="checkbox" className={styles.checkboxInput} checked={optionsAvailable} onChange={(e) => setOptionsAvailable(e.target.checked)} />
+                <div className="form-group mb-md">
+                    <label className={styles.checkboxLabel}> {/* Retain for specific checkbox layout */}
+                        <input type="checkbox" checked={optionsAvailable} onChange={(e) => setOptionsAvailable(e.target.checked)} />
                         Has Options (e.g., sizes, colors, rate modifiers)
                     </label>
                 </div>
 
-                <div className={styles.formGroup}>
-                    <label htmlFor="materialFormDescription" className={styles.label}>Description:</label>
-                    <textarea id="materialFormDescription" className={styles.textarea} value={description} onChange={(e) => setDescription(e.target.value)} />
+                <div className="form-group mb-md">
+                    <label htmlFor="materialFormDescription">Description:</label>
+                    <textarea id="materialFormDescription" value={description} onChange={(e) => setDescription(e.target.value)} rows={3}/>
                 </div>
 
-
                 {optionsAvailable && (
-                    <div className={styles.optionsSection}>
+                    <div className={`${styles.optionsSection} mt-lg mb-lg`}>
                         <h4 className={styles.optionsTitle}>Manage Options</h4>
-                        {isLoadingOptions && <p>Loading options...</p>}
-                        {optionsError && <p className={styles.errorMessage}>{optionsError}</p>}
+                        {isLoadingOptions && <p className="text-center text-muted">Loading options...</p>}
+                        {optionsError && <p className="text-danger text-center mt-sm">{optionsError}</p>}
                         
-                        <div className={styles.optionInputRow}>
-                            <div className={styles.optionInputGroup}>
-                                <label htmlFor="optionFormName" className={styles.label}>Option Name:</label>
-                                <input type="text" id="optionFormName" placeholder="E.g., Large" className={styles.input} value={currentOptionName} onChange={(e) => setCurrentOptionName(e.target.value)} />
+                        <div className={`${styles.optionInputRow} mb-md`}>
+                            <div className="form-group">
+                                <label htmlFor="optionFormName">Option Name:</label>
+                                <input type="text" id="optionFormName" placeholder="E.g., Large" value={currentOptionName} onChange={(e) => setCurrentOptionName(e.target.value)} />
                             </div>
-                            <div className={styles.optionInputGroup}>
-                                <label htmlFor="optionFormDescription" className={styles.label}>Option Description:</label>
-                                <input type="text" id="optionFormDescription" placeholder="E.g., 1200x600mm" className={styles.input} value={currentOptionDescription} onChange={(e) => setCurrentOptionDescription(e.target.value)} />
+                            <div className="form-group">
+                                <label htmlFor="optionFormDescription">Option Description:</label>
+                                <input type="text" id="optionFormDescription" placeholder="E.g., 1200x600mm" value={currentOptionDescription} onChange={(e) => setCurrentOptionDescription(e.target.value)} />
                             </div>
-                             <div className={styles.optionInputGroup}>
-                                <label htmlFor="optionFormRateModifier" className={styles.label}>Rate Modifier ($):</label>
-                                <input type="number" id="optionFormRateModifier" placeholder="e.g., +5.00 or -2.50" className={styles.input} value={currentOptionRateModifier} onChange={(e) => setCurrentOptionRateModifier(e.target.value)} step="any" />
+                             <div className="form-group">
+                                <label htmlFor="optionFormRateModifier">Rate Modifier ($):</label>
+                                <input type="number" id="optionFormRateModifier" placeholder="e.g., +5.00 or -2.50" value={currentOptionRateModifier} onChange={(e) => setCurrentOptionRateModifier(e.target.value)} step="any" />
                             </div>
                             <div className={styles.optionAddButtonContainer}>
-                                <button type="button" className={styles.primaryButtonSmall} onClick={handleAddOrUpdateOption} disabled={isSaving}> {editingOptionId ? 'Update' : '+ Add'} </button>
+                                <button type="button" className="btn btn-primary btn-sm" onClick={handleAddOrUpdateOption} disabled={isSaving}> {editingOptionId ? 'Update' : '+ Add'} </button>
                             </div>
                         </div>
 
@@ -300,16 +294,16 @@ function MaterialFormModal({
                                             {(typeof opt.rateModifier === 'number' && opt.rateModifier !== 0) && <small className={styles.optionItemDescription}> Modifier: {opt.rateModifier > 0 ? '+' : ''}{opt.rateModifier.toFixed(2)}</small>}
                                         </div>
                                         <div className={styles.optionActions}>
-                                            <button type="button" className={styles.optionActionButton} onClick={() => handleEditOption(opt)} disabled={isSaving}>Edit</button>
-                                            <button type="button" className={styles.optionDeleteButton} onClick={() => handleDeleteOptionFromLocal(opt.id)} disabled={isSaving}>Del</button>
+                                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleEditOption(opt)} disabled={isSaving}>Edit</button>
+                                            <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDeleteOptionFromLocal(opt.id)} disabled={isSaving}>Del</button>
                                         </div>
                                     </li>))}
                             </ul>
                         )}
-                        {options.length === 0 && !isLoadingOptions && <p style={{fontSize: '0.9em', color: '#666', textAlign: 'center'}}>No options added yet for this material.</p>}
+                        {options.length === 0 && !isLoadingOptions && <p className="text-muted text-center" style={{fontSize: '0.9em'}}>No options added yet for this material.</p>}
                     </div>
                 )}
-                {formError && <p className={styles.errorMessage}>{formError}</p>}
+                {formError && <p className="text-danger text-center mt-sm">{formError}</p>}
             </form>
         </GenericFormModal>
     );

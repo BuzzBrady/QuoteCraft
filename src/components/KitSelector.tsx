@@ -2,31 +2,24 @@
 // -------------
 // Component to fetch and display global and user-specific kit templates,
 // allowing selection via an onSelect callback.
-// (Includes TypeScript fixes for errors shown in screenshot)
 
-// Removed unused 'React' import
 import styles from './KitSelector.module.css';
 import { useState, useEffect, useMemo } from 'react';
-// Added QueryDocumentSnapshot for explicit typing, removed unused DocumentData
 import { collection, query, where, getDocs, orderBy, QuerySnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
-import { db } from '../config/firebaseConfig'; // Adjust path if needed
-import { KitTemplate } from '../types'; // Adjust path if needed
+import { db } from '../config/firebaseConfig';
+import { KitTemplate } from '../types';
 
-// Define the props the component accepts
 interface KitSelectorProps {
-    userId: string | null | undefined; // ID of the logged-in user
-    onSelect: (kit: KitTemplate) => void; // Callback function when a kit is selected
+    userId: string | null | undefined;
+    onSelect: (kit: KitTemplate) => void;
 }
 
-// Add isCustom flag for easier handling internally
 type CombinedKit = KitTemplate & { isCustom?: boolean };
 
-// Define a type for the snapshot results to handle the conditional custom fetch
 type KitQuerySnapshots = [
-    QuerySnapshot, // Always expect global snapshot
-    QuerySnapshot | null // Custom snapshot might be null if no userId
+    QuerySnapshot, 
+    QuerySnapshot | null 
 ];
-
 
 function KitSelector({ userId, onSelect }: KitSelectorProps) {
     const [allKits, setAllKits] = useState<CombinedKit[]>([]);
@@ -34,7 +27,6 @@ function KitSelector({ userId, onSelect }: KitSelectorProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Effect to fetch kits when the component mounts or userId changes
     useEffect(() => {
         const fetchKits = async () => {
             setIsLoading(true);
@@ -42,28 +34,22 @@ function KitSelector({ userId, onSelect }: KitSelectorProps) {
             console.log("KitSelector: Fetching kits...");
 
             try {
-                // --- Define Promises ---
                 const globalKitsRef = collection(db, 'kitTemplates');
                 const globalQuery = query(globalKitsRef, where('isGlobal', '==', true), orderBy('name_lowercase'));
                 const globalPromise = getDocs(globalQuery);
 
-                // Initialize customPromise correctly based on userId presence
                 const customPromise = userId
                     ? getDocs(query(collection(db, `users/${userId}/kitTemplates`), orderBy('name_lowercase')))
-                    : Promise.resolve(null); // Resolve to null if no userId
+                    : Promise.resolve(null);
 
-                // --- Wait for queries ---
-                // Explicitly type the result of Promise.all
                 const [globalSnapshot, customSnapshot] = await Promise.all([
                     globalPromise,
                     customPromise
-                ]) as KitQuerySnapshots; // Assert the type here
+                ]) as KitQuerySnapshots;
 
-                // --- Process Results ---
                 const fetchedKits: CombinedKit[] = [];
 
-                // Process Global Results
-                globalSnapshot.forEach((doc: QueryDocumentSnapshot) => { // Added type for doc
+                globalSnapshot.forEach((doc: QueryDocumentSnapshot) => {
                     fetchedKits.push({
                         id: doc.id,
                         ...doc.data(),
@@ -71,9 +57,8 @@ function KitSelector({ userId, onSelect }: KitSelectorProps) {
                     } as CombinedKit );
                 });
 
-                // Process Custom Results (if fetched - customSnapshot won't be 'never' now)
                 if (customSnapshot) {
-                    customSnapshot.forEach((doc: QueryDocumentSnapshot) => { // Added type for doc
+                    customSnapshot.forEach((doc: QueryDocumentSnapshot) => {
                         fetchedKits.push({
                             id: doc.id,
                             ...doc.data(),
@@ -82,22 +67,18 @@ function KitSelector({ userId, onSelect }: KitSelectorProps) {
                     });
                 }
 
-                // Simple sort putting global before custom, then by name
                 fetchedKits.sort((a, b) => {
                     if (a.isCustom !== b.isCustom) {
-                        return a.isCustom ? 1 : -1; // Sort custom after global
+                        return a.isCustom ? 1 : -1;
                     }
-                    // Ensure names exist before comparing
                     return (a.name ?? '').localeCompare(b.name ?? '');
                 });
-
 
                 setAllKits(fetchedKits);
                 console.log(`KitSelector: Fetched ${fetchedKits.length} total kits.`);
 
-            } catch (err: any) { // Keep 'any' here for general error handling
+            } catch (err: any) {
                 console.error("KitSelector: Error fetching kits:", err);
-                // Check if it's a permission error specifically
                 if (err.code === 'permission-denied') {
                      setError("Permission denied fetching kits. Check Firestore rules.");
                 } else {
@@ -110,10 +91,8 @@ function KitSelector({ userId, onSelect }: KitSelectorProps) {
         };
 
         fetchKits();
-
     }, [userId]);
 
-    // Filter kits based on search term (checking name and tags)
     const filteredKits = useMemo(() => {
         if (!searchTerm) {
             return allKits;
@@ -121,8 +100,7 @@ function KitSelector({ userId, onSelect }: KitSelectorProps) {
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
         return allKits.filter(kit => {
             const nameMatch = kit.name_lowercase?.toLowerCase().includes(lowerCaseSearchTerm) ||
-                              (kit.name ?? '').toLowerCase().includes(lowerCaseSearchTerm); // Add null check for name
-            // Check if any tag includes the search term
+                              (kit.name ?? '').toLowerCase().includes(lowerCaseSearchTerm);
             const tagMatch = kit.tags?.some(tag =>
                 tag.toLowerCase().includes(lowerCaseSearchTerm)
             );
@@ -130,35 +108,36 @@ function KitSelector({ userId, onSelect }: KitSelectorProps) {
         });
     }, [allKits, searchTerm]);
 
-    // --- Render ---
     return (
-        <div className="kit-selector"> {/* Add class for styling */}
-            <h4>Select Kit / Assembly</h4>
+        <div className={styles.kitSelectorContainer}> {/* Use module style for container */}
+            <h4 className="mb-md">Select Kit / Assembly</h4> {/* Add margin utility */}
             <input
                 type="text"
                 placeholder="Search kits by name or tag..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={styles.input}
+                // Assuming global input styles apply; module style can add specifics if needed.
+                className={styles.input} 
             />
 
             {isLoading && <p>Loading kits...</p>}
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+            {error && <p className="text-danger">{error}</p>} {/* Use global text-danger */}
 
             {!isLoading && !error && (
                  <ul className={styles.kitList}>
                     {filteredKits.length > 0 ? (
                         filteredKits.map((kit) => (
-                            <li key={kit.id} onClick={() => onSelect(kit)} className={`${styles.kitItem} kit-selector-item`}>
+                            <li key={kit.id} onClick={() => onSelect(kit)} className={styles.kitItem}>
                                 <span className={`${styles.kitName} ${kit.isCustom ? styles.isCustom : ''}`}>
-                                    {kit.name ?? 'Unnamed Kit'} {/* Add fallback for name */}
+                                    {kit.name ?? 'Unnamed Kit'}
                                     {kit.isCustom && <span className={styles.customMark}>(Custom)</span>}
                                 </span>
                                 {kit.tags && kit.tags.length > 0 && (<div className={styles.tagsContainer}>Tags: {kit.tags.join(', ')}</div>)}
                             </li>
                         ))
                     ) : (
-                        <li style={{ padding: '8px 10px', color: '#777' }}>No kits found.</li>
+                        // Use module style for no kits message if available and suitable, or global text utility
+                        <li className={styles.noKitsMessage || 'text-muted p-md'}>No kits found.</li>
                     )}
                 </ul>
             )}

@@ -5,57 +5,55 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.65);
+    background-color: rgba(0, 0, 0, 0.65); /* Consistent with --modal-backdrop */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1050;
+    z-index: var(--z-index-modal); /* Using global modal z-index */
 }
 
 .modalContent {
-    background: var(--primary-deep-charcoal);
-    color: var(--primary-white);
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    background: var(--theme-primary-deep-charcoal);
+    color: var(--theme-primary-white);
+    padding: var(--space-xl);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--box-shadow-lg);
     width: 90%;
     max-width: 500px;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: var(--space-lg);
 }
 
 .modalContent h2 {
-    color: var(--primary-light-blue);
+    /* Uses global h2 styles for color, font-weight */
     margin-top: 0;
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--space-md); /* Adjusted from 0.75rem */
     text-align: center;
-    font-size: 1.6em;
+    font-size: 1.6em; /* Specific size for modal title */
 }
 
 .formField {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: var(--space-xs); /* Adjusted from 0.4rem */
 }
 
 .formField label {
-    font-weight: bold;
-    font-size: 0.9em;
-    color: var(--secondary-steel-gray);
+    /* Uses global label styles for color, font-weight, margin-bottom */
+    font-size: 0.9em; /* Specific font size if needed */
 }
 
 .formField input[type="text"],
 .formField textarea,
 .formField select {
-    width: 100%;
-    padding: 0.7rem 0.6rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
+    /* Inherits most styles from global input/textarea/select in index.css */
+    /* Overrides or specific adjustments here: */
+    padding: var(--space-sm); /* Global default is sm+md, this is slightly smaller */
     font-size: 0.95em;
-    background-color: var(--primary-deep-charcoal); /* Or a shade lighter */
-    color: var(--primary-white);
-    box-sizing: border-box;
+    /* background-color already var(--background-color-sections) or var(--theme-primary-deep-charcoal) from global */
+    /* border-radius already var(--border-radius-md) from global */
 }
 
 .formField textarea {
@@ -66,39 +64,63 @@
 .formActions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: var(--space-md);
+    margin-top: var(--space-lg); /* Increased from 1rem for more separation */
 }
 
-.formActions button {
-    padding: 0.65rem 1.25rem;
-    border: none;
-    border-radius: 4px;
+/* Buttons can be refactored to use global .btn classes in TSX */
+.formActions button { /* Base for buttons in this modal if not using global .btn */
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
     cursor: pointer;
-    font-size: 0.95em;
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: var(--space-sm) var(--space-md); /* Aligning with .btn padding */
+    font-size: 0.95em; /* Specific font size for modal buttons */
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-fast);
 }
 
 .submitButton {
-    background-color: var(--accent-bright-blue);
-    color: var(--primary-white);
+    /* Extends .formActions button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
 }
 
-.submitButton:hover {
-    opacity: 0.85;
+.submitButton:hover, .submitButton:focus {
+    background-color: #00a6d8; /* Darker bright blue - consistent with .btn-accent:hover */
+    border-color: #00a6d8;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.submitButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
 }
 
 .cancelButton {
-    background-color: var(--secondary-steel-gray);
-    color: var(--primary-white);
+    /* Extends .formActions button */
+    color: var(--theme-primary-white);
+    background-color: var(--theme-secondary-steel-gray);
+    border-color: var(--theme-secondary-steel-gray);
 }
 
-.cancelButton:hover {
-    opacity: 0.85;
+.cancelButton:hover, .cancelButton:focus {
+    background-color: #8e989f; /* Darker steel gray - consistent with .btn-secondary:hover */
+    border-color: #8e989f;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.cancelButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
 }
 
 .errorMessage {
-    color: #ff4d4d; /* Consider a variable for error colors */
+    color: var(--color-error);
     font-size: 0.85em;
-    margin-top: -0.5rem;
+    margin-top: calc(-1 * var(--space-sm)); /* Pull closer if needed, adjust value */
+    margin-bottom: var(--space-sm);
 }

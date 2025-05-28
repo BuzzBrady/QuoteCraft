@@ -1,126 +1,153 @@
 /* src/pages/ProfileSettingsPage.module.css */
 .settingsContainer {
     max-width: 600px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: var(--primary-deep-charcoal); /* Slightly lighter for card effect if body is same */
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 8px;
-    /* box-shadow: 0 4px 12px rgba(0,0,0,0.1); */ /* Re-evaluate shadow */
-    color: var(--primary-white);
+    margin: var(--space-xl) auto;
+    padding: var(--space-xl);
+    background-color: var(--background-color-sections); /* Use section background for card effect */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--box-shadow-md);
+    color: var(--theme-primary-white);
 }
 
 .settingsContainer h1 {
-    color: var(--primary-light-blue);
+    /* Global h1 styles for font-family, weight. Specific color/size for this page */
+    color: var(--theme-primary-light-blue);
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-xl);
     font-size: 1.8em;
 }
 
 .formGroup {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-lg);
 }
 
 .formGroup label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-    color: var(--secondary-steel-gray);
+    /* Global label styles for display, font-weight, margin-bottom */
+    color: var(--theme-secondary-steel-gray);
     font-size: 0.95em;
+    margin-bottom: var(--space-xs);
 }
 
 .formGroup input[type="text"],
 .formGroup input[type="email"],
 .formGroup input[type="password"] {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid var(--secondary-steel-gray);
-    border-radius: 4px;
+    /* Inherits global input styles for width, border, bg-color, color, box-sizing, border-radius */
+    padding: var(--space-sm);
     font-size: 1em;
-    background-color: var(--primary-deep-charcoal); /* Input background */
-    color: var(--primary-white);
-    box-sizing: border-box;
 }
 
 .formActions {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--secondary-steel-gray);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color-light); /* Was secondary-steel-gray, changed to lighter for subtle division */
     display: flex;
-    flex-direction: column; /* Stack buttons vertically for emphasis */
-    gap: 1rem;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+/* Base for buttons in this form if not using global .btn in TSX */
+.buttonBase {
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 1em; /* Default button size */
+    line-height: 1.5;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-fast);
 }
 
 .saveButton {
-    padding: 0.8rem 1.5rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1.05em;
-    background-color: var(--accent-bright-blue);
-    color: var(--primary-white);
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    composes: buttonBase;
+    color: var(--theme-primary-white);
+    background-color: var(--theme-accent-bright-blue);
+    border-color: var(--theme-accent-bright-blue);
+    font-size: 1.05em; /* Specific size */
 }
 
-.saveButton:hover {
-    opacity: 0.85;
+.saveButton:hover,
+.saveButton:focus {
+    background-color: #00a6d8; /* Darker accent */
+    border-color: #00a6d8;
+    color: var(--theme-primary-white);
+    outline: 0;
+}
+.saveButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
 }
 
 .deleteAccountSection {
-    margin-top: 2.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px dashed var(--secondary-steel-gray); /* Dashed for visual separation */
+    margin-top: var(--space-xxl); /* Approx 2.5rem */
+    padding-top: var(--space-lg);
+    border-top: 1px dashed var(--theme-secondary-steel-gray);
 }
 
 .deleteAccountSection h2 {
-    color: var(--primary-light-blue); /* Or a warning color if available */
+    /* Global h2 styles for font-family, weight. Specific color/size */
+    color: var(--theme-primary-light-blue); /* Or var(--color-warning) for more alert */
     font-size: 1.3em;
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--space-sm);
 }
 
 .deleteAccountSection p {
     font-size: 0.9em;
-    color: var(--secondary-steel-gray);
-    margin-bottom: 1rem;
+    color: var(--theme-secondary-steel-gray);
+    margin-bottom: var(--space-md);
     line-height: 1.5;
 }
 
 .deleteAccountButton {
-    width: 100%; /* Make delete button full width for emphasis */
-    padding: 0.8rem 1.5rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1em;
-    /* background-color: #dc3545; */ /* Example: Bootstrap danger red - replace with a variable if you add one */
-    background-color: var(--secondary-steel-gray); /* Or a dedicated danger variable */
-    color: var(--primary-white);
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    composes: buttonBase;
+    width: 100%;
+    color: var(--color-error-text);
+    background-color: var(--color-error); /* Using danger color */
+    border-color: var(--color-error);
 }
 
-.deleteAccountButton:hover {
-    opacity: 0.8; 
-    /* background-color: #c82333; */ /* Darker red on hover */
+.deleteAccountButton:hover,
+.deleteAccountButton:focus {
+    background-color: #c82333; /* Darker danger color from index.css */
+    border-color: #bd2130;
+    color: var(--color-error-text);
+    outline: 0;
+}
+.deleteAccountButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(220, 53, 69, 0.5); /* RGB for --color-error */
 }
 
-.loadingMessage, .successMessage, .errorMessage {
+.messageArea {
     text-align: center;
-    padding: 0.75rem;
-    margin-top: 1rem;
-    border-radius: 4px;
+    padding: var(--space-sm);
+    margin-top: var(--space-md);
+    border-radius: var(--border-radius-md);
     font-size: 0.95em;
+    border-width: 1px;
+    border-style: solid;
 }
 
 .successMessage {
-    background-color: rgba(40, 167, 69, 0.2); /* Light green for success, variable? */
-    color: #28a745;
-    border: 1px solid #28a745;
+    composes: messageArea;
+    background-color: var(--background-color-sections); /* Subtle background */
+    color: var(--color-success);
+    border-color: var(--color-success);
 }
 
 .errorMessage {
-    background-color: rgba(220, 53, 69, 0.1); /* Light red for error, variable? */
-    color: #dc3545;
-    border: 1px solid #dc3545;
+    composes: messageArea;
+    background-color: var(--background-color-sections);
+    color: var(--color-error);
+    border-color: var(--color-error);
 }
 
-/* Consider adding variables for success/error/warning states for theme consistency */
+/* Fallback for .loadingMessage if it's just text */
+.loadingMessage {
+    composes: messageArea;
+    color: var(--text-color-muted);
+    border-color: transparent; /* No border for loading usually */
+    background-color: transparent;
+}

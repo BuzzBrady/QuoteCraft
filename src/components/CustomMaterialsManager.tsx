@@ -33,11 +33,10 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
     const [currentMaterial, setCurrentMaterial] = useState<CustomMaterial & { options?: MaterialOption[] } | null>(null);
 
-    // Fetch Materials
     const fetchMaterials = useCallback(async () => {
         if (!currentUser?.uid) {
             setMaterials([]);
-            setIsLoading(false); // Stop loading if no user
+            setIsLoading(false);
             return;
         }
         setIsLoading(true);
@@ -57,13 +56,12 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
         } finally {
             setIsLoading(false);
         }
-    }, [currentUser]); // Dependency on currentUser
+    }, [currentUser]);
 
     useEffect(() => {
         fetchMaterials();
     }, [fetchMaterials]);
 
-    // Modal Handlers
     const handleOpenModalForAdd = () => {
         setCurrentMaterial(null);
         setModalMode('add');
@@ -82,8 +80,8 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
     };
 
     const handleSaveMaterialCallback = async () => {
-        await fetchMaterials(); // Refresh list
-        handleCloseModal();     // Close modal
+        await fetchMaterials();
+        handleCloseModal();
     };
 
     const handleDeleteMaterial = async (materialId: string, materialHasOptions: boolean) => {
@@ -92,9 +90,6 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
             console.error("Delete Material: No current user found.");
             return;
         }
-
-        // MODIFICATION: Removed window.confirm to allow deletion to proceed in iframe environments.
-        // For a production app, implement a custom confirmation modal here.
         console.log(`Proceeding with delete for material ID: ${materialId}. Has options: ${materialHasOptions}`);
 
         setIsLoading(true);
@@ -103,7 +98,6 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
             const batch = writeBatch(db);
             const materialDocRef = doc(db, `users/${currentUser.uid}/customMaterials`, materialId);
 
-            // If the material has options, delete them from the subcollection
             if (materialHasOptions) {
                 const optionsCollectionRef = collection(db, `users/${currentUser.uid}/customMaterials/${materialId}/options`);
                 const optionsSnapshot = await getDocs(optionsCollectionRef);
@@ -117,13 +111,12 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
                 }
             }
             
-            // Delete the main material document
             batch.delete(materialDocRef);
             
             await batch.commit();
             console.log(`Material ${materialId} and its options (if any) deleted successfully from Firestore.`);
             
-            await fetchMaterials(); // Refresh the list in the UI
+            await fetchMaterials();
         } catch (err: any) {
             console.error("Error deleting material:", err);
             setError(`Failed to delete material: ${err.message}. Check console for details.`);
@@ -133,28 +126,28 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
     };
 
     if (!currentUser) {
-        return <p>Please log in to manage your custom materials.</p>;
+        return <p className="text-warning">Please log in to manage your custom materials.</p>; // Added text-warning
     }
 
     return (
-        <div className={styles.managerContainer}>
-            <h3>My Custom Materials</h3>
-            <button className={styles.button} onClick={handleOpenModalForAdd} disabled={isLoading}>
+        <div className={styles.managerContainer}> {/* Retain module style for container */}
+            <h3 className="mb-lg">My Custom Materials</h3> {/* Added mb-lg for spacing */} 
+            <button className="btn btn-primary mb-lg" onClick={handleOpenModalForAdd} disabled={isLoading}>
                 + Add New Material
             </button>
 
             {isLoading && <p>Loading materials...</p>}
-            {error && <p className={styles.error || ''} style={!styles.error ? { color: 'red'} : {}}>{error}</p>}
+            {error && <p className="text-danger">{error}</p>} {/* Use global text-danger */}
 
             {!isLoading && !error && materials.length === 0 && (
                 <p>You haven't added any custom materials yet.</p>
             )}
 
             {!isLoading && !error && materials.length > 0 && (
-                 <ul className={styles.itemList}>
+                 <ul className={styles.itemList}> {/* Retain module style for list */}
                     {materials.map(material => (
-                        <li key={material.id} className={styles.item}>
-                           <div className={styles.itemDetails}>
+                        <li key={material.id} className={styles.item}> {/* Retain module style for item */}
+                           <div className={styles.itemDetails}> {/* Retain module style for item details */}
                                 <strong>{material.name}</strong>
                                 <br />
                                 <small>Options: {material.optionsAvailable ? 'Yes' : 'No'}</small>
@@ -166,16 +159,16 @@ function CustomMaterialsManager({}: CustomMaterialsManagerProps) {
                                 )}
                                 {material.description && <><br /><small>Desc: {material.description}</small></>}
                             </div>
-                            <div className={styles.actions}>
+                            <div className={styles.actions}> {/* Retain module style for actions container */}
                                 <button
-                                    className={styles.editButton}
+                                    className="btn btn-secondary btn-sm" // Use global button styles
                                     onClick={() => handleOpenModalForEdit(material)}
                                     disabled={isLoading}
                                 >
                                     Edit / Manage Options
                                 </button>
                                 <button
-                                    className={styles.deleteButton}
+                                    className="btn btn-danger btn-sm ml-xs" // Use global button styles + margin utility
                                     onClick={() => handleDeleteMaterial(material.id, material.optionsAvailable || false)}
                                     disabled={isLoading}
                                 >
