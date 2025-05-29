@@ -1,0 +1,44 @@
+/* src/components/QuoteLineItemDisplay.module.css */
+.quoteLineItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) 0; /* Using variables from index.css */
+    border-bottom: 1px solid var(--border-color-light);
+    gap: var(--space-md);
+    /* Add other styles as needed */
+}
+
+.itemDetails {
+    flex-grow: 1;
+}
+
+.itemName {
+    font-weight: 600;
+    color: var(--text-color-main);
+}
+
+.itemDescription {
+    font-size: 0.85em;
+    color: var(--text-color-muted);
+    display: block; /* Or inline-block as needed */
+}
+
+.itemPricing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 120px; /* Adjust as needed */
+}
+
+.itemTotal {
+    font-weight: bold;
+    color: var(--theme-primary-light-blue); /* Or your accent color */
+}
+
+.itemActions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+/* Add any other specific styles for this component */

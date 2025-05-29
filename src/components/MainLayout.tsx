@@ -1,23 +1,31 @@
 // src/components/MainLayout.tsx
-import React from 'react'; // Ensured React is imported
-import { Outlet } from 'react-router-dom';
-import Header from '../../Header'; // Adjusted import path, assuming Header.tsx is in the root
+import React, { useRef } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import Header from '../../Header'; //
+import { useGSAP } from '@gsap/react';
+import { fadeIn } from '../utils/animations'; // Assuming it's in src/utils
 
 function MainLayout() {
+    const mainContentRef = useRef<HTMLElement>(null);
+    const location = useLocation(); // To trigger animation on route change
+
+    useGSAP(() => {
+        if (mainContentRef.current) {
+            fadeIn(mainContentRef.current, 0.5); // Fade in over 0.5 seconds
+        }
+    }, [location.pathname]); // Rerun animation when pathname changes
+
     return (
-        // Assuming 'app-container' is a global class for overall app structure
         <div className="app-container">
             <Header />
-            <main 
-                className="main-content p-lg mx-auto" // Applied padding and auto margin utilities
-                style={{ maxWidth: '1200px' }}      // Retained maxWidth as an inline style
+            <main
+                ref={mainContentRef}
+                className="main-content p-lg mx-auto"
+                style={{ maxWidth: '1200px', opacity: 0 }} // Start with opacity 0
             >
-                {/* Outlet renders the matched child route component */}
                 <Outlet />
             </main>
-            {/* You could add a Footer component here too */}
         </div>
     );
 }
-
 export default MainLayout;
