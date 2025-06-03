@@ -6,13 +6,114 @@ import puppeteer, { PDFOptions, Browser } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import handlebars from "handlebars";
 import { Buffer } from "node:buffer";
+import { VertexAI } from "@google-cloud/vertexai";
 
-admin.initializeApp();
+// Initialize Firebase Admin SDK only once
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 const db = admin.firestore();
 
 export type QuoteExportLevel = "summary" | "standardDetail" | "fullDetail";
 
-// --- HTML TEMPLATE ---
+// --- Configuration ---
+const project = process.env.GCLOUD_PROJECT || "quotecraftv6"; // Ensure this is your Google Cloud Project ID
+const location = "australia-southeast1"; // Your chosen region for functions and AI
+
+// --- Vertex AI Initialization ---
+const vertexAI = new VertexAI({ project, location });
+const generativeModel = vertexAI.getGenerativeModel({
+  model: "gemini-1.0-pro-001",
+});
+
+// --- Function Options ---
+const baseFunctionOptions: HttpsOptions = {
+  region: location,
+  // enforceAppCheck: true, // Optional: Consider enabling if you use App Check
+};
+
+const aiFunctionOptions: HttpsOptions = {
+  ...baseFunctionOptions,
+  memory: "1GiB",
+  timeoutSeconds: 60,
+};
+
+const pdfFunctionOptions: HttpsOptions = {
+  ...baseFunctionOptions,
+  memory: "2GiB",
+  timeoutSeconds: 300,
+};
+
+// --- Interfaces for AI Text Generation ---
+interface GenerateQuoteTextData {
+    prompt: string;
+    fieldType: "projectDescription" | "additionalDetails" | "generalNotes";
+}
+interface GenerateQuoteTextResult {
+    generatedText: string;
+}
+
+// --- generateQuoteText Cloud Function (onCall) ---
+export const generateQuoteText = onCall(
+  aiFunctionOptions,
+  async (request: CallableRequest<GenerateQuoteTextData>): Promise<GenerateQuoteTextResult> => {
+    logger.info("AI Gen (onCall) - Request Data:", request.data);
+
+    if (!request.auth) {
+      logger.error("AI Gen (onCall) - Error: Unauthenticated user.");
+      throw new HttpsError("unauthenticated", "Please log in to use this feature.");
+    }
+    const uid = request.auth.uid;
+
+    const { prompt: promptText, fieldType } = request.data;
+
+    if (!promptText || typeof promptText !== "string") {
+      logger.error("AI Gen (onCall) - Error: Invalid prompt argument.", { receivedData: request.data });
+      throw new HttpsError("invalid-argument", "A valid 'prompt' is required.");
+    }
+    if (!fieldType || !["projectDescription", "additionalDetails", "generalNotes"].includes(fieldType)) {
+      logger.error("AI Gen (onCall) - Error: Invalid fieldType argument.", { receivedData: request.data });
+      throw new HttpsError("invalid-argument", "A valid 'fieldType' is required.");
+    }
+
+    logger.info(`AI Gen (onCall) - Request for field: ${fieldType}`, {
+      uid: uid,
+      promptLength: promptText.length,
+    });
+
+    try {
+      const aiReq = {
+        contents: [{ role: "user", parts: [{ text: promptText }] }],
+      };
+      const streamingResp = await generativeModel.generateContentStream(aiReq);
+      let aggregatedResponse = "";
+      for await (const item of streamingResp.stream) {
+        if (item.candidates && item.candidates[0].content && item.candidates[0].content.parts[0]?.text) {
+          aggregatedResponse += item.candidates[0].content.parts[0].text;
+        }
+      }
+      const generatedText = aggregatedResponse.trim();
+
+      if (!generatedText) {
+        logger.warn("AI Gen (onCall) - Vertex AI returned empty text.", { uid: uid });
+        throw new HttpsError("internal", "AI failed to generate text (empty response).");
+      }
+
+      logger.info("AI Gen (onCall) - Text Generation Successful", { uid: uid, outputLength: generatedText.length });
+      return { generatedText: generatedText };
+
+    } catch (error: unknown) {
+      logger.error("AI Gen (onCall) - Error calling Vertex AI:", error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError("internal", `AI service failed: ${error.message || "Unknown error"}`, { originalError: error.toString() });
+    }
+  }
+);
+
+
+// --- HTML TEMPLATE for PDF Generation ---
 const HTML_QUOTE_TEMPLATE = `
 <!DOCTYPE html>
 <html lang="en">
@@ -161,7 +262,7 @@ const HTML_QUOTE_TEMPLATE = `
                     </table>
                     {{else}}
                         <p>Overall project total listed below.</p>
-                    {{/if}} {{!-- Corrected from {{/unless}} --}}
+                    {{/if}}
                 </div>
             </div>
         {{/if}}
@@ -272,8 +373,7 @@ const HTML_QUOTE_TEMPLATE = `
                     </table>
                 </div>
             {{else}}
-                {{!-- Fallback for Full Detail if showFullItemizedTable is false --}}
-                 <div class="content-columns-container">
+                <div class="content-columns-container">
                     <div class="scope-column">
                         <h3>Scope Overview</h3>
                          {{#if quote.projectDescription}}
@@ -301,7 +401,7 @@ const HTML_QUOTE_TEMPLATE = `
                         </table>
                         {{else}}
                             <p>Overall project total listed below.</p>
-                        {{/if}} {{!-- Corrected from {{/unless}} --}}
+                        {{/if}}
                     </div>
                 </div>
                 <p class="summary-only-notice">Full itemized breakdown has been omitted as per your profile settings for this quote.</p>
@@ -361,12 +461,7 @@ const HTML_QUOTE_TEMPLATE = `
     </div>
 </body>
 </html>
-`; // End of HTML_QUOTE_TEMPLATE
-
-// ... (rest of the TypeScript code from the previous correct version, including interface definitions, helpers, and the generateQuotePdf function) ...
-// Ensure the interface definitions for QuoteLineData, LineItemForPdf, GroupedLineItemForPdf, SectionSummaryForPdf are present as in the last good version.
-// Also ensure the logic for templatePayload, especially for groupedLineItemsShort, showUnitPrices, etc., is as per the last good version.
-// The ONLY change in this response is within the HTML_QUOTE_TEMPLATE string itself.
+`;
 
 const compiledTemplate = handlebars.compile(HTML_QUOTE_TEMPLATE);
 
@@ -385,12 +480,8 @@ handlebars.registerHelper("formatCurrency", (amount: number | null | undefined, 
   return `${code} ${Number(amount).toFixed(2)}`;
 });
 
-const functionOptions: HttpsOptions = {
-  timeoutSeconds: 300,
-  memory: "2GiB",
-  region: "australia-southeast1",
-};
 
+// --- Interfaces for PDF Generation ---
 interface QuoteLineData {
     section?: string;
     taskId?: string | null;
@@ -408,11 +499,9 @@ interface QuoteLineData {
     order?: number;
     kitTemplateId?: string | null;
 }
-
 interface LineItemForPdf extends QuoteLineData {
     unitPrice?: number | null;
 }
-
 interface GroupedLineItemForPdf {
     sectionName: string;
     items: LineItemForPdf[];
@@ -420,207 +509,201 @@ interface GroupedLineItemForPdf {
     sectionSubtotal: number;
     summaryQuantities?: string;
 }
-
 interface SectionSummaryForPdf {
     sectionName: string;
     sectionSubtotal: number;
     summaryQuantities?: string;
     itemCount?: number;
 }
-
 interface GeneratePdfRequestData {
     quoteId: string;
     exportLevel: QuoteExportLevel;
 }
+interface PdfGenerationResult {
+    pdfBase64: string;
+}
 
-export const generateQuotePdf = onCall(functionOptions, async (request: CallableRequest<GeneratePdfRequestData>) => {
-  logger.info("[PDF Gen Sparticuz] Function called with request data:", JSON.stringify(request.data, null, 2));
-  logger.info("[PDF Gen Sparticuz] Auth object:", JSON.stringify(request.auth, null, 2));
 
-  if (!request.auth) {
-    logger.error("[PDF Gen Sparticuz] Auth Error: Unauthenticated user.");
-    throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
-  }
-  const userId = request.auth.uid;
-  const { quoteId, exportLevel } = request.data;
+// --- generateQuotePdf Cloud Function (onCall) ---
+export const generateQuotePdf = onCall(
+  pdfFunctionOptions, // pdfFunctionOptions was used here previously
+  async (request: CallableRequest<GeneratePdfRequestData>): Promise<PdfGenerationResult> => {
+    logger.info("[PDF Gen (onCall) V2] Function called with request data:", request.data);
 
-  if (!quoteId || typeof quoteId !== "string") {
-    logger.error("[PDF Gen Sparticuz] Invalid Argument: quoteId missing or not a string.", { receivedData: request.data });
-    throw new HttpsError("invalid-argument", "The function must be called with a \"quoteId\" string parameter.");
-  }
-
-  if (!exportLevel || !["summary", "standardDetail", "fullDetail"].includes(exportLevel)) {
-    logger.error("[PDF Gen Sparticuz] Invalid Argument: exportLevel missing or invalid.", { receivedData: request.data });
-    throw new HttpsError("invalid-argument", "Invalid or missing \"exportLevel\". Must be 'summary', 'standardDetail', or 'fullDetail'.");
-  }
-
-  try {
-    logger.info(`[PDF Gen Sparticuz] START - QuoteID: ${quoteId}, UserID: ${userId}, ExportLevel: ${exportLevel}`);
-
-    const userProfileRef = db.doc(`users/${userId}`);
-    const quoteRef = db.doc(`users/${userId}/quotes/${quoteId}`);
-    const [userProfileSnap, quoteSnap] = await Promise.all([
-      userProfileRef.get(),
-      quoteRef.get(),
-    ]);
-
-    if (!userProfileSnap.exists) {
-      logger.error(`[PDF Gen Sparticuz] User profile NOT FOUND for UID: ${userId}`);
-      throw new HttpsError("not-found", `User profile not found for UID: ${userId}. Please complete your profile settings.`);
+    if (!request.auth) {
+      logger.error("[PDF Gen (onCall) V2] Auth Error: Unauthenticated user.");
+      throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
-    const userProfileData = userProfileSnap.data() || {};
-    logger.info("[PDF Gen Sparticuz] User profile fetched.");
+    const userId = request.auth.uid;
+    const { quoteId, exportLevel } = request.data;
 
-    if (!quoteSnap.exists) {
-      logger.error(`[PDF Gen Sparticuz] Quote NOT FOUND: ${quoteId} for user ${userId}`);
-      throw new HttpsError("not-found", `Quote not found: ${quoteId}`);
+    if (!quoteId || typeof quoteId !== "string") {
+      logger.error("[PDF Gen (onCall) V2] Invalid Argument: quoteId missing.", { receivedData: request.data });
+      throw new HttpsError("invalid-argument", "The function must be called with a \"quoteId\" string parameter.");
     }
-    const quoteDataFromDb = quoteSnap.data() || {};
-    logger.info("[PDF Gen Sparticuz] Quote data fetched.");
-
-    const linesRef = quoteRef.collection("quoteLines");
-    const linesSnap = await linesRef.orderBy("order").get();
-    const fetchedLineItemsData: QuoteLineData[] = linesSnap.docs.map(docValue => docValue.data() as QuoteLineData);
-    logger.info(`[PDF Gen Sparticuz] Fetched ${fetchedLineItemsData.length} line items.`);
-
-    const groupedLineItemsFull: GroupedLineItemForPdf[] = fetchedLineItemsData.reduce<GroupedLineItemForPdf[]>((acc, line) => {
-      const sectionName = line.section || "Uncategorized";
-      let section = acc.find(s => s.sectionName === sectionName);
-      if (!section) {
-        section = { sectionName, items: [], itemCount: 0, sectionSubtotal: 0, summaryQuantities: "" };
-        acc.push(section);
-      }
-      const unitPrice = line.inputType === "price" ? line.price : line.referenceRate;
-      section.items.push({ ...line, unitPrice: unitPrice ?? null });
-      section.itemCount += 1;
-      section.sectionSubtotal += line.lineTotal || 0;
-      let itemQtyUnit = "";
-      if (line.quantity && line.unit) { itemQtyUnit = `${line.quantity} ${line.unit}`; }
-      else if (line.price && !line.quantity) { itemQtyUnit = "Fixed Price"; }
-      else if (line.quantity) { itemQtyUnit = `${line.quantity} units`;}
-      else { itemQtyUnit = "Included"; }
-      if (itemQtyUnit && typeof section.summaryQuantities === "string") {
-        section.summaryQuantities += (section.summaryQuantities ? "; " : "") + itemQtyUnit;
-      }
-      return acc;
-    }, []);
-
-    const groupedLineItemsShort: SectionSummaryForPdf[] = groupedLineItemsFull.map(section => ({
-      sectionName: section.sectionName,
-      sectionSubtotal: section.sectionSubtotal,
-      summaryQuantities: section.summaryQuantities,
-      itemCount: section.itemCount,
-    }));
-
-    let combinedTerms = "";
-    if (quoteDataFromDb.terms) combinedTerms += quoteDataFromDb.terms;
-    if (userProfileData.defaultQuoteTerms) {
-      if (combinedTerms) combinedTerms += "\n\n\n";
-      combinedTerms += userProfileData.defaultQuoteTerms;
+    if (!exportLevel || !["summary", "standardDetail", "fullDetail"].includes(exportLevel)) {
+      logger.error("[PDF Gen (onCall) V2] Invalid Argument: exportLevel missing.", { receivedData: request.data });
+      throw new HttpsError("invalid-argument", "Invalid or missing \"exportLevel\".");
     }
 
-    const taxRate = (userProfileData.taxRate as number | undefined) ?? 0;
-    const totalAmount = quoteDataFromDb.totalAmount || 0;
-    let subtotalBeforeTaxVal = totalAmount;
-    let taxAmountVal = 0;
-    if (taxRate > 0 && (1 + taxRate) !== 0) {
-      subtotalBeforeTaxVal = totalAmount / (1 + taxRate);
-      taxAmountVal = totalAmount - subtotalBeforeTaxVal;
-    } else if (taxRate !== 0 && (1 + taxRate) === 0) {
-      subtotalBeforeTaxVal = totalAmount;
-      taxAmountVal = 0;
-    }
-
-    const templatePayload = {
-      userProfile: userProfileData,
-      quote: quoteDataFromDb,
-      groupedLineItemsFull: groupedLineItemsFull,
-      groupedLineItemsShort: groupedLineItemsShort,
-      isSummary: exportLevel === "summary",
-      isStandardDetail: exportLevel === "standardDetail",
-      isFullDetail: exportLevel === "fullDetail",
-      showFullItemizedTable: (exportLevel === "fullDetail") && (userProfileData.showFullItemizedTableInPdf ?? true),
-      showUnitPrices: userProfileData.showUnitPricesInPdf ?? true,
-      dateIssued: (quoteDataFromDb.createdAt as admin.firestore.Timestamp)?.toDate().toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) || "N/A",
-      validUntilFormatted: (quoteDataFromDb.validUntil as admin.firestore.Timestamp)?.toDate().toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) || null,
-      combinedTerms: combinedTerms,
-      projectDescription: quoteDataFromDb.projectDescription,
-      additionalDetails: quoteDataFromDb.additionalDetails,
-      generalNotes: quoteDataFromDb.generalNotes,
-      currencyCode: (quoteDataFromDb.currencyCode || userProfileData.currencyCode || "AUD") as string,
-      subtotalBeforeTax: taxRate > 0 ? subtotalBeforeTaxVal : null,
-      taxAmount: taxRate > 0 ? taxAmountVal : null,
-      taxRatePercentage: taxRate > 0 ? (taxRate * 100).toFixed(0) : null,
-    };
-    logger.info("[PDF Gen Sparticuz] Final Template Payload:", JSON.stringify(templatePayload, null, 2));
-
-    const htmlContent = compiledTemplate(templatePayload);
-    logger.info("[PDF Gen Sparticuz] HTML content populated.");
-
-    let browser: Browser | null = null;
     try {
-      logger.info("[PDF Gen Sparticuz] Launching Puppeteer with @sparticuz/chromium...");
-      const executablePath = await chromium.executablePath();
-      logger.info(`[PDF Gen Sparticuz] Using Chromium executablePath: ${executablePath}`);
+      logger.info(`[PDF Gen (onCall) V2] START - QuoteID: ${quoteId}, UserID: ${userId}, ExportLevel: ${exportLevel}`);
 
-      if (!executablePath) {
-        logger.error("[PDF Gen Sparticuz] Chromium executable path is invalid or not found by @sparticuz/chromium.");
-        throw new HttpsError("internal", "Chromium setup failed, executable path not found by @sparticuz/chromium.");
+      const userProfileRef = db.doc(`users/${userId}`);
+      const quoteRef = db.doc("users/<span class=\"math-inline\">\{userId\}/quotes/</span>{quoteId}");
+      const [userProfileSnap, quoteSnap] = await Promise.all([
+        userProfileRef.get(),
+        quoteRef.get(),
+      ]);
+
+      if (!userProfileSnap.exists) {
+        logger.error(`[PDF Gen (onCall) V2] User profile NOT FOUND for UID: ${userId}`);
+        throw new HttpsError("not-found", `User profile not found for UID: ${userId}. Please complete your profile settings.`);
+      }
+      const userProfileData = userProfileSnap.data() || {};
+      logger.info("[PDF Gen (onCall) V2] User profile fetched.");
+
+      if (!quoteSnap.exists) {
+        logger.error(`[PDF Gen (onCall) V2] Quote NOT FOUND: ${quoteId} for user ${userId}`);
+        throw new HttpsError("not-found", `Quote not found: ${quoteId}`);
+      }
+      const quoteDataFromDb = quoteSnap.data() || {};
+      logger.info("[PDF Gen (onCall) V2] Quote data fetched.");
+
+      const linesRef = quoteRef.collection("quoteLines");
+      const linesSnap = await linesRef.orderBy("order").get();
+      const fetchedLineItemsData: QuoteLineData[] = linesSnap.docs.map(docValue => docValue.data() as QuoteLineData);
+      logger.info(`[PDF Gen (onCall) V2] Fetched ${fetchedLineItemsData.length} line items.`);
+
+      const groupedLineItemsFull: GroupedLineItemForPdf[] = fetchedLineItemsData.reduce<GroupedLineItemForPdf[]>((acc, line) => {
+        const sectionName = line.section || "Uncategorized";
+        let section = acc.find(s => s.sectionName === sectionName);
+        if (!section) {
+          section = { sectionName, items: [], itemCount: 0, sectionSubtotal: 0, summaryQuantities: "" };
+          acc.push(section);
+        }
+        const unitPrice = line.inputType === "price" ? line.price : line.referenceRate;
+        section.items.push({ ...line, unitPrice: unitPrice ?? null });
+        section.itemCount += 1;
+        section.sectionSubtotal += line.lineTotal || 0;
+        let itemQtyUnit = "";
+        if (line.quantity && line.unit) { itemQtyUnit = `${line.quantity} ${line.unit}`; }
+        else if (line.price && !line.quantity) { itemQtyUnit = "Fixed Price"; }
+        else if (line.quantity) { itemQtyUnit = `${line.quantity} units`;}
+        else { itemQtyUnit = "Included"; }
+        if (itemQtyUnit && typeof section.summaryQuantities === "string") {
+          section.summaryQuantities += (section.summaryQuantities ? "; " : "") + itemQtyUnit;
+        }
+        return acc;
+      }, []);
+
+      const groupedLineItemsShort: SectionSummaryForPdf[] = groupedLineItemsFull.map(section => ({
+        sectionName: section.sectionName,
+        sectionSubtotal: section.sectionSubtotal,
+        summaryQuantities: section.summaryQuantities,
+        itemCount: section.itemCount,
+      }));
+      let combinedTerms = "";
+      if (quoteDataFromDb.terms) combinedTerms += quoteDataFromDb.terms;
+      if (userProfileData.defaultQuoteTerms) {
+        if (combinedTerms) combinedTerms += "\n\n\n";
+        combinedTerms += userProfileData.defaultQuoteTerms;
+      }
+      const taxRate = (userProfileData.taxRate as number | undefined) ?? 0;
+      const totalAmount = quoteDataFromDb.totalAmount || 0;
+      let subtotalBeforeTaxVal = totalAmount;
+      let taxAmountVal = 0;
+      if (taxRate > 0 && (1 + taxRate) !== 0) {
+        subtotalBeforeTaxVal = totalAmount / (1 + taxRate);
+        taxAmountVal = totalAmount - subtotalBeforeTaxVal;
       }
 
-      browser = await puppeteer.launch({
-        args: [...chromium.args, "--font-render-hinting=none"],
-        defaultViewport: chromium.defaultViewport,
-        executablePath,
-        headless: chromium.headless,
-      });
-
-      const page = await browser.newPage();
-      logger.info("[PDF Gen Sparticuz] Puppeteer page created. Setting content...");
-      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-      logger.info("[PDF Gen Sparticuz] Content set. Generating PDF buffer...");
-
-      const pdfOptions: PDFOptions = {
-        format: "A4",
-        printBackground: true,
-        margin: { top: "15mm", right: "15mm", bottom: "20mm", left: "15mm" },
-        displayHeaderFooter: true,
-        footerTemplate: "<div style=\"font-size:7pt; width:100%; text-align:center; padding: 0 10mm;\">Page <span class=\"pageNumber\"></span> of <span class=\"totalPages\"></span></div>",
-        headerTemplate: "<div></div>",
+      const templatePayload = {
+        userProfile: userProfileData, quote: quoteDataFromDb, groupedLineItemsFull, groupedLineItemsShort,
+        isSummary: exportLevel === "summary", isStandardDetail: exportLevel === "standardDetail", isFullDetail: exportLevel === "fullDetail",
+        showFullItemizedTable: (exportLevel === "fullDetail") && (userProfileData.showFullItemizedTableInPdf ?? true),
+        showUnitPrices: userProfileData.showUnitPricesInPdf ?? true,
+        dateIssued: (quoteDataFromDb.createdAt as admin.firestore.Timestamp)?.toDate().toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) || "N/A",
+        validUntilFormatted: (quoteDataFromDb.validUntil as admin.firestore.Timestamp)?.toDate().toLocaleDateString("en-AU", { day: "2-digit", month: "2-digit", year: "numeric" }) || null,
+        combinedTerms, projectDescription: quoteDataFromDb.projectDescription, additionalDetails: quoteDataFromDb.additionalDetails, generalNotes: quoteDataFromDb.generalNotes,
+        currencyCode: (quoteDataFromDb.currencyCode || userProfileData.currencyCode || "AUD") as string,
+        subtotalBeforeTax: taxRate > 0 ? subtotalBeforeTaxVal : null,
+        taxAmount: taxRate > 0 ? taxAmountVal : null,
+        taxRatePercentage: taxRate > 0 ? (taxRate * 100).toFixed(0) : null,
       };
+      logger.info("[PDF Gen (onCall) V2] Final Template Payload:", JSON.stringify(templatePayload, null, 2));
 
-      const pdfBufferOutput = await page.pdf(pdfOptions);
-      const pdfBufferNode: Buffer = Buffer.from(pdfBufferOutput);
+      const htmlContent = compiledTemplate(templatePayload);
+      logger.info("[PDF Gen (onCall) V2] HTML content populated.");
 
-      logger.info("[PDF Gen Sparticuz] PDF buffer generated successfully.");
-      return { pdfBase64: pdfBufferNode.toString("base64") };
+      let browser: Browser | null = null;
+      try {
+        logger.info("[PDF Gen (onCall) V2] Launching Puppeteer with @sparticuz/chromium...");
+        const executablePath = await chromium.executablePath();
+        logger.info(`[PDF Gen (onCall) V2] Using Chromium executablePath: ${executablePath}`);
 
-    } catch (puppeteerError: unknown) {
-      const error = puppeteerError as Error;
-      logger.error("[PDF Gen Sparticuz] Puppeteer operation failed:", { message: error.message, stack: error.stack });
-      throw new HttpsError("internal", `PDF generation failed at Puppeteer stage: ${error.message}`);
-    } finally {
-      if (browser !== null) {
-        logger.info("[PDF Gen Sparticuz] Closing Puppeteer browser.");
-        await browser.close();
+        if (!executablePath) {
+          logger.error("[PDF Gen (onCall) V2] Chromium executable path is invalid or not found by @sparticuz/chromium.");
+          throw new HttpsError("internal", "Chromium setup failed, executable path not found by @sparticuz/chromium.");
+        }
+
+        browser = await puppeteer.launch({
+          args: [...chromium.args, "--font-render-hinting=none"],
+          defaultViewport: chromium.defaultViewport,
+          executablePath,
+          headless: chromium.headless,
+        });
+
+        const page = await browser.newPage();
+        logger.info("[PDF Gen (onCall) V2] Puppeteer page created. Setting content...");
+        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+        logger.info("[PDF Gen (onCall) V2] Content set. Generating PDF buffer...");
+
+        const pdfOptions: PDFOptions = {
+          format: "A4",
+          printBackground: true,
+          margin: { top: "15mm", right: "15mm", bottom: "20mm", left: "15mm" },
+          displayHeaderFooter: true,
+          footerTemplate:
+                        "<div style=\"font-size:7pt; width:100%; text-align:center; padding: 0 10mm;\">" +
+                        "Page <span class=\"pageNumber\"></span> of <span class=\"totalPages\"></span>" +
+                        "</div>",
+          headerTemplate: "<div></div>",
+        };
+
+        const pdfBufferOutput = await page.pdf(pdfOptions);
+        const pdfBufferNode: Buffer = Buffer.from(pdfBufferOutput);
+
+        logger.info("[PDF Gen (onCall) V2] PDF buffer generated successfully.");
+        return { pdfBase64: pdfBufferNode.toString("base64") };
+
+      } catch (puppeteerError: unknown) {
+        const error = puppeteerError as Error;
+        logger.error("[PDF Gen (onCall) V2] Puppeteer operation failed:", { message: error.message, stack: error.stack });
+        throw new HttpsError("internal", `PDF generation failed at Puppeteer stage: ${error.message}`);
+      } finally {
+        if (browser !== null) {
+          logger.info("[PDF Gen (onCall) V2] Closing Puppeteer browser.");
+          await browser.close();
+        }
       }
+    } catch (error: unknown) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      const err = error as Error & { details?: unknown; code?: string };
+      logger.error("[PDF Gen (onCall) V2] Error in generateQuotePdf (outer catch):", {
+        errorMessage: err.message,
+        errorStack: err.stack,
+        errorDetails: err.details,
+        quoteIdFromRequest: request.data.quoteId,
+        userIdFromAuth: request.auth?.uid,
+        exportLevelFromRequest: request.data.exportLevel,
+      });
+      if (err.message && err.message.includes("if doesn't match unless")) {
+        throw new HttpsError("internal", `PDF template error: Mismatched Handlebars block (e.g., an #if was closed with /unless). Details: ${err.message}`);
+      }
+      throw new HttpsError("internal", `Failed to generate PDF: ${err.message}`);
     }
-
-  } catch (error: unknown) {
-    const err = error as (Error & { details?: any; code?: string });
-    logger.error("[PDF Gen Sparticuz] Error in generateQuotePdf (outer catch):", {
-      errorMessage: err.message,
-      errorStack: err.stack,
-      errorDetails: err.details,
-      quoteIdFromRequest: request.data.quoteId,
-      userIdFromAuth: request.auth?.uid,
-      exportLevelFromRequest: request.data.exportLevel,
-    });
-    if (error instanceof HttpsError) { throw error; }
-    // If the error is the Handlebars mismatch, provide a more specific message
-    if (err.message && err.message.includes("if doesn't match unless")) {
-      throw new HttpsError("internal", `PDF template error: Mismatched Handlebars block (e.g., an #if was closed with /unless). Details: ${err.message}`);
-    }
-    throw new HttpsError("internal", `Failed to generate PDF: ${err.message}`);
   }
-});
+);

@@ -1,0 +1,40 @@
+/* src/components/StickyQuoteProgressBar.module.css */
+.stickyBar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #1566b76b; /* Or your theme's color */
+    border-top: 1px solid #dee2e6;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+}
+
+.progressInfo {
+    font-weight: bold;
+}
+
+.contextualInfo {
+    display: flex;
+    gap: 15px; /* Spacing between context items */
+    font-size: 0.9em;
+    color: #555;
+}
+.contextualInfo .activeSection,
+.contextualInfo .configuredItem,
+.contextualInfo .quoteTotal {
+    /* Add specific styling if needed */
+}
+.contextualInfo .quoteTotal {
+    font-weight: bold;
+    color: #000;
+}
+
+
+.actions button {
+    margin-left: 10px;
+}

@@ -1,0 +1,24 @@
+/* src/components/MainLayout.module.css */
+.appContainer {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Ensure the layout takes at least the full viewport height */
+}
+
+.mainContent {
+    flex-grow: 1; /* Allows the main content to expand and push a potential footer down */
+    width: 100%; /* Crucial: ensures it tries to take full width of its parent */
+    max-width: 1200px; /* Your desired max-width for the content area */
+    margin-left: auto; /* Centers the .mainContent block if its parent is wider */
+    margin-right: auto; /* Centers the .mainContent block */
+    padding: 1.5rem; /* Corresponds to p-lg, adjust if your p-lg is different */
+                     /* Consider more specific padding: padding: 1.5rem 1rem; for top/bottom and left/right */
+    box-sizing: border-box; /* Includes padding and border in the element's total width and height */
+    opacity: 0; /* Initial state for GSAP animation */
+}
+
+/* If you have global utility classes like p-lg, ensure they don't conflict
+   or consider defining them locally if they are specific to this layout.
+   The padding: 1.5rem above replaces a p-lg assumption.
+   The mx-auto is replaced by margin-left/right: auto.
+*/

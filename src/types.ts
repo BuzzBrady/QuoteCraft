@@ -224,3 +224,14 @@ export type CombinedMaterial = Omit<Material | CustomMaterial, 'name' | 'name_lo
     name: string;
     name_lowercase: string;
 };
+
+export type CollapsedSectionsState = Record<string, boolean>;
+
+export interface CurrentItemDetails {
+    rateData: UserRateTemplate | undefined; // The matching rate template, if any
+    unit: string;                           // The effective unit for the item
+    rate: number;                           // The calculated rate for the item
+    inputType: QuoteLine['inputType'];      // The type of input ('quantity', 'price', 'checkbox')
+                                            // from QuoteLine type
+    isHourly: boolean;                      // True if the unit is considered hourly
+}

@@ -16,9 +16,12 @@
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@google-cloud/vertexai": "^1.10.0",
     "@sparticuz/chromium": "^123.0.1",
+    "express": "^5.1.0",
     "firebase-admin": "^12.2.0",
     "firebase-functions": "^6.3.2",
+    "google-auth-library": "^9.15.1",
     "handlebars": "^4.7.8",
     "puppeteer-core": "^22.8.0"
   },
