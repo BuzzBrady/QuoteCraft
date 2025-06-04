@@ -1,6 +1,6 @@
 # QuoteCraftv6 - UI/UX Enhancement Plan
 
-**Last Updated:** June 3, 2025 *(Updated to reflect recent changes)*
+**Last Updated:** June 4, 2025 *(Reflecting AI Logic migration and GSAP integration)*
 
 ## 1. Overall UI/UX Goals
 
@@ -13,59 +13,44 @@
 ## 2. Foundational UI/UX Enhancements (Phase 1 - Immediate Focus)
 
 ### 2.1. Color Scheme & Typography
-* **Current State:** Basic styling, mix of inline styles and CSS Modules. CSS Modules now more consistently used.
+* **Current State:** Basic styling, mix of inline styles and CSS Modules.
 * **Desired Enhancements:**
-    * [ ] Define a consistent color palette:
-        * Primary Color: `_________` (e.g., for buttons, active elements)
-        * Secondary Color: `_________` (e.g., for secondary actions, borders)
-        * Accent Color: `_________` (e.g., for highlights, notifications)
-        * Neutral - Text: `_________` (e.g., dark grey/black)
-        * Neutral - Background (Main): `_________` (e.g., white/off-white)
-        * Neutral - Background (Sections/Cards): `_________`
-        * Neutral - Borders/Dividers: `_________`
-    * [ ] Standardize typography:
-        * Primary Font (Body & UI): `_________` (e.g., Inter, Lato, Open Sans from Google Fonts)
-        * Heading Font (if different): `_________`
-        * Define hierarchy (sizes, weights) for H1, H2, H3, p, label, small.
-    * [ ] Apply globally via `src/index.css` or CSS Variables for module consumption.
+    * [ ] Define a consistent color palette.
+    * [ ] Standardize typography.
+    * [ ] Apply globally via `src/index.css` or CSS Variables.
 * **Action Items/Notes:**
-    * Discuss initial color preferences.
-    * Select web-safe/Google Fonts.
+    * In progress / To be defined.
 
 ### 2.2. Basic Element Styling Consistency
-* **Current State:** Varies per component/module. Some global button styles initiated.
+* **Current State:** Varies per component/module.
 * **Desired Enhancements:**
-    * [ ] Create consistent base styles for:
-        * Buttons (primary, secondary, danger/warning).
-        * Form Inputs (text, textarea, select, checkbox).
-        * Modals.
-        * Tables.
+    * [ ] Create consistent base styles for buttons, form inputs, modals, tables.
 * **Action Items/Notes:**
     * Implement based on chosen color scheme and typography.
 
 ### 2.3. Core Usability & Layout Review (High-Impact Areas)
-* **Current State:** Functional, significant improvements made to QuoteBuilder.
+* **Current State:** Significant improvements to `QuoteBuilder.tsx`. Other areas pending.
 * **Desired Enhancements:**
-    * [x] Review and simplify the layout of `QuoteBuilder.tsx` for better workflow. *(Implemented multi-step wizard, streamlined Step 1, added sticky navigation bar. Content centering addressed.)*
+    * [x] Review and simplify the layout of `QuoteBuilder.tsx` for better workflow. *(Implemented multi-step wizard with client-side AI and GSAP animations).*
     * [ ] Improve table readability and actions on `ExistingQuotesPage.tsx`.
-    * [ ] Standardize loading state indicators (e.g., simple spinner for now).
-    * [ ] Replace browser `alert()` with a consistent, non-blocking notification/toast system (e.g., for save success/error). *(Partially addressed for AI generation errors, but a global system is needed).*
+    * [ ] Standardize loading state indicators (e.g., simple spinner for now, dedicated states for AI generation).
+    * [ ] Replace browser `alert()` with a consistent, non-blocking notification/toast system.
 * **Action Items/Notes:**
-    * Focus on one page/component at a time after global styles are set.
+    * `QuoteBuilder.tsx` overhaul is a major step forward.
 
 ### 2.4. Responsiveness Basics
-* **Current State:** Varies. `MainLayout.tsx` improved for centering.
+* **Current State:** Varies. `MainLayout.tsx` improved.
 * **Desired Enhancements:**
-    * [x] Ensure `Header.tsx` and `MainLayout.tsx` are responsive and handle centering.
+    * [x] Ensure `Header.tsx` and `MainLayout.tsx` are responsive.
     * [ ] Basic checks for key pages like `QuoteBuilder.tsx` (wizard steps) and `ExistingQuotesPage.tsx` on smaller screens.
 * **Action Items/Notes:**
-    * Focus on preventing broken layouts initially.
+    * Ongoing.
 
 ### 2.5. Accessibility Basics
 * **Current State:** Minimal explicit implementation.
 * **Desired Enhancements:**
     * [ ] Ensure semantic HTML where possible.
-    * [ ] Basic keyboard navigation checks for interactive elements.
+    * [ ] Basic keyboard navigation checks for interactive elements (wizard navigation).
     * [ ] Check for sufficient color contrast once the palette is defined.
 * **Action Items/Notes:**
     * Incorporate during component styling and layout reviews.
@@ -73,93 +58,119 @@
 ## 3. Animation with GSAP (Phased Integration)
 
 ### 3.1. Phase 1: No GSAP (Focus on UI/UX Foundation)
-* **Status:** Current phase.
-* **Rationale:** Establish solid structure, styling, and core usability before introducing animations. Main layout fade-in initiated in `MainLayout.tsx`.
+* **Status:** Moved to Phase 2.
 
 ### 3.2. Phase 2: Subtle & Enhancing GSAP Animations
-* **Trigger:** After the foundational UI/UX (colors, typography, basic layouts, core usability of main pages) is stable and consistent.
-* **Goals:** Improve user experience with smooth transitions and meaningful feedback without being distracting.
+* **Status:** In Progress / Initial Implementation.
+* **Rationale:** Establish solid structure, styling, and core usability before introducing animations.
+* **Implemented:**
+    * [x] Smooth step transitions for `QuoteBuilder` wizard using GSAP.
+    * [x] Direction-aware animations for forward/backward navigation in the wizard.
+    * [x] Performance optimized: Hardware-accelerated transforms using GSAP.
+    * [x] Animation state management to prevent conflicts during transitions.
 * **Potential GSAP Uses (Core & ScrollTrigger for simple entrances):**
-    * [ ] Subtle page transitions (e.g., fades, quick slides) for wizard steps.
     * [ ] Micro-interactions for buttons, form elements on hover/focus/click.
     * [ ] Smooth animations for modal dialogs (open/close).
     * [ ] Smooth enter/exit animations for list items (e.g., quote lines, items in management pages).
     * [ ] Simple ScrollTrigger effects: fade-in elements as they enter the viewport on longer pages.
 * **Action Items/Notes:**
-    * Identify specific elements/interactions for initial subtle animations.
-    * Ensure animations are quick and don't hinder performance.
+    * `wizardTransition(currentStep, nextStep, 'forward', onComplete);` example implemented.
+    * Fine-tune animation timing and easing.
 
 ### 3.3. Phase 3: Advanced & "Delightful" GSAP Animations
-* **Trigger:** After the application is robust, Phase 2 animations are well-integrated, and the core product is polished. When looking to add premium "wow" factors.
-* **Goals:** Create more engaging and memorable user experiences in specific, appropriate areas.
-* **Potential GSAP Uses (Premium Plugins like SplitText, MorphSVG; Advanced ScrollTrigger):**
-    * [ ] **SplitText:** Engaging text reveals for headings, key messages, or section titles.
-    * [ ] **MorphSVG:** Animating icons (e.g., status changes, success indicators), creative transitions between UI states using SVG.
-    * [ ] **ScrollTrigger (Advanced):** More complex scroll-driven animations for landing/marketing pages (if any) or detailed feature showcases. Pinning elements, scrubbing animations.
-    * [ ] **Complex GSAP Timelines:** Orchestrating multiple animations for sophisticated effects (e.g., onboarding tour, data visualizations on the dashboard).
-* **Important Considerations for Advanced Animations:**
-    * Maintain high performance; test thoroughly.
-    * Ensure animations are purposeful and enhance usability or delight, not distract.
-    * Consider user preferences for reduced motion.
+* **Trigger:** After the application is robust, Phase 2 animations are well-integrated.
+* **Goals:** Create more engaging user experiences.
+* **Potential GSAP Uses:** SplitText, MorphSVG, Advanced ScrollTrigger, Complex Timelines.
 * **Action Items/Notes:**
-    * Identify specific "moments" in the app that could benefit most from these advanced effects.
+    * Future consideration.
 
-## 4. Page-Specific UI/UX Enhancements (To be detailed after Phase 1 Foundations)
+## 4. Page-Specific UI/UX Enhancements
 
 * **`QuoteBuilder.tsx`:**
-    * **Done/In Progress:**
-        * Implemented a multi-step wizard interface (Step 1: Job/Client, Step 2: Line Items, Step 3: Notes & Review).
-        * Added a sticky bottom navigation bar for wizard progression.
-        * Simplified Step 1: Focus on Job Title, Client Selection (from existing clients), and Quote Valid Until. Client details (name, email, etc.) are auto-populated for display from selection.
-        * Added "+ Add New Client" and "Edit Client" buttons in Step 1, navigating to `/my-clients`.
-        * Moved "Project Description," "Additional Details," and "General Notes" text areas to Step 3.
-        * Integrated "Generate with AI" buttons next to these text areas in Step 3.
+    * **Status:** Significantly Overhauled.
+    * **Implemented:**
+        * Guided 3-step wizard interface (Step 1: Client & Job, Step 2: Build Line Items, Step 3: Review & Finalize/Notes).
+        * Client-side AI text generation using Firebase AI Logic for "Project Description," "Additional Details," and "General Notes" in Step 3.
+        * GSAP animations for smooth, direction-aware step transitions.
+        * Simplified Step 1 focusing on core inputs.
     * **Future Considerations:**
-        * Real-time quote total updates in sticky bar or header.
-        * Drag-and-drop reordering for line items/sections.
-        * More intuitive Kit selection and preview before adding to quote.
-        * UI for handling AI generation (loading states, error messages within the component).
+        * Real-time quote total updates.
+        * Drag-and-drop for line items.
+        * Enhanced Kit selection/preview.
+        * Dedicated loading states and improved error display for AI generation.
 * **`ExistingQuotesPage.tsx`:** (e.g., search, filter, pagination, card view)
 * **`ProfileSettingsPage.tsx`:** (e.g., organization via tabs, tooltips)
 * **Data Management Pages (Clients, Kits, Custom Items):** (e.g., consistent tables, streamlined forms, search)
 * **`DashboardPage.tsx`:** (e.g., metrics, charts, actionable summaries)
 
-## 5. UI/UX for Future Features
+## 5. UI/UX for Future Features / Architectural Changes
 
-* **AI Content Generation:**
-    * **In Progress:**
-        * Added "Generate with AI" buttons in `QuoteBuilder.tsx` (Step 3) for Project Description, Additional Details, and General Notes.
-        * Implemented frontend logic (`handleGenerateWithAI`) in `QuoteBuilder.tsx` to construct prompts (based on Job Title, Client Name, and Quote Lines) and call a Firebase Cloud Function.
-        * Developed and debugged a new Firebase Cloud Function `generateQuoteText` (using `onCall` trigger in `australia-southeast1`) in `functions/src/index.ts`. This function interfaces with Google's Vertex AI (Gemini model) to generate text based on the provided prompt.
-        * Addressed various TypeScript, CORS (via client-side region specification for `onCall`), and linting issues for the Cloud Function.
-    * **Key UI Considerations (Future):**
-        * Clearer visual indication of AI-generated content within textareas.
-        * User-friendly display of AI generation in progress (beyond button text).
-        * More sophisticated error handling and display for AI failures directly in the UI.
-        * Potential for users to give feedback on or refine AI prompts (advanced).
+* **AI Content Generation (Client-Side with Firebase AI Logic):**
+    * **Status:** Implemented - Major Overhaul.
+    * **Details:**
+        * Migrated from a server-side Cloud Function (`generateQuoteText`) to direct client-side integration using `firebase/ai` (`getAI`, `getGenerativeModel` with `GoogleAIBackend` and "gemini-2.0-flash" model).
+        * **Removed:** `generateQuoteText` Cloud Function.
+        * **Benefits Achieved:** Faster AI responses, simplified backend architecture, reduced server load, potential cost optimization.
+        * **New Capabilities:** Smart project descriptions, intelligent additional details, client-friendly notes with cleaner output due to advanced prompt engineering.
+    * **Configuration:** Requires Firebase AI Logic enabled in the console and Gemini Developer API configured.
+    * **Immediate Next Steps:** Add loading states for AI generation, implement AI response caching.
+    * **Future:** AI-powered line item suggestions, smart quote templates.
+
+* **Cloud Functions:**
+    * **Streamlined:** Now focused solely on PDF generation (`generateQuotePdf`).
+    * **Optimized:** Reduced complexity and deployment size due to removal of AI logic.
 
 ## 6. Tooling & Process
 
-* **Design Tools (Optional):** Figma (for mockups if needed for complex changes).
-* **Component Library/Framework Choice:** Continue with CSS Modules, CSS Variables for themeability.
-* **Testing Strategy for UI/UX:** Manual testing on different browsers/devices; gather user feedback when possible. Test AI generation with various inputs.
+* **Design Tools (Optional):** Figma.
+* **Component Library/Framework Choice:** Continue with CSS Modules, CSS Variables.
+* **Key Dependencies Added/Updated:**
+    * `firebase`: "latest" (for Firebase AI Logic support).
+    * `gsap`: "^3.12.2" (for animations).
+* **Testing Strategy for UI/UX:** Manual testing, gather user feedback. Test AI generation and animations.
 
 ## 7. Prioritization & Roadmap (Simplified for Initial Focus)
 
-* **Phase 1 - Immediate Priorities:**
+* **Phase 1 - Recently Completed/In Progress:**
+    * [x] **Major Overhaul of `QuoteBuilder.tsx`:** Implemented wizard flow, client-side AI, GSAP animations.
+    * [x] **AI Integration Overhaul:** Migrated AI to Firebase AI Logic (client-side).
+    * [x] **Cloud Function Cleanup:** Removed `generateQuoteText` function.
     * [ ] Define and apply a new color scheme globally.
     * [ ] Define and apply basic global typography.
-    * [x] Remove "Summary Sections" setting from `ProfileSettingsPage.tsx` & `UserProfile` type. *(Assuming this was implicitly done or not a blocker)*
-    * [x] Initial review and **major layout refactor** for `QuoteBuilder.tsx` (wizard implementation) for usability gains.
-    * [ ] Implement a non-blocking notification system (toasts) for save/error messages (including AI generation feedback).
-    * [ ] Thoroughly test and refine the "Generate with AI" feature (both frontend and backend Cloud Function).
-* **Phase 2 - Next Steps (After Phase 1):**
-    * [ ] Introduce subtle GSAP animations (as per section 3.2).
-    * [ ] Deeper UI/UX enhancements for `QuoteBuilder.tsx` (e.g., kit preview, drag-and-drop).
+    * [ ] Implement a non-blocking notification system (toasts).
+    * [ ] Fine-tune animation timing and easing for wizard.
+    * [ ] Add loading states for AI generation.
+    * [ ] Implement AI response caching.
+* **Phase 2 - Next Steps:**
+    * [ ] Deeper UI/UX enhancements for `QuoteBuilder.tsx` (e.g., kit preview).
     * [ ] UI/UX enhancements for `ExistingQuotesPage.tsx`.
-    * [ ] Comprehensive responsiveness pass for all wizard steps and key pages.
+    * [ ] Comprehensive responsiveness pass.
+    * [ ] Add keyboard shortcuts for wizard navigation.
 * **Phase 3 - Future Polish:**
-    * [ ] Advanced GSAP animations (as per section 3.3).
-    * [ ] UI/UX enhancements for other pages (`ProfileSettingsPage`, Data Management, `DashboardPage`).
-    * [ ] Deeper accessibility audit and improvements.
-    * [ ] Further refinement of AI Content Generation UI/UX (e.g., prompt helpers, editing generated content).
+    * [ ] Advanced GSAP animations.
+    * [ ] UI/UX enhancements for other pages.
+    * [ ] Deeper accessibility audit.
+    * [ ] AI-powered line item suggestions & smart quote templates.
+
+## 8. Documentation Updates (New Section)
+
+* **New Guides Added/To Be Added:**
+    * [x] Firebase AI Logic setup and configuration.
+    * [x] GSAP animation implementation patterns (`animations.ts`).
+    * [x] Quote wizard best practices.
+    * [x] AI prompt engineering guidelines (for client-side implementation).
+* **Developer Resources Updated:**
+    * [x] TypeScript patterns for Firebase AI Logic.
+    * [x] Animation performance optimization notes.
+    * [x] Error handling strategies for client-side AI features.
+    * [x] Testing approaches for animated components.
+
+## 9. Migration Notes (For this Update)
+
+* **If upgrading from a version pre-dating client-side AI & GSAP:**
+    * **Update Firebase SDK:** Run `npm install firebase@latest` (or yarn equivalent).
+    * **Enable Firebase AI Logic:** Configure in the Firebase console as per the new setup guide.
+    * **Remove Old Cloud Function:** The `generateQuoteText` Cloud Function is deprecated and should be removed from `functions/src/index.ts` and your Firebase project (`firebase functions:delete generateQuoteText --region your-region`).
+    * **Update Dependencies:** Add GSAP: `npm install gsap@latest` (or yarn).
+    * **Refactor `QuoteBuilder.tsx`:** Adapt to use the new client-side `firebase/ai` calls for text generation and integrate GSAP animation calls (e.g., `wizardTransition`).
+    * **Review `firebaseConfig.ts`:** Ensure it's compatible with latest Firebase SDK and AI Logic initialization.

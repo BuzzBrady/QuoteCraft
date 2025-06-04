@@ -127,4 +127,175 @@ export const animateListItemOut = (itemRef: HTMLElement, onComplete: () => void)
     });
 };
 
-// Add more animation functions as we identify needs
+// Add these functions to your existing animations.ts file
+
+/**
+ * Animates a wizard step entering from the right (for next step)
+ * @param target - The step element to animate in
+ * @param duration - Animation duration in seconds
+ * @param onComplete - Optional callback when animation completes
+ */
+export const wizardStepInFromRight = (target: gsap.TweenTarget, duration: number = 0.5, onComplete?: () => void) => {
+    return gsap.fromTo(target, 
+        { 
+            opacity: 0, 
+            x: 50,
+            scale: 0.98
+        }, 
+        { 
+            opacity: 1, 
+            x: 0,
+            scale: 1,
+            duration, 
+            ease: 'power2.out',
+            onComplete
+        }
+    );
+};
+
+/**
+ * Animates a wizard step entering from the left (for previous step)
+ * @param target - The step element to animate in
+ * @param duration - Animation duration in seconds
+ * @param onComplete - Optional callback when animation completes
+ */
+export const wizardStepInFromLeft = (target: gsap.TweenTarget, duration: number = 0.5, onComplete?: () => void) => {
+    return gsap.fromTo(target, 
+        { 
+            opacity: 0, 
+            x: -50,
+            scale: 0.98
+        }, 
+        { 
+            opacity: 1, 
+            x: 0,
+            scale: 1,
+            duration, 
+            ease: 'power2.out',
+            onComplete
+        }
+    );
+};
+
+/**
+ * Animates a wizard step exiting to the left (when going to next step)
+ * @param target - The step element to animate out
+ * @param duration - Animation duration in seconds
+ * @param onComplete - Optional callback when animation completes
+ */
+export const wizardStepOutToLeft = (target: gsap.TweenTarget, duration: number = 0.4, onComplete?: () => void) => {
+    return gsap.to(target, {
+        opacity: 0,
+        x: -50,
+        scale: 0.98,
+        duration,
+        ease: 'power2.in',
+        onComplete
+    });
+};
+
+/**
+ * Animates a wizard step exiting to the right (when going to previous step)
+ * @param target - The step element to animate out
+ * @param duration - Animation duration in seconds
+ * @param onComplete - Optional callback when animation completes
+ */
+export const wizardStepOutToRight = (target: gsap.TweenTarget, duration: number = 0.4, onComplete?: () => void) => {
+    return gsap.to(target, {
+        opacity: 0,
+        x: 50,
+        scale: 0.98,
+        duration,
+        ease: 'power2.in',
+        onComplete
+    });
+};
+
+/**
+ * Animates wizard step content appearing with staggered elements
+ * @param target - The content elements to animate
+ * @param stagger - Stagger delay between elements
+ * @param duration - Animation duration
+ */
+export const wizardContentIn = (target: gsap.TweenTarget, stagger: number = 0.1, duration: number = 0.6) => {
+    return gsap.fromTo(target,
+        {
+            opacity: 0,
+            y: 20
+        },
+        {
+            opacity: 1,
+            y: 0,
+            duration,
+            ease: 'power2.out',
+            stagger
+        }
+    );
+};
+
+/**
+ * Creates a smooth wizard transition timeline
+ * @param outTarget - Element to animate out
+ * @param inTarget - Element to animate in
+ * @param direction - 'forward' or 'backward'
+ * @param onComplete - Callback when transition completes
+ */
+
+export const wizardTransition = (
+    outTarget: gsap.TweenTarget, 
+    inTarget: gsap.TweenTarget, 
+    direction: 'forward' | 'backward' = 'forward',
+    onComplete?: () => void
+) => {
+    const tl = gsap.timeline({ onComplete });
+    
+    if (direction === 'forward') {
+        tl.to(outTarget, {
+            opacity: 0,
+            x: -30,
+            scale: 0.98,
+            duration: 0.3,
+            ease: 'power2.in'
+        })
+        .fromTo(inTarget, 
+            { 
+                opacity: 0, 
+                x: 30,
+                scale: 0.98
+            },
+            {
+                opacity: 1,
+                x: 0,
+                scale: 1,
+                duration: 0.4,
+                ease: 'power2.out'
+            }, 
+            '-=0.1' // Start slightly before previous animation ends
+        );
+    } else {
+        tl.to(outTarget, {
+            opacity: 0,
+            x: 30,
+            scale: 0.98,
+            duration: 0.3,
+            ease: 'power2.in'
+        })
+        .fromTo(inTarget, 
+            { 
+                opacity: 0, 
+                x: -30,
+                scale: 0.98
+            },
+            {
+                opacity: 1,
+                x: 0,
+                scale: 1,
+                duration: 0.4,
+                ease: 'power2.out'
+            }, 
+            '-=0.1'
+        );
+    }
+    
+    return tl;
+};

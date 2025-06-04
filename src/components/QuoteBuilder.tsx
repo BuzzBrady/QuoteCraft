@@ -18,7 +18,7 @@ import {
 } from '../types'; //
 
 import { formatCurrency, findMatchingRate, groupLinesBySection } from '../utils/utils'; //
-
+import { wizardStepInFromRight, wizardStepInFromLeft, wizardTransition, wizardContentIn } from '../utils/animations';
 import TaskSelector from './TaskSelector'; //
 import MaterialSelector from './MaterialSelector'; //
 import MaterialOptionSelector from './MaterialOptionSelector'; //
@@ -33,9 +33,7 @@ import Step3_ReviewFinalize from './Step3_ReviewFinalize';
 
 import styles from './QuoteBuilder.module.css'; //
 import StickyQuoteProgressBar from './StickyQuoteProgressBar'; // Adjust path if necessary
-import { getFunctions, httpsCallable, Functions } from 'firebase/functions';
-// Ensure formatCurrency is imported if not already
-
+import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 
 interface QuoteBuilderProps {
     existingQuoteId?: string;
@@ -103,115 +101,208 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     // Generate with AI buttons
     const [isAIGenerating, setIsAIGenerating] = useState(false);
 
-    // Define the types for the data you are sending to and expecting from the AI function
-    type GenerateQuoteTextRequestData = {
-    prompt: string;
-    fieldType: "projectDescription" | "additionalDetails" | "generalNotes";
-};
+    // Add these new state variables after your existing useState declarations
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
+// Add these refs after your existing useRef declarations
+    const step1Ref = useRef<HTMLDivElement>(null);
+    const step2Ref = useRef<HTMLDivElement>(null);
+    const step3Ref = useRef<HTMLDivElement>(null);
 
-    type GenerateQuoteTextResultData = {
-    generatedText: string;
-};
-
-const handleGenerateWithAI = async (fieldType: GenerateQuoteTextRequestData['fieldType']) => {
-    if (!jobTitle && quoteLines.length === 0) {
-        alert("Please add a job title and some line items before generating text with AI.");
-        return;
-    }
-    setIsAIGenerating(true);
-
-    // --- Construct your prompt (ensure this logic is complete) ---
-    let contextForAI = `You are an assistant helping a user write sections of a service quote. Be professional, clear, and concise.`;
-    contextForAI += `\nThe quote is for a job titled: "${jobTitle}".`;
-    if (clientName) { 
-        contextForAI += `\nThe client is: ${clientName}.`; 
-    }
-    if (quoteLines.length > 0) {
-        contextForAI += "\nThe primary items in this quote include:\n";
-        const itemSummary = quoteLines.map(line => {
-            let summary = `- ${line.displayName}`;
-            if (line.quantity && line.unit) summary += ` (Quantity: ${line.quantity} ${line.unit})`;
-            if (line.section) summary += ` in the "${line.section}" area`;
-            return summary;
-        }).join("\n");
-        contextForAI += itemSummary;
-    } else { 
-        contextForAI += "\nNo specific line items have been added yet."; 
-    }
-
-    let specificInstruction = "";
-    switch (fieldType) {
-        case 'projectDescription':
-            specificInstruction = `\n\nBased on the job title and items, write a project description or scope of work. This should give the client a clear understanding of what will be delivered. Make it about 2-4 sentences long.`;
-            break;
-        case 'additionalDetails':
-            specificInstruction = `\n\nBased on the job title and items, list any important additional details, inclusions, or exclusions. For example, specific materials used if not obvious, site conditions, access notes, or things not covered. Use bullet points if appropriate.`;
-            break;
-        case 'generalNotes':
-            specificInstruction = `\n\nBased on the job title and items, write some general notes for the client. This could include information about next steps, a thank you note, or warranty information if applicable. Keep it brief and friendly.`;
-            break;
-    }
-    const fullPrompt = contextForAI + specificInstruction;
-    // --- End prompt construction ---
-
-    console.log(`Calling 'generateQuoteText' (onCall) in region 'australia-southeast1' for field: <span class="math-inline">\{fieldType\}\. Prompt starts with\: "</span>{fullPrompt.substring(0, 100)}..."`);
-
-    try {
-        // IMPORTANT: Initialize with your Firebase app and the function's region
-        const functionsInstance: Functions = getFunctions(app, "australia-southeast1");
-
-        const generateQuoteTextCallable = httpsCallable<GenerateQuoteTextRequestData, GenerateQuoteTextResultData>(
-            functionsInstance, 
-            'generateQuoteText'
-        );
-
-        const result = await generateQuoteTextCallable({ prompt: fullPrompt, fieldType: fieldType });
-        const generatedText = result.data.generatedText;
-
-        if (generatedText) {
-            if (fieldType === 'projectDescription') setProjectDescription(generatedText);
-            else if (fieldType === 'additionalDetails') setAdditionalDetails(generatedText);
-            else if (fieldType === 'generalNotes') setGeneralNotes(generatedText);
-        } else {
-            // This case might be handled by an HttpsError thrown from the backend if text is empty
-            console.warn("AI returned empty text (client-side check).");
-            alert("AI returned an empty response. Please try again or add more details to the quote.");
+    const getCurrentStepRef = (step: number) => {
+        switch (step) {
+            case 1: return step1Ref;
+            case 2: return step2Ref;
+            case 3: return step3Ref;
+            default: return null;
         }
+    };
 
-    } catch (error: any) { // Catch errors from the callable function
-        console.error("Error calling 'generateQuoteText' (onCall):", error);
-        // 'error.message' and 'error.code' will be from the HttpsError thrown by the function
-        alert(`Failed to generate text with AI. Error: ${error.message || "Unknown error"} (Code: ${error.code || 'N/A'})`);
-    } finally {
-        setIsAIGenerating(false);
-    }
-};
+    const handleGenerateWithAI = async (fieldType: 'projectDescription' | 'additionalDetails' | 'generalNotes') => {
+        if (!jobTitle && quoteLines.length === 0) {
+            alert("Please add a job title and some line items before generating text with AI.");
+            return;
+        }
+        setIsAIGenerating(true);
+    
+        // Build your prompt (keep your existing logic)
+        let contextForAI = `You are an assistant helping a user write sections of a service quote. Be professional, clear, and concise.`;
+        contextForAI += `\nThe quote is for a job titled: "${jobTitle}".`;
+        if (clientName) { 
+            contextForAI += `\nThe client is: ${clientName}.`; 
+        }
+        if (quoteLines.length > 0) {
+            contextForAI += "\nThe primary items in this quote include:\n";
+            const itemSummary = quoteLines.map(line => {
+                let summary = `- ${line.displayName}`;
+                if (line.quantity && line.unit) summary += ` (Quantity: ${line.quantity} ${line.unit})`;
+                if (line.section) summary += ` in the "${line.section}" area`;
+                return summary;
+            }).join("\n");
+            contextForAI += itemSummary;
+        }
+    
+        let specificInstruction = "";
+        switch (fieldType) {
+            case 'projectDescription':
+        specificInstruction = `\n\nWrite a professional project description or scope of work. Do not include headers, labels, or introductory phrases. Start directly with the description content. Keep it 2-4 sentences and focus on what will be delivered to the client.`;
+        break;
+    case 'additionalDetails':
+        specificInstruction = `\n\nList important additional details, inclusions, or exclusions. Do not include headers, labels, or introductory phrases like "Here are the details" or "Important notes". Start directly with the actual details. Use bullet points if appropriate, but do not include any preamble or conclusion.`;
+        break;
+    case 'generalNotes':
+        specificInstruction = `\n\nWrite brief, friendly general notes for the client. Do not include headers, labels, or introductory phrases like "Here are some notes" or "Regarding this quote". Start directly with the actual notes content. Keep it professional but warm.`;
+        break;
+        }
+        const fullPrompt = contextForAI + specificInstruction;
+    
+        try {
+            console.log("🔍 Debug: Initializing Firebase AI Logic...");
+            console.log("🔍 Debug: App object:", app);
+            
+            // Initialize Firebase AI Logic
+            const ai = getAI(app, { backend: new GoogleAIBackend() });
+            console.log("🔍 Debug: AI initialized:", ai);
+            
+            // Try different model names if one doesn't work
+            const modelNames = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"];
+            let model;
+            let lastError;
+            
+            for (const modelName of modelNames) {
+                try {
+                    console.log(`🔍 Debug: Trying model: ${modelName}`);
+                    model = getGenerativeModel(ai, { model: modelName });
+                    
+                    // Test the model with a simple prompt first
+                    const result = await model.generateContent(fullPrompt);
+                    const response = result.response;
+                    const text = response.text();
+                    
+                    console.log("✅ Success with model:", modelName);
+                    console.log("🔍 Debug: Generated text:", text.substring(0, 100) + "...");
+    
+                    if (text) {
+                        if (fieldType === 'projectDescription') setProjectDescription(text);
+                        else if (fieldType === 'additionalDetails') setAdditionalDetails(text);
+                        else if (fieldType === 'generalNotes') setGeneralNotes(text);
+                        return; // Success!
+                    } else {
+                        throw new Error("Empty response from AI");
+                    }
+                } catch (modelError: any) {
+                    console.log(`❌ Model ${modelName} failed:`, modelError.message);
+                    lastError = modelError;
+                    continue;
+                }
+            }
+            
+            // If we get here, all models failed
+            throw lastError || new Error("All models failed");
+    
+        } catch (error: any) {
+            console.error("🚨 Error calling Firebase AI Logic:", error);
+            console.error("🚨 Error details:", {
+                name: error.name,
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            });
+            alert(`Failed to generate text with AI. Error: ${error.message || "Unknown error"}`);
+        } finally {
+            setIsAIGenerating(false);
+        }
+    };
 
     /* Define State for Current Step */
     const [currentStep, setCurrentStep] = useState(1);
     const totalSteps = 3; // We'll define 3 steps for now   
 
     const handleNextStep = () => {
-        // Basic validation for Step 1 (Job Title) as an example
+        if (isAnimating) return; // Prevent multiple animations
+        
+        // Basic validation for Step 1
         if (currentStep === 1) {
             if (!jobTitle.trim()) {
-                alert("Job Title is required."); return;
+                alert("Job Title is required."); 
+                return;
             }
-            if (!selectedClientId) { // Crucial: a client MUST be selected
-                alert("Please select a client."); return;
+            if (!selectedClientId) {
+                alert("Please select a client."); 
+                return;
             }
         }
     
         if (currentStep < totalSteps) {
-            setCurrentStep(prev => prev + 1);
+            setIsAnimating(true);
+            setAnimationDirection('forward');
+            
+            const currentStepRef = getCurrentStepRef(currentStep);
+            const nextStepRef = getCurrentStepRef(currentStep + 1);
+            
+            if (currentStepRef && nextStepRef) {
+                wizardTransition(
+                    currentStepRef.current,
+                    nextStepRef.current,
+                    'forward',
+                    () => {
+                        setCurrentStep(prev => prev + 1);
+                        setIsAnimating(false);
+                        
+                        // Animate in the content of the new step
+                        setTimeout(() => {
+                            const contentElements = nextStepRef.current?.querySelectorAll('.wizard-content > *');
+                            if (contentElements) {
+                                wizardContentIn(contentElements, 0.05, 0.4);
+                            }
+                        }, 50);
+                    }
+                );
+            } else {
+                // Fallback if refs aren't available
+                setCurrentStep(prev => prev + 1);
+                setIsAnimating(false);
+            }
         }
     };
     
     const handlePreviousStep = () => {
+        if (isAnimating) return; // Prevent multiple animations
+        
         if (currentStep > 1) {
-            setCurrentStep(prev => prev - 1);
+            setIsAnimating(true);
+            setAnimationDirection('backward');
+            
+            const currentStepRef = getCurrentStepRef(currentStep);
+            const prevStepRef = getCurrentStepRef(currentStep - 1);
+            
+            if (currentStepRef && prevStepRef) {
+                wizardTransition(
+                    currentStepRef.current,
+                    prevStepRef.current,
+                    'backward',
+                    () => {
+                        setCurrentStep(prev => prev - 1);
+                        setIsAnimating(false);
+                        
+                        // Animate in the content of the previous step
+                        setTimeout(() => {
+                            const contentElements = prevStepRef.current?.querySelectorAll('.wizard-content > *');
+                            if (contentElements) {
+                                wizardContentIn(contentElements, 0.05, 0.4);
+                            }
+                        }, 50);
+                    }
+                );
+            } else {
+                // Fallback if refs aren't available
+                setCurrentStep(prev => prev - 1);
+                setIsAnimating(false);
+            }
         }
     };
+
+
 
     const clearSelections = useCallback(() => {
         setSelectedTask(null); setSelectedMaterial(null); setSelectedOption(null);
@@ -242,6 +333,10 @@ const handleGenerateWithAI = async (fieldType: GenerateQuoteTextRequestData['fie
     // Save disabled message will use global text-warning or text-muted if applied directly to the span/p tag
 
     useEffect(() => { setOverrideRateInput(currentItemDetails.rate.toString()); }, [currentItemDetails.rate]);
+
+    // Add this useEffect with your other useEffect hooks (around line 985 area)
+// Make sure it's AFTER the isLoadingOverall declaration but WITH the other useEffects
+
 
     // --- Data Fetching useEffects ---
 
@@ -425,7 +520,8 @@ const handleGenerateWithAI = async (fieldType: GenerateQuoteTextRequestData['fie
         fetchQuote();
     }, [existingQuoteId, userId, userProfile.defaultQuoteTerms, globalAreas, clients, clearSelections]);
 
-
+    
+    
     useEffect(() => {
         if (!userId) {
             setAllTasks([]);
@@ -468,6 +564,7 @@ const handleGenerateWithAI = async (fieldType: GenerateQuoteTextRequestData['fie
         };
         fetchAllReferencedData();
     }, [userId]);
+
 
     const handleOpenNewTaskModal = (initialName?: string) => {
         return new Promise<CombinedTask | null>((resolve, reject) => {
@@ -874,6 +971,24 @@ const handleGenerateWithAI = async (fieldType: GenerateQuoteTextRequestData['fie
 
     const isLoadingOverall = isLoadingGlobals || isLoadingRates || isLoadingAreas || isLoadingClients || isLoadingQuote;
 
+    useEffect(() => {
+        if (!isLoadingOverall && currentStep === 1 && step1Ref.current) {
+            // Animate in the first step when component loads
+            setTimeout(() => {
+                wizardStepInFromRight(step1Ref.current, 0.6);
+                
+                // Animate in the content
+                setTimeout(() => {
+                    const contentElements = step1Ref.current?.querySelectorAll('.wizard-content > *');
+                    if (contentElements) {
+                        wizardContentIn(contentElements, 0.08, 0.5);
+                    }
+                }, 200);
+            }, 100);
+        }
+    }, [isLoadingOverall, currentStep]);
+    
+
     const getStepName = (step: number) => {
         if (step === 1) return "Client & Job Details";
         if (step === 2) return "Build Line Items";
@@ -895,120 +1010,130 @@ const handleGenerateWithAI = async (fieldType: GenerateQuoteTextRequestData['fie
             {errorRates && <p className="text-danger">Rates Error: {errorRates}</p>}
     
             {!isLoadingOverall && (
-                <>
-                    {/* STEP 1: Render Step1_QuoteClientDetails Component */}
-                    {currentStep === 1 && (
-                        <Step1_QuoteClientDetails
-                            jobTitle={jobTitle}
-                            setJobTitle={setJobTitle}
-                            selectedClientId={selectedClientId}
-                            setSelectedClientId={setSelectedClientId}
-                            clients={clients}
-                            isLoadingClients={isLoadingClients}
-                            validUntilDate={validUntilDate}
-                            setValidUntilDate={setValidUntilDate}
-                            clientNameDisplay={clientName}
-                            clientAddressDisplay={clientAddress}
-                            clientEmailDisplay={clientEmail}
-                            clientPhoneDisplay={clientPhone}
-                        />
-                    )}
-    
-                    {/* STEP 2: Render Step2_LineItemBuilder Component */}
-                    {currentStep === 2 && (
-                        <Step2_LineItemBuilder
-                            // Pass ALL necessary props for Step 2, for example:
-                            globalAreas={globalAreas}
-                            activeSection={activeSection}
-                            isLoadingAreas={isLoadingAreas}
-                            handleSetActiveSection={handleSetActiveSection}
-                            itemSelectorRef={itemSelectorRef} // Pass the ref
-                            userId={userId}
-                            allTasks={allTasks}
-                            allMaterials={allMaterials}
-                            selectedTask={selectedTask}
-                            selectedMaterial={selectedMaterial}
-                            selectedOption={selectedOption}
-                            selectedQuantity={selectedQuantity}
-                            setSelectedQuantity={setSelectedQuantity}
-                            overrideRateInput={overrideRateInput}
-                            setOverrideRateInput={setOverrideRateInput}
-                            selectedDescription={selectedDescription}
-                            setSelectedDescription={setSelectedDescription}
-                            currentItemDetails={currentItemDetails}
-                            isLoadingGlobals={isLoadingGlobals}
-                            isLoadingRates={isLoadingRates}
-                            handleTaskSelectForItemForm={handleTaskSelectForItemForm}
-                            handleMaterialSelectForItemForm={handleMaterialSelectForItemForm}
-                            handleOptionSelectForItemForm={handleOptionSelectForItemForm}
-                            handleOpenNewTaskModal={handleOpenNewTaskModal}
-                            handleOpenNewMaterialModal={handleOpenNewMaterialModal}
-                            handleKitSelected={handleKitSelected}
-                            handleNavigateToKitCreator={handleNavigateToKitCreator}
-                            handleAddLineItem={handleAddLineItem}
-                            isLoadingQuote={isLoadingQuote}
-                            quoteLines={quoteLines}
-                            sortedSectionNames={sortedSectionNames} // Make sure these are calculated in QuoteBuilder
-                            groupedQuoteLines={groupedQuoteLines}   // Make sure these are calculated in QuoteBuilder
-                            collapsedSections={collapsedSections}
-                            toggleSectionCollapse={toggleSectionCollapse}
-                            handleDeleteLineItem={handleDeleteLineItem}
-                            handleEditLineItem={handleEditLineItem}
-                        />
-                    )}
-    
-                    {/* STEP 3: Render Step3_ReviewFinalize Component */}
-                    {currentStep === 3 && (
-                        <Step3_ReviewFinalize
-                            // Pass ALL necessary props for Step 3, for example:
-                            jobTitle={jobTitle}
-                            clientName={clientName} // Pass the actual client data from QuoteBuilder state
-                            clientAddress={clientAddress}
-                            clientEmail={clientEmail}
-                            clientPhone={clientPhone}
-                            validUntilDate={validUntilDate}
-                            quoteLines={quoteLines}
-                            sortedSectionNames={sortedSectionNames} // Make sure these are calculated
-                            groupedQuoteLines={groupedQuoteLines}   // Make sure these are calculated
-                            projectDescription={projectDescription}
-                            setProjectDescription={setProjectDescription}
-                            additionalDetails={additionalDetails}
-                            setAdditionalDetails={setAdditionalDetails}
-                            generalNotes={generalNotes}
-                            setGeneralNotes={setGeneralNotes}
-                            terms={terms}
-                            setTerms={setTerms}
-                            validationIssues={validationIssues} // Pass relevant validation issues for the final step
-                            isLoadingQuote={isLoadingQuote}
-                            onGenerateWithAI={handleGenerateWithAI} // If you've implemented this
-                            isAIGenerating={isAIGenerating}       // If you've implemented this
-                        />
-                    )}
-    
-                    {/* Sticky Bottom Bar */}
-                    <StickyQuoteProgressBar
-                        currentStep={currentStep}
-                        totalSteps={totalSteps}
-                        activeSection={activeSection}
-                        quoteTotal={quoteLines.reduce((sum, line) => sum + (line.lineTotal || 0), 0)}
-                        onNext={handleNextStep}
-                        onPrevious={handlePreviousStep}
-                        onSave={handleSaveQuote}
-                        isSaveDisabled={isSaveDisabled}
-                        isLoading={isLoadingQuote}
-                        configuredItemPreview={
-                            (selectedTask || selectedMaterial) && currentStep === 2 ? {
-                                taskName: selectedTask?.name,
-                                materialName: selectedMaterial?.name,
-                                optionName: selectedOption?.name,
-                                quantity: currentItemDetails.inputType === 'quantity' ? selectedQuantity : null,
-                                rate: parseFloat(overrideRateInput) || currentItemDetails.rate,
-                                unit: currentItemDetails.unit
-                            } : null
-                        }
+    <>
+        {/* STEP 1: Render Step1_QuoteClientDetails Component */}
+        {currentStep === 1 && (
+            <div ref={step1Ref} className="wizard-step">
+                <div className="wizard-content">
+                    <Step1_QuoteClientDetails
+                        jobTitle={jobTitle}
+                        setJobTitle={setJobTitle}
+                        selectedClientId={selectedClientId}
+                        setSelectedClientId={setSelectedClientId}
+                        clients={clients}
+                        isLoadingClients={isLoadingClients}
+                        validUntilDate={validUntilDate}
+                        setValidUntilDate={setValidUntilDate}
+                        clientNameDisplay={clientName}
+                        clientAddressDisplay={clientAddress}
+                        clientEmailDisplay={clientEmail}
+                        clientPhoneDisplay={clientPhone}
                     />
-                </>
-            )}
+                </div>
+            </div>
+        )}
+
+        {/* STEP 2: Render Step2_LineItemBuilder Component */}
+        {currentStep === 2 && (
+            <div ref={step2Ref} className="wizard-step">
+                <div className="wizard-content">
+                    <Step2_LineItemBuilder
+                        globalAreas={globalAreas}
+                        activeSection={activeSection}
+                        isLoadingAreas={isLoadingAreas}
+                        handleSetActiveSection={handleSetActiveSection}
+                        itemSelectorRef={itemSelectorRef}
+                        userId={userId}
+                        allTasks={allTasks}
+                        allMaterials={allMaterials}
+                        selectedTask={selectedTask}
+                        selectedMaterial={selectedMaterial}
+                        selectedOption={selectedOption}
+                        selectedQuantity={selectedQuantity}
+                        setSelectedQuantity={setSelectedQuantity}
+                        overrideRateInput={overrideRateInput}
+                        setOverrideRateInput={setOverrideRateInput}
+                        selectedDescription={selectedDescription}
+                        setSelectedDescription={setSelectedDescription}
+                        currentItemDetails={currentItemDetails}
+                        isLoadingGlobals={isLoadingGlobals}
+                        isLoadingRates={isLoadingRates}
+                        handleTaskSelectForItemForm={handleTaskSelectForItemForm}
+                        handleMaterialSelectForItemForm={handleMaterialSelectForItemForm}
+                        handleOptionSelectForItemForm={handleOptionSelectForItemForm}
+                        handleOpenNewTaskModal={handleOpenNewTaskModal}
+                        handleOpenNewMaterialModal={handleOpenNewMaterialModal}
+                        handleKitSelected={handleKitSelected}
+                        handleNavigateToKitCreator={handleNavigateToKitCreator}
+                        handleAddLineItem={handleAddLineItem}
+                        isLoadingQuote={isLoadingQuote}
+                        quoteLines={quoteLines}
+                        sortedSectionNames={sortedSectionNames}
+                        groupedQuoteLines={groupedQuoteLines}
+                        collapsedSections={collapsedSections}
+                        toggleSectionCollapse={toggleSectionCollapse}
+                        handleDeleteLineItem={handleDeleteLineItem}
+                        handleEditLineItem={handleEditLineItem}
+                    />
+                </div>
+            </div>
+        )}
+
+        {/* STEP 3: Render Step3_ReviewFinalize Component */}
+        {currentStep === 3 && (
+            <div ref={step3Ref} className="wizard-step">
+                <div className="wizard-content">
+                    <Step3_ReviewFinalize
+                        jobTitle={jobTitle}
+                        clientName={clientName}
+                        clientAddress={clientAddress}
+                        clientEmail={clientEmail}
+                        clientPhone={clientPhone}
+                        validUntilDate={validUntilDate}
+                        quoteLines={quoteLines}
+                        sortedSectionNames={sortedSectionNames}
+                        groupedQuoteLines={groupedQuoteLines}
+                        projectDescription={projectDescription}
+                        setProjectDescription={setProjectDescription}
+                        additionalDetails={additionalDetails}
+                        setAdditionalDetails={setAdditionalDetails}
+                        generalNotes={generalNotes}
+                        setGeneralNotes={setGeneralNotes}
+                        terms={terms}
+                        setTerms={setTerms}
+                        validationIssues={validationIssues}
+                        isLoadingQuote={isLoadingQuote}
+                        onGenerateWithAI={handleGenerateWithAI}
+                        isAIGenerating={isAIGenerating}
+                    />
+                </div>
+            </div>
+        )}
+
+        {/* Sticky Bottom Bar */}
+        <StickyQuoteProgressBar
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            activeSection={activeSection}
+            quoteTotal={quoteLines.reduce((sum, line) => sum + (line.lineTotal || 0), 0)}
+            onNext={handleNextStep}
+            onPrevious={handlePreviousStep}
+            onSave={handleSaveQuote}
+            isSaveDisabled={isSaveDisabled || isAnimating}
+            isLoading={isLoadingQuote}
+            configuredItemPreview={
+                (selectedTask || selectedMaterial) && currentStep === 2 ? {
+                    taskName: selectedTask?.name,
+                    materialName: selectedMaterial?.name,
+                    optionName: selectedOption?.name,
+                    quantity: currentItemDetails.inputType === 'quantity' ? selectedQuantity : null,
+                    rate: parseFloat(overrideRateInput) || currentItemDetails.rate,
+                    unit: currentItemDetails.unit
+                } : null
+            }
+        />
+    </>
+)}
     
             {/* --- Modals --- */}
             {userId && (

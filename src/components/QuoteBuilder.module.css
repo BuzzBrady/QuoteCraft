@@ -1,4 +1,24 @@
 /* src/components/QuoteBuilder.module.css */
+.wizard-step {
+    min-height: 400px;
+    width: 100%;
+    opacity: 0; /* Start hidden to prevent flash */
+}
+
+.wizard-content {
+    width: 100%;
+}
+
+.quoteBuilderContainer {
+    overflow: hidden;
+    position: relative;
+}
+
+/* Ensure the step becomes visible when GSAP animates it */
+.wizard-step.gsap-animated {
+    opacity: 1;
+}
+
 .selectedClientDetailsContainer {
     background-color: var(--background-color-light); /* Slightly different background */
     padding: var(--space-md);
