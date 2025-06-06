@@ -1,0 +1,81 @@
+/* src/pages/ManageCustomItemsPage.css (or .module.css) */
+
+/* --- Page & Tab Layout (Mirrors KitCreatorPage) --- */
+.pageContainer {
+    padding: var(--space-lg, 1.5rem);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl, 2rem);
+}
+
+.pageTitle {
+    /* Uses global h1 styles */
+}
+
+.backLink {
+    /* Uses global 'a' link styles */
+}
+
+.tabNavigation {
+    display: flex;
+    border-bottom: 1px solid var(--border-color, #444);
+    margin-bottom: var(--space-xl, 2rem);
+}
+
+.tabButton {
+    padding: var(--space-sm, 0.75rem) var(--space-lg, 1.5rem);
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-color-muted, #ccc);
+    font-size: 1.1em;
+    font-weight: 500;
+    transition: var(--transition-fast, 0.2s ease);
+    margin-bottom: -1px; /* Overlaps the container border-bottom */
+}
+
+.tabButton:hover, .tabButton:focus {
+    color: var(--theme-primary-white, #fff);
+    outline: none;
+}
+
+.tabButtonActive {
+    color: var(--theme-primary-light-blue, #4DA8DA);
+    border-bottom-color: var(--theme-primary-light-blue, #4DA8DA);
+    font-weight: 600;
+}
+
+.tabContent {
+    /* No extra styles needed, content is styled by its own sections */
+}
+
+/* --- Container for the Manager components --- */
+/* This can wrap the CustomTasksManager and CustomMaterialsManager if needed,
+   or the styles can be applied directly within those components' root divs. */
+.managerContainer {
+    /* Styles for the content within a tab */
+}
+
+/* Fallback loading/error text styles */
+.loadingText, .errorText {
+    text-align: center;
+    padding: var(--space-xl, 2rem);
+    font-style: italic;
+    color: var(--text-color-muted, #ccc);
+}
+.errorText {
+    color: var(--color-error, red);
+    font-style: normal;
+    font-weight: 500;
+}
+
+/* Buttons can be styled globally, e.g., using .btn .btn-primary in JSX.
+   No specific button styles are needed here if global classes are used.
+*/

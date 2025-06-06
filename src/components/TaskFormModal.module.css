@@ -1,126 +1,175 @@
 /* src/components/TaskFormModal.module.css */
+
 .modalOverlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.65); /* Consistent with --modal-backdrop */
+    background-color: rgba(0, 0, 0, 0.65);
     display: flex;
+    align-items: center; /* Vertically centers the modal */
     justify-content: center;
+    z-index: var(--z-index-modal, 1050);
+    padding: var(--space-md, 1rem); /* Space around modal on small screens */
+    box-sizing: border-box;
+  }
+  
+  .modalContent {
+    background: var(--theme-primary-deep-charcoal, #2c303a);
+    color: var(--theme-primary-white, #ecf0f1);
+    border-radius: var(--border-radius-lg, 8px);
+    border: 1px solid var(--border-color, #34495e);
+    box-shadow: var(--box-shadow-lg, 0 10px 25px rgba(0,0,0,0.2));
+    width: 100%;
+    max-width: 600px; /* Set a max-width to prevent it from being too wide */
+    
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh; /* CRITICAL: Constrains the overall modal height */
+  }
+  
+  .modalHeader {
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    border-bottom: 1px solid var(--border-color-light, #4a6072);
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    z-index: var(--z-index-modal); /* Using global modal z-index */
-}
-
-.modalContent {
-    background: var(--theme-primary-deep-charcoal);
-    color: var(--theme-primary-white);
-    padding: var(--space-xl);
-    border-radius: var(--border-radius-lg);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow-lg);
-    width: 90%;
-    max-width: 500px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
-}
-
-.modalContent h2 {
-    /* Uses global h2 styles for color, font-weight */
-    margin-top: 0;
-    margin-bottom: var(--space-md); /* Adjusted from 0.75rem */
-    text-align: center;
-    font-size: 1.6em; /* Specific size for modal title */
-}
-
-.formField {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs); /* Adjusted from 0.4rem */
-}
-
-.formField label {
-    /* Uses global label styles for color, font-weight, margin-bottom */
-    font-size: 0.9em; /* Specific font size if needed */
-}
-
-.formField input[type="text"],
-.formField textarea,
-.formField select {
-    /* Inherits most styles from global input/textarea/select in index.css */
-    /* Overrides or specific adjustments here: */
-    padding: var(--space-sm); /* Global default is sm+md, this is slightly smaller */
-    font-size: 0.95em;
-    /* background-color already var(--background-color-sections) or var(--theme-primary-deep-charcoal) from global */
-    /* border-radius already var(--border-radius-md) from global */
-}
-
-.formField textarea {
-    min-height: 80px;
-    resize: vertical;
-}
-
-.formActions {
+    flex-shrink: 0; /* Header should not shrink */
+  }
+  
+  .modalTitle {
+    margin: 0;
+    font-size: 1.4em;
+    font-weight: 600;
+  }
+  
+  .closeButton {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--text-color-muted, #7f8c8d);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    transition: color 0.2s ease-in-out;
+  }
+  .closeButton:hover {
+    color: var(--theme-primary-white, #ecf0f1);
+  }
+  
+  .modalBody {
+    padding: var(--space-lg, 1.5rem);
+    flex-grow: 1;   /* Allows the body to take up all available vertical space */
+    overflow-y: auto;   /* CRITICAL: Adds a scrollbar if content overflows */
+  }
+  
+  .modalFooter {
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    border-top: 1px solid var(--border-color-light, #4a6072);
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-md);
-    margin-top: var(--space-lg); /* Increased from 1rem for more separation */
-}
-
-/* Buttons can be refactored to use global .btn classes in TSX */
-.formActions button { /* Base for buttons in this modal if not using global .btn */
-    font-family: var(--font-primary);
-    font-weight: 600;
+    gap: var(--space-md, 1rem);
+    background-color: var(--background-color-sections, #34495e20);
+    flex-shrink: 0; /* Footer should not shrink */
+  }
+  
+  /* This is for the <form> element itself */
+  .taskFormContainer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg, 1.5rem); /* Space between form groups */
+  }
+  
+  .formRow {
+    display: flex;
+    gap: var(--space-md, 1rem);
+    align-items: flex-start;
+  }
+  .formRow > .form-group {
+      flex: 1;
+  }
+  
+  .errorMessage {
+    color: var(--color-error, red);
+    font-size: 0.9em;
     text-align: center;
-    vertical-align: middle;
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid transparent;
-    padding: var(--space-sm) var(--space-md); /* Aligning with .btn padding */
-    font-size: 0.95em; /* Specific font size for modal buttons */
-    line-height: 1.5;
-    border-radius: var(--border-radius-md);
-    transition: var(--transition-fast);
-}
+    margin-top: calc(-1 * var(--space-sm, 0.5rem)); /* Pull up slightly */
+  }
+  
 
-.submitButton {
-    /* Extends .formActions button */
-    color: var(--theme-primary-white);
-    background-color: var(--theme-accent-bright-blue);
-    border-color: var(--theme-accent-bright-blue);
-}
-
-.submitButton:hover, .submitButton:focus {
-    background-color: #00a6d8; /* Darker bright blue - consistent with .btn-accent:hover */
-    border-color: #00a6d8;
-    color: var(--theme-primary-white);
-    outline: 0;
-}
-.submitButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
-}
-
-.cancelButton {
-    /* Extends .formActions button */
-    color: var(--theme-primary-white);
-    background-color: var(--theme-secondary-steel-gray);
-    border-color: var(--theme-secondary-steel-gray);
-}
-
-.cancelButton:hover, .cancelButton:focus {
-    background-color: #8e989f; /* Darker steel gray - consistent with .btn-secondary:hover */
-    border-color: #8e989f;
-    color: var(--theme-primary-white);
-    outline: 0;
-}
-.cancelButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
-}
-
-.errorMessage {
-    color: var(--color-error);
-    font-size: 0.85em;
-    margin-top: calc(-1 * var(--space-sm)); /* Pull closer if needed, adjust value */
-    margin-bottom: var(--space-sm);
-}
+  .labelWithHelp {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs, 8px);
+  }
+  
+  /* --- NEW STYLES FOR HELP ICON AND TOOLTIP --- */
+  .tooltipContainer {
+    position: relative; /* This is the anchor for the absolute positioned tooltip */
+    display: inline-flex; /* Keeps it inline with the label text */
+  }
+  
+  .helpIcon {
+    display: inline-block;
+    color: var(--background-color-main, #2C2C2C); /* Dark text for the '?' */
+    background-color: var(--theme-secondary-steel-gray, #A9B1B7); /* Lighter gray background */
+    border-radius: 50%;
+    width: 18px; /* Slightly larger */
+    height: 18px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 18px; /* Vertically centers the text */
+    text-align: center;
+    cursor: help;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    user-select: none; /* Prevents text selection of the '?' */
+  }
+  
+  .tooltip {
+    /* Initial state: hidden */
+    visibility: hidden;
+    opacity: 0;
+    
+    /* Appearance */
+    position: absolute;
+    bottom: 140%; /* Position above the icon */
+    left: 50%;
+    transform: translateX(-50%); /* Center it horizontally */
+    padding: var(--space-sm, 0.75rem);
+    border-radius: var(--border-radius-md, 6px);
+    background-color: var(--background-color-light, #3a3a3a); /* Use a distinct tooltip background */
+    border: 1px solid var(--border-color, #5a5a5a);
+    color: var(--theme-primary-white, #fff);
+    font-size: 0.85em; /* Smaller font for tooltip */
+    font-weight: normal; /* Normal font weight */
+    line-height: 1.4;
+    text-align: left;
+    width: 250px; /* Set a specific width */
+    z-index: 10; /* Ensure it's above other elements */
+    pointer-events: none; /* So the tooltip itself doesn't interfere with mouse events */
+  
+    /* Animation */
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition-delay: 0.75s; /* Delay before it starts to fade in */
+  }
+  
+  /* This creates the little triangle pointer below the tooltip */
+  .tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%; /* At the bottom of the tooltip */
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--background-color-light, #3a3a3a) transparent transparent transparent;
+  }
+  
+  /* Show tooltip on hover of the container */
+  .tooltipContainer:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0.75s; /* Same delay for fade-in on hover */
+  }

@@ -1,9 +1,9 @@
 // src/components/QuickAddMaterialModal.tsx
 import React, { useState, useEffect } from 'react';
-import styles from './QuickAddMaterialModal.module.css'; 
-import { MaterialOption } from '../types'; 
+import styles from './QuickAddMaterialModal.module.css';
+import { MaterialOption } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { formatCurrency } from '../utils/utils';
+import { formatCurrency } from '../utils/utils'; // Assuming this path is correct
 
 interface QuickAddMaterialModalProps {
     isOpen: boolean;
@@ -14,16 +14,16 @@ interface QuickAddMaterialModalProps {
         optionsAvailable: boolean;
         defaultRate?: number;
         defaultUnit?: string;
-        options: MaterialOption[]; 
+        options: MaterialOption[];
     }) => void;
     initialName?: string;
 }
 
 interface TempOptionData {
-    id: string; 
+    id: string;
     name: string;
     description?: string;
-    rateModifier?: number;
+    rateModifier?: number; // Keep as number for calculations
 }
 
 const initialTempOptionData: TempOptionData = {
@@ -34,23 +34,40 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [optionsAvailable, setOptionsAvailable] = useState(false);
-    const [defaultRate, setDefaultRate] = useState<string>('');
+    const [defaultRate, setDefaultRate] = useState<string>(''); // Keep as string for input field
     const [defaultUnit, setDefaultUnit] = useState<string>('item');
     
     const [currentOptions, setCurrentOptions] = useState<MaterialOption[]>([]);
     const [showOptionSubForm, setShowOptionSubForm] = useState(false);
     const [tempOption, setTempOption] = useState<TempOptionData>(initialTempOptionData);
 
+    // --- FIX FOR BODY SCROLL ---
     useEffect(() => {
         if (isOpen) {
-            setName(initialName);
+            // When modal opens, disable body scroll
+            document.body.style.overflow = 'hidden';
+        } else {
+            // When modal closes, re-enable body scroll
+            document.body.style.overflow = 'auto'; // Or 'visible' or original value
+        }
+
+        // Cleanup function to ensure scroll is re-enabled when component unmounts while open
+        return () => {
+            document.body.style.overflow = 'auto'; // Or 'visible' or original value
+        };
+    }, [isOpen]); // Effect runs when 'isOpen' changes
+    // --- END OF FIX FOR BODY SCROLL ---
+
+    useEffect(() => {
+        if (isOpen) {
+            setName(initialName || ''); // Ensure initialName is used or fallback to empty
             setDescription('');
             setOptionsAvailable(false);
             setDefaultRate('');
             setDefaultUnit('item');
             setCurrentOptions([]);
             setShowOptionSubForm(false);
-            setTempOption(initialTempOptionData);
+            setTempOption({...initialTempOptionData, id: uuidv4()}); // Give new tempOption an ID
         }
     }, [isOpen, initialName]);
 
@@ -59,6 +76,13 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
         if (!e.target.checked) {
             setCurrentOptions([]); 
             setShowOptionSubForm(false);
+        } else {
+            // Optionally show the form immediately if "Has Options" is checked
+            // and there are no options yet.
+            if (currentOptions.length === 0) {
+                setShowOptionSubForm(true);
+                setTempOption({...initialTempOptionData, id: uuidv4()});
+            }
         }
     };
 
@@ -66,7 +90,8 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
         const { name: fieldName, value } = e.target;
         setTempOption(prev => ({
             ...prev,
-            [fieldName]: fieldName === 'rateModifier' ? parseFloat(value) || 0 : value,
+            // For rateModifier, store as number if valid, otherwise keep previous or 0
+            [fieldName]: fieldName === 'rateModifier' ? (value === '' ? '' : parseFloat(value)) : value,
         }));
     };
 
@@ -75,15 +100,29 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
             alert("Option name cannot be empty.");
             return;
         }
+        const rateModifierValue = typeof tempOption.rateModifier === 'string' 
+                                  ? parseFloat(tempOption.rateModifier) 
+                                  : tempOption.rateModifier;
+
         const newOption: MaterialOption = {
             id: tempOption.id || uuidv4(), 
             name: tempOption.name.trim(),
             name_lowercase: tempOption.name.trim().toLowerCase(),
-            description: tempOption.description?.trim() || undefined,
-            rateModifier: tempOption.rateModifier || 0, 
+            description: tempOption.description?.trim() || undefined, // Ensure empty string becomes undefined
+            rateModifier: !isNaN(rateModifierValue as number) ? rateModifierValue : 0, 
         };
-        setCurrentOptions(prev => [...prev, newOption]);
-        setTempOption({...initialTempOptionData, id: uuidv4()}); 
+        setCurrentOptions(prev => {
+            const existingIndex = prev.findIndex(opt => opt.id === newOption.id);
+            if (existingIndex > -1) { // Editing existing temp option (though this UI doesn't explicitly support editing from list yet)
+                const updated = [...prev];
+                updated[existingIndex] = newOption;
+                return updated;
+            }
+            return [...prev, newOption];
+        });
+        setTempOption({...initialTempOptionData, id: uuidv4()}); // Reset for next option
+        // Keep the sub-form open to add more options easily
+        setShowOptionSubForm(true); 
     };
     
     const handleRemoveTempOption = (optionIdToRemove: string) => {
@@ -104,35 +143,38 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
             defaultUnit: defaultUnit.trim() || 'item',
             options: currentOptions, 
         });
+        // onClose(); // Usually onSave in parent will trigger onClose
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className={styles.modalOverlay}>
-            <div className={styles.modalContent}>
+        // Add onClick={onClose} to overlay for closing by clicking outside
+        <div className={styles.modalOverlay} onClick={onClose}> 
+            {/* Add e.stopPropagation() to prevent closing when clicking inside modal content */}
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}> 
                 <h2 className={styles.modalTitle}>Quick Add New Material</h2>
                 <form onSubmit={handleSubmit} className={styles.materialFormContainer}>
-                    <div className="form-group mb-md">
-                        <label htmlFor="materialName">Material Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
-                        <input type="text" id="materialName" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Enter material name" />
+                    <div className="form-group mb-md"> {/* Assuming global 'form-group' and 'mb-md' or use styles.* */}
+                        <label htmlFor="qam-materialName">Material Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
+                        <input type="text" id="qam-materialName" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Enter material name" />
                     </div>
                     <div className="form-group mb-md">
-                        <label htmlFor="materialDescription">Description:</label>
-                        <textarea id="materialDescription" value={description} onChange={(e) => setDescription(e.target.value)} rows={2}></textarea>
+                        <label htmlFor="qam-materialDescription">Description:</label>
+                        <textarea id="qam-materialDescription" value={description} onChange={(e) => setDescription(e.target.value)} rows={2}></textarea>
                     </div>
                     <div className={`${styles.formGroupRow} mb-md`}>
                         <div className="form-group">
-                            <label htmlFor="defaultRate">Default Rate ($):</label>
-                            <input type="number" id="defaultRate" value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} step="any" />
+                            <label htmlFor="qam-defaultRate">Default Rate ($):</label>
+                            <input type="number" id="qam-defaultRate" value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} step="any" />
                         </div>
                         <div className="form-group">
-                            <label htmlFor="defaultUnit">Default Unit:</label>
-                            <input type="text" id="defaultUnit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="e.g. item" />
+                            <label htmlFor="qam-defaultUnit">Default Unit:</label>
+                            <input type="text" id="qam-defaultUnit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="e.g. item" />
                         </div>
                     </div>
                     <div className="form-group mb-md">
-                        <label className={styles.checkboxLabel}> {/* Retain styles.checkboxLabel for specific flex/alignment if needed */}
+                        <label className={styles.checkboxLabel}>
                             <input type="checkbox" checked={optionsAvailable} onChange={handleOptionsAvailableChange} />
                             Has Options?
                         </label>
@@ -146,29 +188,47 @@ function QuickAddMaterialModal({ isOpen, onClose, onSave, initialName = '' }: Qu
                                     {currentOptions.map((opt) => (
                                         <li key={opt.id} className={styles.optionPreviewItem}>
                                             <span>{opt.name} {opt.rateModifier ? `(${opt.rateModifier >=0 ? '+' : ''}${formatCurrency(opt.rateModifier)})` : ''}</span>
+                                            {/* Consider adding an edit button here later if needed */}
                                             <button type="button" onClick={() => handleRemoveTempOption(opt.id)} className="btn btn-danger btn-sm">Remove</button>
                                         </li>
                                     ))}
                                 </ul>
                             )}
                             
-                            <button type="button" onClick={() => {setShowOptionSubForm(prev => !prev); setTempOption({...initialTempOptionData, id:uuidv4()});}} className="btn btn-secondary mb-sm">
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    setShowOptionSubForm(prev => !prev); 
+                                    // Reset tempOption only when showing the form to start fresh
+                                    if (!showOptionSubForm) {
+                                        setTempOption({...initialTempOptionData, id:uuidv4()});
+                                    }
+                                }} 
+                                className="btn btn-secondary mb-sm"
+                            >
                                 {showOptionSubForm ? 'Hide Option Form' : '+ Add New Option'}
                             </button>
 
                             {showOptionSubForm && (
                                 <div className={styles.optionSubForm}>
                                     <div className="form-group mb-sm">
-                                        <label htmlFor="optionName">Option Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
-                                        <input type="text" id="optionName" name="name" value={tempOption.name} onChange={handleTempOptionChange} />
+                                        <label htmlFor="qam-optionName">Option Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
+                                        <input type="text" id="qam-optionName" name="name" value={tempOption.name} onChange={handleTempOptionChange} />
                                     </div>
                                     <div className="form-group mb-sm">
-                                        <label htmlFor="optionRateModifier">Rate Modifier ($):</label>
-                                        <input type="number" id="optionRateModifier" name="rateModifier" value={tempOption.rateModifier} onChange={handleTempOptionChange} step="any" />
+                                        <label htmlFor="qam-optionRateModifier">Rate Modifier ($):</label>
+                                        <input 
+                                            type="number" 
+                                            id="qam-optionRateModifier" 
+                                            name="rateModifier" 
+                                            value={tempOption.rateModifier === undefined || tempOption.rateModifier === null || isNaN(tempOption.rateModifier as number) ? '' : tempOption.rateModifier} // Handle number correctly
+                                            onChange={handleTempOptionChange} 
+                                            step="any" 
+                                        />
                                     </div>
                                     <div className="form-group mb-sm">
-                                        <label htmlFor="optionDescription">Option Description:</label>
-                                        <textarea id="optionDescription" name="description" value={tempOption.description} onChange={handleTempOptionChange} rows={2}></textarea>
+                                        <label htmlFor="qam-optionDescription">Option Description:</label>
+                                        <textarea id="qam-optionDescription" name="description" value={tempOption.description || ''} onChange={handleTempOptionChange} rows={2}></textarea>
                                     </div>
                                     <button type="button" onClick={handleAddTempOption} className="btn btn-primary w-100">Add Option to List</button>
                                 </div>

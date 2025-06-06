@@ -17,6 +17,9 @@ import {
     Client
 } from '../types'; //
 
+import { gsap } from 'gsap'; // For core GSAP functionalities
+import { useGSAP } from '@gsap/react'; // For the React hook
+
 import { formatCurrency, findMatchingRate, groupLinesBySection } from '../utils/utils'; //
 import { wizardStepInFromRight, wizardStepInFromLeft, wizardTransition, wizardContentIn } from '../utils/animations';
 import TaskSelector from './TaskSelector'; //
@@ -30,6 +33,7 @@ import MaterialFormModal from './MaterialFormModal'; //
 import Step1_QuoteClientDetails from './Step1_QuoteClientDetails';
 import Step2_LineItemBuilder from './Step2_LineItemBuilder'; // Corrected potential typo from "LineltemBuilder"
 import Step3_ReviewFinalize from './Step3_ReviewFinalize';
+
 
 import styles from './QuoteBuilder.module.css'; //
 import StickyQuoteProgressBar from './StickyQuoteProgressBar'; // Adjust path if necessary
@@ -108,6 +112,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const step1Ref = useRef<HTMLDivElement>(null);
     const step2Ref = useRef<HTMLDivElement>(null);
     const step3Ref = useRef<HTMLDivElement>(null);
+    const stepsContainerRef = useRef<HTMLDivElement>(null);
 
     const getCurrentStepRef = (step: number) => {
         switch (step) {
@@ -115,6 +120,92 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             case 2: return step2Ref;
             case 3: return step3Ref;
             default: return null;
+        }
+    };
+
+    // src/components/QuoteBuilder.tsx
+
+
+    const handleStepChange = (newStep: number) => {
+        console.log(`DEBUG: handleStepChange called for newStep: ${newStep}. Current step: ${currentStep}, isAnimating: ${isAnimating}`);
+        if (isAnimating || newStep === currentStep || newStep < 1 || newStep > totalSteps) {
+            console.log("DEBUG: handleStepChange - bailed out due to conditions.");
+            return;
+        }
+    
+        const direction = newStep > currentStep ? 'forward' : 'backward';
+        const outStepRef = getCurrentStepRef(currentStep);
+        // We can't get inStepRef.current yet, because it's not rendered.
+    
+        if (outStepRef?.current) { // Only need outStepRef to start the exit.
+            setIsAnimating(true);
+    
+            const xOutVal = direction === 'forward' ? -30 : 30;
+            const xInInitialVal = direction === 'forward' ? 30 : -30;
+    
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    // Content animation for the NEWLY current step (newStep)
+                    // This runs after setCurrentStep has updated the DOM and the new step has animated in
+                    gsap.delayedCall(0.01, () => {
+                        const currentVisibleStepRef = getCurrentStepRef(newStep); // Get the ref for the now current step
+                        if (currentVisibleStepRef?.current) {
+                            const contentElements = currentVisibleStepRef.current.querySelectorAll(`.${styles.wizardContent} > *`);
+                            if (contentElements && contentElements.length > 0) {
+                                console.log(`DEBUG: Animating content for newly current step ${newStep}`);
+                                gsap.set(contentElements, { autoAlpha: 0, y: 20 });
+                                wizardContentIn(contentElements, 0.05, 0.4);
+                            }
+                        }
+                    });
+                    setIsAnimating(false); // Allow further animations
+                }
+            });
+    
+            // 1. Animate out the current step
+            tl.to(outStepRef.current, {
+                autoAlpha: 0,
+                x: xOutVal,
+                scale: 0.98,
+                duration: 0.3,
+                ease: 'power2.in',
+                onComplete: () => {
+                    console.log(`DEBUG: Out-animation complete. Setting currentStep to ${newStep}`);
+                    setCurrentStep(newStep); // **** KEY: Change step AFTER out-animation ****
+                }
+            });
+    
+            // 2. Animate in the new step
+            //    We use .call to ensure setCurrentStep has rendered the new step into the DOM.
+            //    The fromTo will target the inStepRef which should now be available.
+            tl.call(() => {
+                const inStepRef = getCurrentStepRef(newStep); // Get the ref for the incoming step NOW
+                if (inStepRef?.current) {
+                    console.log(`DEBUG: In-animation starting for step ${newStep}`, inStepRef.current);
+                    // Immediately set its starting properties (it's now in the DOM but invisible due to CSS)
+                    gsap.set(inStepRef.current, { autoAlpha: 0, x: xInInitialVal, scale: 0.98 });
+                    // Animate it to its final state
+                    gsap.to(inStepRef.current, {
+                        autoAlpha: 1,
+                        x: 0,
+                        scale: 1,
+                        duration: 0.4,
+                        ease: 'power2.out'
+                    });
+                } else {
+                    console.error(`DEBUG: inStepRef.current for step ${newStep} is null even after setCurrentStep. This is unexpected.`);
+                    // If inStepRef is still null, we need to fall back or log an error,
+                    // because setCurrentStep should have caused it to render.
+                    // This might happen if getCurrentStepRef has an issue or if React batching is very delayed.
+                    // For now, we'll just log the error. The onComplete for the main timeline will still setIsAnimating(false).
+                }
+            }, undefined, ">0.05"); // Run this slightly after the out-animation completes (or at the same time like "-=0.1" if setCurrentStep is fast)
+                                     // Using ">0.05" means it runs 0.05s after the previous tween's start. Let's use a small positive delay
+                                     // after the previous onComplete implicitly. Or better, just let it be next in sequence.
+    
+        } else {
+            console.warn("DEBUG: handleStepChange - outStepRef.current is null!", { currentStep });
+            setCurrentStep(newStep); // Fallback if outRef is missing
         }
     };
 
@@ -145,7 +236,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
         let specificInstruction = "";
         switch (fieldType) {
             case 'projectDescription':
-        specificInstruction = `\n\nWrite a professional project description or scope of work. Do not include headers, labels, or introductory phrases. Start directly with the description content. Keep it 2-4 sentences and focus on what will be delivered to the client.`;
+        specificInstruction = `\n\nConvert the following list of quote items into a professional project scope of work. The output must be an unbulleted list. Each item in the list should correspond to a line from the provided quote, rephrased as a concise, client-facing deliverable. Do not include headers, labels, or any introductory phrases. Begin the response directly with the first deliverable.`;
         break;
     case 'additionalDetails':
         specificInstruction = `\n\nList important additional details, inclusions, or exclusions. Do not include headers, labels, or introductory phrases like "Here are the details" or "Important notes". Start directly with the actual details. Use bullet points if appropriate, but do not include any preamble or conclusion.`;
@@ -219,88 +310,30 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
     const totalSteps = 3; // We'll define 3 steps for now   
 
     const handleNextStep = () => {
-        if (isAnimating) return; // Prevent multiple animations
-        
-        // Basic validation for Step 1
+        // You can keep any specific validation for the current step here
         if (currentStep === 1) {
-            if (!jobTitle.trim()) {
+            if (!jobTitle.trim()) { 
                 alert("Job Title is required."); 
-                return;
+                return; 
             }
-            if (!selectedClientId) {
+            if (!selectedClientId) { 
                 alert("Please select a client."); 
-                return;
+                return; 
             }
         }
-    
+        // Call handleStepChange to go to the next step
         if (currentStep < totalSteps) {
-            setIsAnimating(true);
-            setAnimationDirection('forward');
-            
-            const currentStepRef = getCurrentStepRef(currentStep);
-            const nextStepRef = getCurrentStepRef(currentStep + 1);
-            
-            if (currentStepRef && nextStepRef) {
-                wizardTransition(
-                    currentStepRef.current,
-                    nextStepRef.current,
-                    'forward',
-                    () => {
-                        setCurrentStep(prev => prev + 1);
-                        setIsAnimating(false);
-                        
-                        // Animate in the content of the new step
-                        setTimeout(() => {
-                            const contentElements = nextStepRef.current?.querySelectorAll('.wizard-content > *');
-                            if (contentElements) {
-                                wizardContentIn(contentElements, 0.05, 0.4);
-                            }
-                        }, 50);
-                    }
-                );
-            } else {
-                // Fallback if refs aren't available
-                setCurrentStep(prev => prev + 1);
-                setIsAnimating(false);
-            }
+            handleStepChange(currentStep + 1);
         }
     };
     
+    // src/components/QuoteBuilder.tsx
     const handlePreviousStep = () => {
-        if (isAnimating) return; // Prevent multiple animations
-        
-        if (currentStep > 1) {
-            setIsAnimating(true);
-            setAnimationDirection('backward');
-            
-            const currentStepRef = getCurrentStepRef(currentStep);
-            const prevStepRef = getCurrentStepRef(currentStep - 1);
-            
-            if (currentStepRef && prevStepRef) {
-                wizardTransition(
-                    currentStepRef.current,
-                    prevStepRef.current,
-                    'backward',
-                    () => {
-                        setCurrentStep(prev => prev - 1);
-                        setIsAnimating(false);
-                        
-                        // Animate in the content of the previous step
-                        setTimeout(() => {
-                            const contentElements = prevStepRef.current?.querySelectorAll('.wizard-content > *');
-                            if (contentElements) {
-                                wizardContentIn(contentElements, 0.05, 0.4);
-                            }
-                        }, 50);
-                    }
-                );
-            } else {
-                // Fallback if refs aren't available
-                setCurrentStep(prev => prev - 1);
-                setIsAnimating(false);
-            }
-        }
-    };
+    // Call handleStepChange to go to the previous step
+    if (currentStep > 1) {
+        handleStepChange(currentStep - 1);
+    }
+};
 
 
 
@@ -971,22 +1004,59 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
 
     const isLoadingOverall = isLoadingGlobals || isLoadingRates || isLoadingAreas || isLoadingClients || isLoadingQuote;
 
-    useEffect(() => {
-        if (!isLoadingOverall && currentStep === 1 && step1Ref.current) {
-            // Animate in the first step when component loads
-            setTimeout(() => {
-                wizardStepInFromRight(step1Ref.current, 0.6);
-                
-                // Animate in the content
-                setTimeout(() => {
-                    const contentElements = step1Ref.current?.querySelectorAll('.wizard-content > *');
-                    if (contentElements) {
-                        wizardContentIn(contentElements, 0.08, 0.5);
-                    }
-                }, 200);
-            }, 100);
+    useGSAP(() => {
+        // Log current state of refs and conditions at the beginning of EVERY run of this effect
+        console.log("DEBUG: Initial Animation useGSAP RUNNING - stepsContainerRef.current:", stepsContainerRef.current);
+        console.log("DEBUG: Initial Animation useGSAP RUNNING - step1Ref.current:", step1Ref.current);
+        console.log("DEBUG: Initial Animation useGSAP RUNNING - Conditions: isLoadingOverall:", isLoadingOverall, "currentStep:", currentStep);
+    
+        if (!isLoadingOverall && currentStep === 1 && step1Ref.current && stepsContainerRef.current) {
+            // The check for stepsContainerRef.current is added back here; if it causes "Invalid scope",
+            // we might need to ensure this effect runs only once after everything is truly ready, or remove scope.
+            console.log("DEBUG: Initial Animation - Conditions met. Animating Step 1 in.", step1Ref.current);
+    
+            const stepTarget = step1Ref.current;
+            // CSS (.wizardStep) should have opacity:0, visibility:hidden. GSAP will animate from this.
+            // No need for an explicit gsap.set to autoAlpha:0 here if CSS handles it.
+    
+            const tl = gsap.timeline({ 
+                delay: 0.05 // Small delay for browser paint to settle after isLoadingOverall flips
+            });
+    
+            // Animate the step container TO its visible state
+            tl.to(stepTarget, { 
+                autoAlpha: 1, // Makes it visible and opacity 1
+                x: 0,
+                scale: 1,
+                duration: 0.6, // Duration for Step 1 container to animate in
+                ease: 'power2.out'
+            });
+    
+            const contentElements = stepTarget.querySelectorAll(`.${styles.wizardContent} > *`);
+            if (contentElements && contentElements.length > 0) {
+                // Ensure content elements also start hidden if their own CSS doesn't guarantee it
+                gsap.set(contentElements, { autoAlpha: 0, y: 20 }); 
+    
+                // Animate content TO its visible state
+                tl.to(contentElements, { 
+                    autoAlpha: 1,
+                    y: 0,
+                    duration: 0.5, // Duration for content to animate in
+                    ease: 'power2.out',
+                    stagger: 0.08 // Stagger amount for content elements
+                }, "-=0.4"); // Start this animation 0.4s before the stepTarget animation ends (overlap)
+            }
+    
+        } else {
+            if (isLoadingOverall) console.log("DEBUG: Initial Animation - SKIPPED, isLoadingOverall is true.");
+            else if (currentStep !== 1) console.log("DEBUG: Initial Animation - SKIPPED, currentStep is not 1.");
+            else if (!step1Ref.current) console.log("DEBUG: Initial Animation - SKIPPED, step1Ref is not yet current.");
+            else if (!stepsContainerRef.current) console.log("DEBUG: Initial Animation - SKIPPED, stepsContainerRef is not yet current (for scope or logic).");
         }
-    }, [isLoadingOverall, currentStep]);
+    }, { 
+        scope: stepsContainerRef, // TRYING scope again. If "Invalid scope" returns, remove this line.
+        dependencies: [isLoadingOverall, currentStep] 
+    });
     
 
     const getStepName = (step: number) => {
@@ -1009,132 +1079,134 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
             {errorQuote && <p className="text-danger">Quote Error: {errorQuote}</p>}
             {errorRates && <p className="text-danger">Rates Error: {errorRates}</p>}
     
-            {!isLoadingOverall && (
-    <>
-        {/* STEP 1: Render Step1_QuoteClientDetails Component */}
-        {currentStep === 1 && (
-            <div ref={step1Ref} className="wizard-step">
-                <div className="wizard-content">
-                    <Step1_QuoteClientDetails
-                        jobTitle={jobTitle}
-                        setJobTitle={setJobTitle}
-                        selectedClientId={selectedClientId}
-                        setSelectedClientId={setSelectedClientId}
-                        clients={clients}
-                        isLoadingClients={isLoadingClients}
-                        validUntilDate={validUntilDate}
-                        setValidUntilDate={setValidUntilDate}
-                        clientNameDisplay={clientName}
-                        clientAddressDisplay={clientAddress}
-                        clientEmailDisplay={clientEmail}
-                        clientPhoneDisplay={clientPhone}
-                    />
-                </div>
-            </div>
-        )}
-
-        {/* STEP 2: Render Step2_LineItemBuilder Component */}
-        {currentStep === 2 && (
-            <div ref={step2Ref} className="wizard-step">
-                <div className="wizard-content">
-                    <Step2_LineItemBuilder
-                        globalAreas={globalAreas}
-                        activeSection={activeSection}
-                        isLoadingAreas={isLoadingAreas}
-                        handleSetActiveSection={handleSetActiveSection}
-                        itemSelectorRef={itemSelectorRef}
-                        userId={userId}
-                        allTasks={allTasks}
-                        allMaterials={allMaterials}
-                        selectedTask={selectedTask}
-                        selectedMaterial={selectedMaterial}
-                        selectedOption={selectedOption}
-                        selectedQuantity={selectedQuantity}
-                        setSelectedQuantity={setSelectedQuantity}
-                        overrideRateInput={overrideRateInput}
-                        setOverrideRateInput={setOverrideRateInput}
-                        selectedDescription={selectedDescription}
-                        setSelectedDescription={setSelectedDescription}
-                        currentItemDetails={currentItemDetails}
-                        isLoadingGlobals={isLoadingGlobals}
-                        isLoadingRates={isLoadingRates}
-                        handleTaskSelectForItemForm={handleTaskSelectForItemForm}
-                        handleMaterialSelectForItemForm={handleMaterialSelectForItemForm}
-                        handleOptionSelectForItemForm={handleOptionSelectForItemForm}
-                        handleOpenNewTaskModal={handleOpenNewTaskModal}
-                        handleOpenNewMaterialModal={handleOpenNewMaterialModal}
-                        handleKitSelected={handleKitSelected}
-                        handleNavigateToKitCreator={handleNavigateToKitCreator}
-                        handleAddLineItem={handleAddLineItem}
-                        isLoadingQuote={isLoadingQuote}
-                        quoteLines={quoteLines}
-                        sortedSectionNames={sortedSectionNames}
-                        groupedQuoteLines={groupedQuoteLines}
-                        collapsedSections={collapsedSections}
-                        toggleSectionCollapse={toggleSectionCollapse}
-                        handleDeleteLineItem={handleDeleteLineItem}
-                        handleEditLineItem={handleEditLineItem}
-                    />
-                </div>
-            </div>
-        )}
-
-        {/* STEP 3: Render Step3_ReviewFinalize Component */}
-        {currentStep === 3 && (
-            <div ref={step3Ref} className="wizard-step">
-                <div className="wizard-content">
-                    <Step3_ReviewFinalize
-                        jobTitle={jobTitle}
-                        clientName={clientName}
-                        clientAddress={clientAddress}
-                        clientEmail={clientEmail}
-                        clientPhone={clientPhone}
-                        validUntilDate={validUntilDate}
-                        quoteLines={quoteLines}
-                        sortedSectionNames={sortedSectionNames}
-                        groupedQuoteLines={groupedQuoteLines}
-                        projectDescription={projectDescription}
-                        setProjectDescription={setProjectDescription}
-                        additionalDetails={additionalDetails}
-                        setAdditionalDetails={setAdditionalDetails}
-                        generalNotes={generalNotes}
-                        setGeneralNotes={setGeneralNotes}
-                        terms={terms}
-                        setTerms={setTerms}
-                        validationIssues={validationIssues}
-                        isLoadingQuote={isLoadingQuote}
-                        onGenerateWithAI={handleGenerateWithAI}
-                        isAIGenerating={isAIGenerating}
-                    />
-                </div>
-            </div>
-        )}
-
-        {/* Sticky Bottom Bar */}
-        <StickyQuoteProgressBar
-            currentStep={currentStep}
-            totalSteps={totalSteps}
-            activeSection={activeSection}
-            quoteTotal={quoteLines.reduce((sum, line) => sum + (line.lineTotal || 0), 0)}
-            onNext={handleNextStep}
-            onPrevious={handlePreviousStep}
-            onSave={handleSaveQuote}
-            isSaveDisabled={isSaveDisabled || isAnimating}
-            isLoading={isLoadingQuote}
-            configuredItemPreview={
-                (selectedTask || selectedMaterial) && currentStep === 2 ? {
-                    taskName: selectedTask?.name,
-                    materialName: selectedMaterial?.name,
-                    optionName: selectedOption?.name,
-                    quantity: currentItemDetails.inputType === 'quantity' ? selectedQuantity : null,
-                    rate: parseFloat(overrideRateInput) || currentItemDetails.rate,
-                    unit: currentItemDetails.unit
-                } : null
-            }
-        />
-    </>
-)}
+            {/* THIS 'div' IS CRITICAL - It should always be rendered for the ref to attach.
+                It wraps the conditionally rendered steps. */}
+            <div ref={stepsContainerRef} className={styles.stepsContainer}>
+                {/* Only the steps INSIDE here are conditional on !isLoadingOverall AND currentStep */}
+                {!isLoadingOverall && currentStep === 1 && (
+                    <div ref={step1Ref} className={styles.wizardStep}> {/* Ensure this class has opacity:0, visibility:hidden in CSS */}
+                    <div className={styles.wizardContent}>
+                            <Step1_QuoteClientDetails
+                                jobTitle={jobTitle}
+                                setJobTitle={setJobTitle}
+                                selectedClientId={selectedClientId}
+                                setSelectedClientId={setSelectedClientId}
+                                clients={clients}
+                                isLoadingClients={isLoadingClients}
+                                validUntilDate={validUntilDate}
+                                setValidUntilDate={setValidUntilDate}
+                                clientNameDisplay={clientName}
+                                clientAddressDisplay={clientAddress}
+                                clientEmailDisplay={clientEmail}
+                                clientPhoneDisplay={clientPhone}
+                            />
+                        </div>
+                    </div>
+                )}
     
+                {!isLoadingOverall && currentStep === 2 && (
+                    <div ref={step2Ref} className={styles.wizardStep}>
+                        <div className={styles.wizardContent}>
+                            <Step2_LineItemBuilder
+                                // ... all your props for Step2_LineItemBuilder ...
+                                globalAreas={globalAreas}
+                                activeSection={activeSection}
+                                isLoadingAreas={isLoadingAreas}
+                                handleSetActiveSection={handleSetActiveSection}
+                                itemSelectorRef={itemSelectorRef}
+                                userId={userId}
+                                allTasks={allTasks}
+                                allMaterials={allMaterials}
+                                selectedTask={selectedTask}
+                                selectedMaterial={selectedMaterial}
+                                selectedOption={selectedOption}
+                                selectedQuantity={selectedQuantity}
+                                setSelectedQuantity={setSelectedQuantity}
+                                overrideRateInput={overrideRateInput}
+                                setOverrideRateInput={setOverrideRateInput}
+                                selectedDescription={selectedDescription}
+                                setSelectedDescription={setSelectedDescription}
+                                currentItemDetails={currentItemDetails}
+                                isLoadingGlobals={isLoadingGlobals}
+                                isLoadingRates={isLoadingRates}
+                                handleTaskSelectForItemForm={handleTaskSelectForItemForm}
+                                handleMaterialSelectForItemForm={handleMaterialSelectForItemForm}
+                                handleOptionSelectForItemForm={handleOptionSelectForItemForm}
+                                handleOpenNewTaskModal={handleOpenNewTaskModal}
+                                handleOpenNewMaterialModal={handleOpenNewMaterialModal}
+                                handleKitSelected={handleKitSelected}
+                                handleNavigateToKitCreator={handleNavigateToKitCreator}
+                                handleAddLineItem={handleAddLineItem}
+                                isLoadingQuote={isLoadingQuote}
+                                quoteLines={quoteLines}
+                                sortedSectionNames={sortedSectionNames}
+                                groupedQuoteLines={groupedQuoteLines}
+                                collapsedSections={collapsedSections}
+                                toggleSectionCollapse={toggleSectionCollapse}
+                                handleDeleteLineItem={handleDeleteLineItem}
+                                handleEditLineItem={handleEditLineItem}
+                            />
+                        </div>
+                    </div>
+                )}
+    
+                {!isLoadingOverall && currentStep === 3 && (
+                    <div ref={step3Ref} className={styles.wizardStep}>
+                        <div className={styles.wizardContent}>
+                            <Step3_ReviewFinalize
+                                // ... all your props for Step3_ReviewFinalize ...
+                                jobTitle={jobTitle}
+                                clientName={clientName}
+                                clientAddress={clientAddress}
+                                clientEmail={clientEmail}
+                                clientPhone={clientPhone}
+                                validUntilDate={validUntilDate}
+                                quoteLines={quoteLines}
+                                sortedSectionNames={sortedSectionNames}
+                                groupedQuoteLines={groupedQuoteLines}
+                                projectDescription={projectDescription}
+                                setProjectDescription={setProjectDescription}
+                                additionalDetails={additionalDetails}
+                                setAdditionalDetails={setAdditionalDetails}
+                                generalNotes={generalNotes}
+                                setGeneralNotes={setGeneralNotes}
+                                terms={terms}
+                                setTerms={setTerms}
+                                validationIssues={validationIssues}
+                                isLoadingQuote={isLoadingQuote}
+                                onGenerateWithAI={handleGenerateWithAI}
+                                isAIGenerating={isAIGenerating}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div> {/* End of stepsContainerRef div */}
+    
+            {/* Sticky Bottom Bar - Renders only when not loading overall */}
+            {!isLoadingOverall && (
+                <StickyQuoteProgressBar
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    activeSection={activeSection}
+                    quoteTotal={quoteLines.reduce((sum, line) => sum + (line.lineTotal || 0), 0)}
+                    onNext={handleNextStep}
+                    onPrevious={handlePreviousStep}
+                    onSave={handleSaveQuote}
+                    isSaveDisabled={isSaveDisabled || isAnimating}
+                    isLoading={isLoadingQuote}
+                    configuredItemPreview={
+                        (selectedTask || selectedMaterial) && currentStep === 2 ? {
+                            taskName: selectedTask?.name,
+                            materialName: selectedMaterial?.name,
+                            optionName: selectedOption?.name,
+                            quantity: currentItemDetails.inputType === 'quantity' ? selectedQuantity : null,
+                            rate: parseFloat(overrideRateInput) || currentItemDetails.rate,
+                            unit: currentItemDetails.unit
+                        } : null
+                    }
+                />
+            )}
+        
             {/* --- Modals --- */}
             {userId && (
                 <>
@@ -1151,7 +1223,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                         initialData={taskFormInitialData}
                         mode="add"
                     />
-    
+        
                     <MaterialFormModal
                         isOpen={isMaterialFormModalOpen}
                         onClose={() => {
@@ -1161,7 +1233,7 @@ function QuoteBuilder({ existingQuoteId, onSaveSuccess }: QuoteBuilderProps) {
                                 createMaterialPromiseRef.current = null;
                             }
                         }}
-                        onSaveCallback={handleMaterialSavedFromModal} // This should trigger a re-fetch or update allMaterials
+                        onSaveCallback={handleMaterialSavedFromModal}
                         userId={userId}
                         initialData={materialFormInitialData}
                         mode="add"

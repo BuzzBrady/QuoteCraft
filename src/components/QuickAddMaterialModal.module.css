@@ -5,116 +5,173 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.65);
+    background-color: rgba(0, 0, 0, 0.65); /* Darker overlay for better focus */
     display: flex;
-    justify-content: center;
     align-items: center;
-    z-index: var(--z-index-popover); /* Ensure it's on top; adjust if needed relative to other modals */
-}
-
-.modalContent {
-    background: var(--theme-primary-deep-charcoal);
-    color: var(--theme-primary-white);
-    padding: var(--space-xl);
-    border-radius: var(--border-radius-lg);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow-lg);
-    width: 90%;
-    max-width: 450px;
+    justify-content: center;
+    z-index: var(--z-index-modal, 1050); /* Ensure it's above other content; use a CSS variable */
+    padding: var(--space-md); /* Add some padding so modal isn't flush with screen edges */
+    box-sizing: border-box;
+  }
+  
+  .modalContent {
+    background: var(--theme-primary-deep-charcoal, #2c303a); /* Fallback color */
+    color: var(--theme-primary-white, #ffffff);
+    padding: var(--space-lg);
+    border-radius: var(--border-radius-lg, 8px);
+    border: 1px solid var(--border-color, #4b5563);
+    box-shadow: var(--box-shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04));
+    width: 100%; /* Responsive width */
+    max-width: 500px; /* Max width of the modal */
+    
+    /* --- CRUCIAL FOR MODAL SCROLLING --- */
+    max-height: 90vh; /* Limit height to 90% of viewport height */
+    overflow-y: auto; /* Allow vertical scrollbar if content overflows THIS modal */
+    /* --- END OF CRUCIAL SCROLLING STYLES --- */
+  
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
-}
-
-.modalContent h2 {
-    /* Uses global h2 styles for color, font-weight */
+  }
+  
+  .modalTitle {
+    font-size: 1.5em;
+    color: var(--theme-accent-bright-blue, #3498db);
     margin-top: 0;
-    margin-bottom: var(--space-md); /* Adjusted from 0.75rem */
+    margin-bottom: var(--space-lg);
     text-align: center;
-    font-size: 1.5em; /* Specific size for modal title */
-}
-
-.formField {
+  }
+  
+  .materialFormContainer {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs); /* Adjusted from 0.3rem */
-}
-
-.formField label {
-    /* Uses global label styles for color, font-weight, margin-bottom */
-    font-size: 0.9em; /* Specific font size */
-}
-
-.formField input[type="text"],
-.formField input[type="number"] {
-    /* Inherits most styles from global input/textarea/select in index.css */
-    /* Overrides or specific adjustments here: */
+    gap: var(--space-md); /* Consistent gap between direct children like form groups or sections */
+  }
+  
+  /* Assuming global .form-group from index.css handles basic margin-bottom.
+     If using <div className="form-group"> from global css, those styles will apply.
+     If using <div className={styles.formGroup}>, define .formGroup here or ensure KitCreatorPage styles are available.
+     The modal JSX mostly uses global class "form-group mb-md" etc.
+  */
+  
+  .formGroupRow {
+    display: flex;
+    gap: var(--space-md);
+  }
+  .formGroupRow > .form-group { /* Or direct child div if .form-group isn't a class used on children */
+    flex: 1;
+  }
+  
+  .checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-weight: normal; /* If global label is bold */
+  }
+  .checkboxLabel input[type="checkbox"] {
+    width: auto; /* Override global input style if it's 100% width */
+    margin-right: var(--space-xs); /* Spacing between checkbox and text */
+  }
+  
+  .optionsSection {
+    border: 1px solid var(--border-color-light, #555);
+    padding: var(--space-md);
+    border-radius: var(--border-radius-md, 6px);
+    margin-top: var(--space-sm); /* Space above this whole section */
+    background-color: rgba(255, 255, 255, 0.03); /* Slightly different background */
+  }
+  
+  .optionsTitle {
+    font-size: 1.1em;
+    color: var(--theme-primary-light-blue, #79c0ff);
+    margin-top: 0;
+    margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border-color-light, #555);
+    padding-bottom: var(--space-sm);
+  }
+  
+  .optionsListPreview {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-md) 0; /* Space below the list */
+    max-height: 150px; /* Allow this list to scroll if many options are added */
+    overflow-y: auto;
+    border: 1px solid var(--border-color-xlight, #444); /* Border around the list */
+    border-radius: var(--border-radius-sm);
+  }
+  
+  .optionPreviewItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-xs) var(--space-sm); /* Padding inside each list item */
+    border-bottom: 1px solid var(--border-color-xlight, #444);
+    font-size: 0.9em;
+  }
+  .optionPreviewItem:last-child {
+    border-bottom: none;
+  }
+  
+  .optionPreviewItem span { /* Text part of the option (name and rate modifier preview) */
+      margin-right: var(--space-sm);
+      flex-grow: 1; /* Allow text to take available space */
+      word-break: break-word;
+  }
+  .rateModifierPreview, .descriptionPreview { /* For styling parts of the option text */
+      margin-left: var(--space-xs);
+      font-style: italic;
+      opacity: 0.8;
+      font-size: 0.9em; /* Slightly smaller */
+  }
+  .descriptionPreview {
+      display: block; /* Put description on new line if long */
+      margin-left: var(--space-lg); /* Indent description slightly */
+  }
+  
+  .optionPreviewItem .btn-sm { /* Specific styling for buttons in the preview list if needed */
+      padding: var(--space-xxs) var(--space-xs);
+      font-size: 0.8em;
+  }
+  
+  
+  .optionSubForm {
+    border: 1px solid var(--border-color-light, #4a5568);
+    padding: var(--space-md);
+    border-radius: var(--border-radius-sm, 4px);
+    background-color: rgba(0,0,0,0.1);
+    margin-top: var(--space-md); /* Space above the sub-form itself */
+  }
+  
+  /* Assuming input, textarea, select are styled globally in index.css
+     If not, you'll need to style them here or ensure your global styles cover them.
+     Example:
+  input[type="text"],
+  input[type="number"],
+  textarea {
+    width: 100%;
     padding: var(--space-sm);
-    font-size: 0.95em;
-    /* background-color already var(--background-color-sections) or var(--theme-primary-deep-charcoal) from global */
-    /* border-radius already var(--border-radius-md) from global */
-}
-
-.formActions {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--input-background);
+    color: var(--input-text-color);
+    box-sizing: border-box;
+  }
+  */
+  
+  .buttonGroup {
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-sm);
-    margin-top: var(--space-md); /* Adjusted from 0.75rem */
-}
-
-/* Buttons can be refactored to use global .btn classes in TSX */
-.formActions button {
-    font-family: var(--font-primary);
-    font-weight: 600;
-    text-align: center;
-    vertical-align: middle;
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid transparent;
-    padding: var(--space-sm) var(--space-md);
-    font-size: 0.9em; /* Specific font size for these modal buttons */
-    line-height: 1.5;
-    border-radius: var(--border-radius-md);
-    transition: var(--transition-fast);
-}
-
-.saveButton {
-    /* Extends .formActions button */
-    color: var(--theme-primary-white);
-    background-color: var(--theme-accent-bright-blue);
-    border-color: var(--theme-accent-bright-blue);
-}
-
-.saveButton:hover, .saveButton:focus {
-    background-color: #00a6d8; /* Darker bright blue */
-    border-color: #00a6d8;
-    color: var(--theme-primary-white);
-    outline: 0;
-}
-.saveButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
-}
-
-.cancelButton {
-    /* Extends .formActions button */
-    color: var(--theme-primary-white);
-    background-color: var(--theme-secondary-steel-gray);
-    border-color: var(--theme-secondary-steel-gray);
-}
-
-.cancelButton:hover, .cancelButton:focus {
-    background-color: #8e989f; /* Darker steel gray */
-    border-color: #8e989f;
-    color: var(--theme-primary-white);
-    outline: 0;
-}
-.cancelButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
-}
-
-.errorMessage {
-    color: var(--color-error);
-    font-size: 0.85em;
-    margin-top: calc(-1 * var(--space-sm));
-    margin-bottom: var(--space-sm);
-}
+    gap: var(--space-md);
+    margin-top: var(--space-lg); 
+    padding-top: var(--space-md); /* Padding above the buttons */
+    border-top: 1px solid var(--border-color-light, #555);
+  }
+  
+  /* Your .saveButton, .cancelButton styles from previous version can be here if not using global .btn classes */
+  /* Or ensure your global .btn, .btn-accent, .btn-secondary are styled appropriately */
+  
+  /* For example, if you need to override global button padding for this modal:
+  .buttonGroup .btn {
+    padding: var(--space-sm) var(--space-lg);
+  }
+  */

@@ -1,14 +1,12 @@
 // src/pages/KitCreatorPage.tsx
 // Page for creating, viewing, and managing Kit Templates.
 // Includes item selection, cost calculation, "Quick Add", and corrected MaterialOptionSelector usage.
-// Corrected TypeScript type conflicts.
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp, deleteField, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../config/firebaseConfig';
-// Ensure CombinedTask and CombinedMaterial are imported from types.ts and NOT re-declared locally
 import { 
     KitTemplate, 
     KitLineItemTemplate, 
@@ -18,8 +16,8 @@ import {
     CustomMaterial, 
     MaterialOption, 
     UserRateTemplate,
-    CombinedTask,  // Imported from types.ts
-    CombinedMaterial // Imported from types.ts
+    CombinedTask,
+    CombinedMaterial
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,7 +28,7 @@ import QuickAddMaterialModal from '../components/QuickAddMaterialModal';
 
 import styles from './KitCreatorPage.module.css';
 
-// Utility functions (assuming these are correct and don't cause type issues with UserRateTemplate)
+// Utility functions
 const findMatchingRate = (
     rates: UserRateTemplate[],
     taskId: string | null,
@@ -67,12 +65,7 @@ const formatCurrency = (amount: number | null | undefined): string => {
   return `$${Number(amount).toFixed(2)}`;
 };
 
-
 type ActiveTab = 'myKits' | 'kitBuilder';
-
-// REMOVE LOCAL DECLARATIONS OF CombinedTask and CombinedMaterial
-// type CombinedTask = (Task | CustomTask) & { isCustom?: boolean }; // REMOVE THIS
-// type CombinedMaterial = (Material | CustomMaterial) & { isCustom?: boolean; options?: MaterialOption[] }; // REMOVE THIS
 
 interface KitItemFormData {
     id: string;
@@ -119,7 +112,6 @@ function KitCreatorPage() {
     const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
     const [itemFormData, setItemFormData] = useState<KitItemFormData>(initialKitItemFormData);
 
-    // Use the imported CombinedTask and CombinedMaterial types for state
     const [allTasks, setAllTasks] = useState<CombinedTask[]>([]);
     const [allMaterials, setAllMaterials] = useState<CombinedMaterial[]>([]);
     const [userRates, setUserRates] = useState<UserRateTemplate[]>([]);
@@ -156,46 +148,12 @@ function KitCreatorPage() {
                     getDocs(query(collection(db, `users/${userId}/rateTemplates`)))
                 ]);
 
-                const globalTasks = tasksSnap.docs.map(d => {
-                    const data = d.data();
-                    return { 
-                        id: d.id, 
-                        ...data, 
-                        name: data.name || '', // Ensure name is string
-                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') // Ensure name_lowercase is string
-                    } as CombinedTask; // Cast to the imported CombinedTask
-                });
-                const userTasks = customTasksSnap.docs.map(d => {
-                    const data = d.data();
-                    return { 
-                        id: d.id, 
-                        ...data, 
-                        isCustom: true, 
-                        name: data.name || '', 
-                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') 
-                    } as CombinedTask; // Cast to the imported CombinedTask
-                });
+                const globalTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedTask));
+                const userTasks = customTasksSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true, name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedTask));
                 setAllTasks([...globalTasks, ...userTasks].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
 
-                const globalMtls = materialsSnap.docs.map(d => {
-                    const data = d.data();
-                    return { 
-                        id: d.id, 
-                        ...data, 
-                        name: data.name || '', 
-                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') 
-                    } as CombinedMaterial; // Cast to the imported CombinedMaterial
-                });
-                const userMtls = customMaterialsSnap.docs.map(d => {
-                    const data = d.data();
-                    return { 
-                        id: d.id, 
-                        ...data, 
-                        isCustom: true, 
-                        name: data.name || '', 
-                        name_lowercase: (data.name_lowercase || data.name?.toLowerCase() || '') 
-                    } as CombinedMaterial; // Cast to the imported CombinedMaterial
-                });
+                const globalMtls = materialsSnap.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedMaterial));
+                const userMtls = customMaterialsSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true, name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedMaterial));
                 setAllMaterials([...globalMtls, ...userMtls].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
                 
                 setUserRates(ratesSnap.docs.map(d => ({ id: d.id, ...d.data() } as UserRateTemplate)));
@@ -214,9 +172,10 @@ function KitCreatorPage() {
         const task = itemFormData.selectedTaskObj;
         const material = itemFormData.selectedMaterialObj;
         const option = itemFormData.selectedMaterialOptionObj;
-        let initialRate = 0;
+        let initialRate = task?.taskRate || 0; // Start with taskRate if it exists
         let unit = itemFormData.unit || material?.defaultUnit || task?.defaultUnit || 'item';
         let suggestedDisplayName = '';
+
         if (task) suggestedDisplayName += task.name;
         if (material) suggestedDisplayName += (suggestedDisplayName ? ' - ' : '') + material.name;
         if (option) suggestedDisplayName += ` (${option.name})`;
@@ -227,14 +186,11 @@ function KitCreatorPage() {
             initialRate = matchingRate.referenceRate;
             unit = matchingRate.unit || unit;
         } else if (material) {
-            initialRate = material.defaultRate || 0;
+            initialRate = (task?.taskRate || 0) + (material.defaultRate || 0); // Combine task and material rate if no specific rate found
             if (option && typeof option.rateModifier === 'number') {
                 initialRate += option.rateModifier;
             }
             unit = material.defaultUnit || unit;
-        } else if (task) {
-            initialRate = 0; 
-            unit = task.defaultUnit || unit;
         }
         
         const overrideRateNum = parseFloat(itemFormData.overrideRateForKit);
@@ -250,8 +206,7 @@ function KitCreatorPage() {
     }, [
         itemFormData.selectedTaskObj, itemFormData.selectedMaterialObj, itemFormData.selectedMaterialOptionObj, 
         itemFormData.baseQuantity, itemFormData.inputType, itemFormData.overrideRateForKit, 
-        userRates, 
-        // itemFormData.unit // Removed to prevent potential infinite loop if unit is also set here. Unit calculation seems okay above.
+        userRates
     ]);
 
     const resetKitBuilderForm = useCallback(() => {
@@ -313,11 +268,11 @@ function KitCreatorPage() {
                 id: docRef.id, 
                 ...newTaskData, 
                 isCustom: true, 
-                name: newTaskData.name, // Ensure name is part of the object for CombinedTask
-                name_lowercase: newTaskData.name_lowercase, // Ensure name_lowercase
-                createdAt: Timestamp.now(), // For local state after creation
-                updatedAt: Timestamp.now()  // For local state after creation
-            } as CombinedTask; // Casting as ServerTimestamp fields are not Timestamps yet.
+                name: newTaskData.name,
+                name_lowercase: newTaskData.name_lowercase,
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now()
+            } as CombinedTask;
             setAllTasks(prev => [...prev, createdTask].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
             setItemFormData(prev => ({...prev, selectedTaskObj: createdTask, displayName: createdTask.name, unit: createdTask.defaultUnit || 'item' }));
             return createdTask;
@@ -326,14 +281,24 @@ function KitCreatorPage() {
 
     const initiateCreateCustomMaterialForItemForm = useCallback((materialName: string): Promise<CombinedMaterial | null> => {
         return new Promise((resolve, reject) => {
-            if (!userId) { alert("Login required."); reject(new Error("User not logged in")); return; }
+            if (!userId) { 
+                alert("Login required."); 
+                return reject(new Error("User not logged in")); 
+            }
             setKitItemQuickAddMaterialInitialName(materialName.trim());
             setIsKitItemQuickAddMaterialModalOpen(true);
             kitItemCreateMaterialPromiseRef.current = { resolve, reject };
         });
     }, [userId]);
 
-    const handleSaveKitItemQuickAddMaterial = async (modalData: { name: string; description: string; optionsAvailable: boolean; defaultRate?: number; defaultUnit?: string; }) => {
+    const handleSaveKitItemQuickAddMaterial = async (data: {
+        name: string;
+        description: string;
+        optionsAvailable: boolean;
+        defaultRate?: number;
+        defaultUnit?: string;
+        options: MaterialOption[];
+    }) => {
         if (!userId || !kitItemCreateMaterialPromiseRef.current) {
             if (kitItemCreateMaterialPromiseRef.current) kitItemCreateMaterialPromiseRef.current.reject(new Error("Save conditions unmet."));
             kitItemCreateMaterialPromiseRef.current = null; setIsKitItemQuickAddMaterialModalOpen(false); return;
@@ -341,26 +306,42 @@ function KitCreatorPage() {
         const { resolve, reject } = kitItemCreateMaterialPromiseRef.current;
         const newMatData = { 
             userId, 
-            name: modalData.name, 
-            name_lowercase: modalData.name.toLowerCase(), 
-            description: modalData.description, 
-            optionsAvailable: modalData.optionsAvailable, 
-            defaultRate: modalData.defaultRate, 
-            defaultUnit: modalData.defaultUnit || 'item', 
-            searchKeywords: [modalData.name.toLowerCase()], 
+            name: data.name, 
+            name_lowercase: data.name.toLowerCase(), 
+            description: data.description, 
+            optionsAvailable: data.optionsAvailable, 
+            defaultRate: data.defaultRate, 
+            defaultUnit: data.defaultUnit || 'item', 
+            searchKeywords: [data.name.toLowerCase()], 
             createdAt: serverTimestamp(), 
             updatedAt: serverTimestamp() 
         };
         try {
-            const docRef = await addDoc(collection(db, `users/${userId}/customMaterials`), newMatData);
+            const materialDocRef = await addDoc(collection(db, `users/${userId}/customMaterials`), newMatData);
+            if (data.optionsAvailable && data.options.length > 0) {
+                const optionsRef = collection(materialDocRef, 'options');
+                const batch = writeBatch(db);
+                data.options.forEach(option => {
+                    const newOptionRef = doc(optionsRef);
+                    batch.set(newOptionRef, {
+                        name: option.name,
+                        name_lowercase: option.name_lowercase,
+                        description: option.description,
+                        rateModifier: option.rateModifier,
+                    });
+                });
+                await batch.commit();
+            }
+
             const createdMat: CombinedMaterial = { 
-                id: docRef.id, 
+                id: materialDocRef.id, 
                 ...newMatData, 
                 isCustom: true, 
-                name: newMatData.name, // Ensure name
-                name_lowercase: newMatData.name_lowercase, // Ensure name_lowercase
+                name: newMatData.name,
+                name_lowercase: newMatData.name_lowercase,
                 createdAt: Timestamp.now(), 
-                updatedAt: Timestamp.now() 
+                updatedAt: Timestamp.now(),
+                options: data.options, // Include options in the local object
             };
             setAllMaterials(prev => [...prev, createdMat].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
             setItemFormData(prev => ({...prev, selectedMaterialObj: createdMat, selectedMaterialOptionObj: null, displayName: createdMat.name, unit: createdMat.defaultUnit || 'item'}));
@@ -374,32 +355,45 @@ function KitCreatorPage() {
         if (kitItemCreateMaterialPromiseRef.current) { kitItemCreateMaterialPromiseRef.current.resolve(null); kitItemCreateMaterialPromiseRef.current = null; }
     };
 
+    // --- CORRECTED STATE HANDLERS ---
     const handleTaskSelectForItemForm = (task: CombinedTask | null) => {
-        setItemFormData(prev => ({
-            ...initialKitItemFormData, 
-            id: prev.id || uuidv4(),   
-            selectedTaskObj: task,
-            selectedMaterialObj: null, 
-            selectedMaterialOptionObj: null,
-            displayName: task?.name || '',
-            unit: task?.defaultUnit || 'item',
-        }));
+        setItemFormData(prev => {
+            const newDisplayName = task ? (prev.selectedMaterialObj ? `${task.name} - ${prev.selectedMaterialObj.name}` : task.name) : (prev.selectedMaterialObj?.name || '');
+            return {
+                ...prev,
+                selectedTaskObj: task,
+                displayName: newDisplayName || 'New Kit Item',
+                unit: prev.unit || task?.defaultUnit || 'item',
+            };
+        });
     };
 
     const handleMaterialSelectForItemForm = (material: CombinedMaterial | null) => {
-        setItemFormData(prev => ({
-            ...initialKitItemFormData,
-            id: prev.id || uuidv4(),
-            selectedTaskObj: prev.selectedTaskObj, 
-            selectedMaterialObj: material,
-            selectedMaterialOptionObj: null, 
-            displayName: material ? (prev.selectedTaskObj ? `${prev.selectedTaskObj.name} - ${material.name}` : material.name) : (prev.selectedTaskObj?.name || ''),
-            unit: material?.defaultUnit || prev.selectedTaskObj?.defaultUnit || 'item',
-        }));
+        setItemFormData(prev => {
+            const newDisplayName = material ? (prev.selectedTaskObj ? `${prev.selectedTaskObj.name} - ${material.name}` : material.name) : (prev.selectedTaskObj?.name || '');
+            return {
+                ...prev,
+                selectedMaterialObj: material,
+                selectedMaterialOptionObj: null,
+                displayName: newDisplayName || 'New Kit Item',
+                unit: material?.defaultUnit || prev.unit || 'item',
+            };
+        });
     };
     
     const handleOptionSelectForItemForm = (option: MaterialOption | null) => {
-        setItemFormData(prev => ({ ...prev, selectedMaterialOptionObj: option }));
+        setItemFormData(prev => {
+            let newDisplayName = '';
+            if (prev.selectedTaskObj) newDisplayName += prev.selectedTaskObj.name;
+            if (prev.selectedMaterialObj) newDisplayName += (newDisplayName ? ' - ' : '') + prev.selectedMaterialObj.name;
+            if (option) newDisplayName += ` (${option.name})`;
+
+            return { 
+                ...prev, 
+                selectedMaterialOptionObj: option,
+                displayName: newDisplayName || 'New Kit Item'
+            };
+        });
     };
 
     const handleAddItemToKit = () => {
@@ -417,7 +411,7 @@ function KitCreatorPage() {
             unit: itemFormData.unit,
             inputType: itemFormData.inputType,
             description: itemFormData.description?.trim() || undefined,
-            // rateForKit: itemFormData.finalRateForKitItem, 
+            // rateForKit is removed; rates are calculated on-the-fly when kit is used
         };
 
         if (editingItemIndex !== null) {
@@ -436,19 +430,29 @@ function KitCreatorPage() {
         const task = itemToEdit.taskId ? allTasks.find(t => t.id === itemToEdit.taskId) || null : null;
         const material = itemToEdit.materialId ? allMaterials.find(m => m.id === itemToEdit.materialId) || null : null;
         let option: MaterialOption | null = null;
-        if (material && material.optionsAvailable && itemToEdit.materialOptionId && itemToEdit.materialOptionName) {
-             option = {id: itemToEdit.materialOptionId, name: itemToEdit.materialOptionName} as MaterialOption; // Assuming structure
+        // This relies on MaterialOptionSelector to fetch options for the selected material
+        if (material && material.optionsAvailable && itemToEdit.materialOptionId) {
+             option = {
+                 id: itemToEdit.materialOptionId, 
+                 name: itemToEdit.materialOptionName || '',
+                 // Other option properties like rateModifier would be re-calculated by the useEffect
+             } as MaterialOption;
         }
         setItemFormData({
             id: uuidv4(), 
-            selectedTaskObj: task, selectedMaterialObj: material, selectedMaterialOptionObj: option,
-            displayName: itemToEdit.displayName, baseQuantity: itemToEdit.baseQuantity,
-            unit: itemToEdit.unit, inputType: itemToEdit.inputType,
+            selectedTaskObj: task, 
+            selectedMaterialObj: material, 
+            selectedMaterialOptionObj: option,
+            displayName: itemToEdit.displayName, 
+            baseQuantity: itemToEdit.baseQuantity,
+            unit: itemToEdit.unit, 
+            inputType: itemToEdit.inputType,
             description: itemToEdit.description || '',
             overrideRateForKit: '', 
             calculatedRate: 0, finalRateForKitItem: 0, calculatedTotal: 0, 
         });
-        setEditingItemIndex(index); setShowItemForm(true);
+        setEditingItemIndex(index); 
+        setShowItemForm(true);
     };
 
     const handleRemoveKitItem = (indexToRemove: number) => { setKitLineItems(prev => prev.filter((_, index) => index !== indexToRemove)); };
@@ -461,14 +465,15 @@ function KitCreatorPage() {
         const kitDataToSave: Omit<KitTemplate, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: any, updatedAt: any } = {
             userId, name: kitName.trim(), name_lowercase: kitName.trim().toLowerCase(),
             description: kitDescription.trim() || undefined,
-            tags: kitTags.split(',').map(tag => tag.trim()).filter(tag => tag),
+            tags: kitTags.split(',').map(tag => tag.trim()).filter(Boolean),
             lineItems: kitLineItems.map(item => ({ 
                 taskId: item.taskId, materialId: item.materialId, materialOptionId: item.materialOptionId,
                 materialOptionName: item.materialOptionName, displayName: item.displayName,
                 baseQuantity: item.baseQuantity, unit: item.unit, inputType: item.inputType,
                 description: item.description,
             })),
-            isGlobal: false, updatedAt: serverTimestamp(),
+            isGlobal: false, 
+            updatedAt: serverTimestamp(),
         };
         try {
             if (currentKitId) {
@@ -477,23 +482,25 @@ function KitCreatorPage() {
                 const docRef = await addDoc(collection(db, `users/${userId}/kitTemplates`), { ...kitDataToSave, createdAt: serverTimestamp() });
                 setCurrentKitId(docRef.id); 
             }
-            alert("Kit saved successfully!"); fetchUserKits(); setActiveTab('myKits');
+            alert("Kit saved successfully!"); 
+            fetchUserKits(); 
+            setActiveTab('myKits');
         } catch (err: any) { console.error("Error saving kit:", err); setKitBuilderError(`Failed: ${err.message}`); alert(`Failed: ${err.message}`);}
         finally { setIsSavingKit(false); }
     };
     
     const kitBuilderItemForm = showItemForm && (
-        <div className={styles.formSection} style={{backgroundColor: '#e9f5ff'}}>
-            <h4 className={styles.formSectionTitle}>{editingItemIndex !== null ? 'Edit Item in Kit' : 'Add New Item to Kit'}</h4>
+        <div className={styles.itemFormSection}> {/* Use the correct class and REMOVE the inline style */}
+        <h4 className={styles.formSectionTitle}>{editingItemIndex !== null ? 'Edit Item in Kit' : 'Add New Item to Kit'}</h4>
             
             <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Task:</label>
                 <TaskSelector
                     userId={userId}
                     onSelect={handleTaskSelectForItemForm}
-                    onCreateCustomTask={handleCreateCustomTaskForItemForm} // This function returns Promise<CombinedTask | null>
+                    onCreateCustomTask={handleCreateCustomTaskForItemForm}
                     isLoading={isLoadingGlobalData}
-                    allTasks={allTasks} // Assuming TaskSelectorProps expects CombinedTask[]
+                    allTasks={allTasks}
                 />
             </div>
             <div className={styles.formGroup}>
@@ -501,9 +508,9 @@ function KitCreatorPage() {
                 <MaterialSelector
                     userId={userId}
                     onSelect={handleMaterialSelectForItemForm}
-                    onCreateCustomMaterial={initiateCreateCustomMaterialForItemForm} // This function returns Promise<CombinedMaterial | null>
+                    onCreateCustomMaterial={initiateCreateCustomMaterialForItemForm}
                     isLoading={isLoadingGlobalData}
-                    allMaterials={allMaterials} // Assuming MaterialSelectorProps expects CombinedMaterial[]
+                    allMaterials={allMaterials}
                 />
             </div>
 

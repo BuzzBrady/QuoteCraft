@@ -1,118 +1,55 @@
 /* src/components/CustomMaterialsManager.module.css */
 .managerContainer {
-    padding: var(--space-lg);
-    border-radius: var(--border-radius-lg);
-    background-color: var(--background-color-sections);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow-md);
+    /* This can be a simple container or have padding/background if not handled by the parent page */
 }
 
-.managerContainer h2 {
-    /* Global h2 styles for font-family, weight. Specific color. */
-    color: var(--theme-primary-light-blue);
-    margin-bottom: var(--space-lg);
-    text-align: center;
-}
-
-.materialList {
+/* Updated to match the style of .kitList from KitCreatorPage */
+.itemList {
+    list-style: none;
+    padding: 0;
     display: grid;
-    gap: var(--space-md);
+    gap: var(--space-md, 1rem);
 }
 
-.materialItem {
-    background-color: var(--background-color-light);
-    border: 1px solid var(--border-color-light);
-    padding: var(--space-md);
-    border-radius: var(--border-radius-md);
+/* Updated to match the style of .kitListItem from KitCreatorPage */
+.item {
+    background-color: var(--background-color-light, #474747);
+    padding: var(--space-lg, 1.5rem);
+    border-radius: var(--border-radius-md, 6px);
+    border: 1px solid var(--border-color, #444);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: var(--theme-primary-white);
-}
-
-.materialDetails span {
-    display: block;
-    margin-bottom: var(--space-xxs);
-}
-
-.materialDetails .name {
-    font-weight: bold;
-    font-size: 1.1em;
-    color: var(--text-color-light);
-}
-
-.materialDetails .price {
-    font-style: italic;
-    font-size: 0.9em;
-    color: var(--text-color-muted);
-}
-
-/* Base for all buttons in this manager */
-.button {
-    font-family: var(--font-primary);
-    font-weight: 600;
-    text-align: center;
-    vertical-align: middle;
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid transparent;
-    line-height: 1.5;
-    border-radius: var(--border-radius-md);
+    gap: var(--space-md, 1rem);
     transition: var(--transition-fast);
-    color: var(--theme-primary-white);
 }
 
-.itemActions button { /* For edit/delete buttons within a material item */
-    margin-left: var(--space-xs);
-    padding: var(--space-xs) var(--space-sm);
-    background-color: var(--theme-primary-light-blue);
-    border-color: var(--theme-primary-light-blue);
+.item:hover {
+    border-color: var(--border-color-light);
 }
 
-.itemActions button:hover,
-.itemActions button:focus {
-    background-color: var(--theme-accent-bright-blue);
-    border-color: var(--theme-accent-bright-blue);
-    outline: 0;
-}
-.itemActions button:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
+.itemDetails {
+    flex-grow: 1;
 }
 
-/* Example: If you add a delete specific button in TSX like <button className={styles.deleteItemButton}>Delete</button> */
-/* .deleteItemButton {
-    composes: itemActions button;
-    background-color: var(--theme-secondary-steel-gray); 
-    border-color: var(--theme-secondary-steel-gray);
+.itemDetails strong {
+    color: var(--text-color-main, #fff);
+    font-weight: 600;
 }
-.deleteItemButton:hover,
-.deleteItemButton:focus {
-    background-color: var(--secondary-color-darker);
-    border-color: var(--secondary-color-darker);
-}
-.deleteItemButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
-}*/
 
-.addButtonContainer {
+.itemDetails small {
+    display: block;
+    font-size: 0.9em;
+    color: var(--text-color-muted, #ccc);
+    margin-top: var(--space-xxs);
+}
+
+.descriptionText {
+    font-style: italic;
+}
+
+.actions {
     display: flex;
-    justify-content: center;
-    margin-top: var(--space-lg);
-}
-
-.addButton {
-    padding: var(--space-sm) var(--space-lg);
-    font-size: 1rem; /* Default button font size */
-    background-color: var(--theme-primary-light-blue);
-    border-color: var(--theme-primary-light-blue);
-}
-
-.addButton:hover,
-.addButton:focus {
-    background-color: var(--theme-accent-bright-blue);
-    border-color: var(--theme-accent-bright-blue);
-    outline: 0;
-}
-.addButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
+    gap: var(--space-sm, 0.75rem);
+    flex-shrink: 0;
 }

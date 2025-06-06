@@ -79,6 +79,7 @@ export interface Task {
     name_lowercase?: string;
     description?: string;
     defaultUnit?: string;
+    taskRate?: number
     createdAt?: Timestamp;
     updatedAt?: Timestamp;
 }

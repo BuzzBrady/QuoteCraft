@@ -8,118 +8,74 @@
     background-color: rgba(0, 0, 0, 0.65);
     display: flex;
     justify-content: center;
+    align-items: center; /* This will vertically center the modal content box */
+    z-index: var(--z-index-modal, 1050);
+    padding: var(--space-lg, 1.5rem); /* Added padding to ensure space around modal on all screen sizes */
+    box-sizing: border-box;
+  }
+  
+  .modalContent {
+    background: var(--theme-primary-deep-charcoal, #2c303a);
+    color: var(--theme-primary-white, #ecf0f1);
+    border-radius: var(--border-radius-lg, 8px);
+    border: 1px solid var(--border-color, #34495e);
+    box-shadow: var(--box-shadow-lg, 0 10px 25px rgba(0,0,0,0.2));
+    
+    width: 100%; /* Take full width of the padding box from .modalOverlay */
+    max-width: 600px; /* INCREASED MAX-WIDTH: Adjust this as needed. Was 500px. For forms, 600px-700px is often good. */
+    
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh; /* Overall modal constraint, ensures it fits viewport */
+    /* overflow: hidden; /* The .modalContent itself should not scroll */
+  }
+  
+  .modalHeader {
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem); /* Adjusted padding */
+    border-bottom: 1px solid var(--border-color-light, #4a6072);
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    z-index: var(--z-index-modal);
-}
-
-.modalContent {
-    background: var(--theme-primary-deep-charcoal);
-    color: var(--theme-primary-white);
-    padding: var(--space-xl);
-    border-radius: var(--border-radius-lg);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow-lg);
-    width: 90%;
-    max-width: 500px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
-}
-
-.modalContent h2 {
-    /* Uses global h2 styles */
-    margin-top: 0;
-    margin-bottom: var(--space-md); /* Adjusted from 0.5rem */
-    text-align: center;
-    font-size: 1.6em;
-}
-
-.formField {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-
-.formField label {
-    /* Uses global label styles */
-    font-size: 0.95em;
-    color: var(--theme-secondary-steel-gray);
-}
-
-.formField input,
-.formField textarea,
-.formField select {
-    /* Inherits most styles from global input/textarea/select in index.css */
-    padding: var(--space-sm); /* Adjusted from 0.75rem */
-    font-size: 1em;
-    /* border-radius from global var(--border-radius-md) */
-}
-
-.formField textarea {
-    min-height: 100px;
-    resize: vertical;
-}
-
-.formActions {
+    flex-shrink: 0;
+  }
+  
+  .modalTitle {
+    margin: 0;
+    font-size: 1.3em; /* Slightly smaller if 1.4em felt too big */
+    font-weight: 600;
+    color: var(--theme-accent-bright-blue, #3498db);
+    line-height: 1.3;
+  }
+  
+  .closeButton {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--text-color-muted, #7f8c8d);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    transition: color 0.2s ease-in-out;
+  }
+  .closeButton:hover,
+  .closeButton:focus {
+    color: var(--theme-primary-white, #ecf0f1);
+    outline: none;
+  }
+  
+  .modalBody {
+    padding: var(--space-lg, 1.5rem);
+    flex-grow: 1;
+    overflow-y: auto; 
+  }
+  
+  .modalFooter {
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    border-top: 1px solid var(--border-color-light, #4a6072);
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-md);
-    margin-top: var(--space-md);
-}
-
-/* Buttons can be refactored to use global .btn classes in TSX */
-.formActions button {
-    font-family: var(--font-primary);
-    font-weight: 600;
-    text-align: center;
-    vertical-align: middle;
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid transparent;
-    padding: var(--space-sm) var(--space-md); /* Adjusted from 0.7rem 1.3rem */
-    font-size: 1em;
-    line-height: 1.5;
-    border-radius: var(--border-radius-md);
-    transition: var(--transition-fast);
-}
-
-.submitButton {
-    /* Extends .formActions button */
-    color: var(--theme-primary-white);
-    background-color: var(--theme-accent-bright-blue);
-    border-color: var(--theme-accent-bright-blue);
-}
-
-.submitButton:hover, .submitButton:focus {
-    background-color: #00a6d8; /* Darker bright blue */
-    border-color: #00a6d8;
-    color: var(--theme-primary-white);
-    outline: 0;
-}
-.submitButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-accent-bright-blue-rgb), 0.5);
-}
-
-.cancelButton {
-    /* Extends .formActions button */
-    color: var(--theme-primary-white);
-    background-color: var(--theme-secondary-steel-gray);
-    border-color: var(--theme-secondary-steel-gray);
-}
-
-.cancelButton:hover, .cancelButton:focus {
-    background-color: #8e989f; /* Darker steel gray */
-    border-color: #8e989f;
-    color: var(--theme-primary-white);
-    outline: 0;
-}
-.cancelButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-secondary-steel-gray-rgb), 0.5);
-}
-
-.errorMessage {
-    color: var(--color-error);
-    font-size: 0.9em;
-    margin-top: calc(-1 * var(--space-xs)); /* Adjusted */
-    margin-bottom: var(--space-xs); /* Adjusted */
-}
+    gap: var(--space-md, 1rem);
+    background-color: var(--background-color-sections, #34495e20);
+    flex-shrink: 0;
+  }

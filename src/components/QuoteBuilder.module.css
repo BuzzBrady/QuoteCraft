@@ -1,26 +1,71 @@
 /* src/components/QuoteBuilder.module.css */
-.wizard-step {
-    min-height: 400px;
-    width: 100%;
-    opacity: 0; /* Start hidden to prevent flash */
-}
 
-.wizard-content {
-    width: 100%;
-}
-
+/* --- Main Container for the Entire Quote Builder Page --- */
 .quoteBuilderContainer {
-    overflow: hidden;
-    position: relative;
-}
-
-/* Ensure the step becomes visible when GSAP animates it */
-.wizard-step.gsap-animated {
+    width: 100%; /* Ensure it tries to take full width of its parent */
+    padding: 20px 15px; /* Add some horizontal padding */
+    box-sizing: border-box; /* Important for padding + width: 100% */
+    /* overflow: hidden; /* Generally not needed here unless specific child overflows */
+    /* position: relative; /* Only if children are absolutely positioned relative to this */
+  }
+  
+  /* --- Container Specifically for the Wizard Steps --- */
+  .stepsContainer {
+    position: relative; /* Good for positioning steps within it if needed, or for scope */
+    /*
+      TEMPORARY DEBUG STYLES - REMOVE OR ADJUST THESE ONCE VISIBILITY IS CONFIRMED
+      border: 2px solid red;
+      min-height: 400px;
+      background-color: rgba(0, 100, 255, 0.1);
+    */
+    /* overflow: hidden; /* Usually not needed here, can hide animations if steps move outside bounds */
+  }
+  
+  /* --- Individual Wizard Step Styling --- */
+  .wizardStep {
+    /* Initial state for GSAP's autoAlpha: 0 (invisible and not in layout flow) */
+    opacity: 0;
+    visibility: hidden;
+  
+    /* Layout and Appearance (once made visible by GSAP) */
+    width: 100%;
+    max-width: 960px; /* Adjust to your desired content width */
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px;
+    border: 1px solid #eeeeee1f; /* Consider using a CSS variable */
+    border-radius: 8px;       /* Consider using a CSS variable */
+    background-color: #8382821b; /* Consider using a CSS variable */
+    margin-bottom: 70px; /* Space above sticky footer */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  
+    /* min-height: 400px; /* Only if you want to enforce a minimum height for empty steps */
+  }
+  
+  /* This class is NOT NEEDED if GSAP is controlling autoAlpha.
+     GSAP applies inline styles (opacity: 1, visibility: visible).
+     Keeping it can cause conflicts or override GSAP if specificity is higher.
+  .wizard-step.gsap-animated {
     opacity: 1;
-}
-
-.selectedClientDetailsContainer {
-    background-color: var(--background-color-light); /* Slightly different background */
+  }
+  */
+  
+  /* --- Content Area within a Wizard Step --- */
+  .wizardContent {
+    width: 100%; /* Usually fine, content will flow within .wizardStep padding */
+  }
+  
+  .wizardStep h3 { /* More specific selector for h3 within a step */
+    margin-top: 0;
+    color: var(--primary-color); /* Ensure --primary-color is defined */
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+  
+  /* --- Selected Client Details Styling --- */
+  .selectedClientDetailsContainer {
+    background-color: var(--background-color-light);
     padding: var(--space-md);
     border-radius: var(--border-radius-md);
     margin-top: var(--space-md);
@@ -29,166 +74,148 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns */
     gap: var(--space-sm) var(--space-md); /* Row and column gap */
-    align-items: center;
-}
-
-.clientDetailItem {
-    font-size: 0.9em;
+    align-items: center; /* Vertically align items in grid cells if they have different heights */
+  }
+  
+  .clientDetailItem {
+    font-size: 0.9em; /* Consider using relative units like rem or em consistently */
     color: var(--text-color-light);
-    word-break: break-word; /* Prevent overflow */
-}
-.clientDetailItem strong {
+    word-break: break-word; /* Good for preventing overflow */
+  }
+  
+  .clientDetailItem strong {
     color: var(--text-color-main);
     margin-right: var(--space-xs);
-}
-
-.clientDetailAddress {
-    grid-column: span 2; /* Make address take more space if possible */
-}
-
-.editClientButton {
-    /* Styles for the edit button, can also use global utility if it fits */
-    /* Example: make it align to one side if needed */
+  }
+  
+  .clientDetailAddress {
+    /* This might not always span 2 columns if there are more than 2 items
+       and auto-fit creates more columns. Consider a fixed grid-template-columns
+       if specific spanning is always desired. */
+    grid-column: span 2;
+  }
+  
+  .editClientButton {
     justify-self: flex-start; /* Aligns button to the start of its grid cell */
-    /* max-width: 150px; /* Optional: if you want to constrain its width */
-}
-
-/* Adjust grid layout for the edit button on smaller screens if needed */
-@media (max-width: 576px) {
+    /* max-width: 150px; /* Optional: to constrain width */
+  }
+  
+  /* Responsive adjustments for Selected Client Details */
+  @media (max-width: 576px) {
     .selectedClientDetailsContainer {
-        grid-template-columns: 1fr; /* Stack everything on small screens */
+      grid-template-columns: 1fr; /* Stack everything */
     }
     .clientDetailAddress {
-        grid-column: span 1; /* Reset span */
+      grid-column: span 1; /* Reset span for single column layout */
     }
     .editClientButton {
-        margin-top: var(--space-sm);
-        width: 100%; /* Make button full width on small screens */
+      margin-top: var(--space-sm);
+      width: 100%; /* Make button full width */
+      justify-self: stretch; /* If you want it to fill the grid cell */
     }
-}
-
-.wizardStep {
-    padding: 20px;
-    border: 1px solid #eeeeee1f;
-    border-radius: 8px;
-    background-color: #8382821b;
-    margin-left: auto;
-    margin-right: auto;
-    max-width: 960px; /* Adjust this to your desired content width */
-    margin-bottom: 70px; /* Ensure space above the sticky footer */
-                         /* This margin-bottom might need to be on a wrapper *around* the step components
-                            if the sticky bar is not absolutely positioned or fixed in a way that
-                            prevents content from flowing under it.
-                            Given the sticky bar is likely position: sticky or fixed, this should be fine. */
-    
-}
-
-.wizardStep h3 {
-    margin-top: 0;
-    color: var(--primary-color); /* Assuming you have CSS variables */
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-}
-
-
-.quoteBuilderContainer {
-    width: 100%; /* Ensure it tries to take full width of its parent */
-    padding: 20px 15px; /* Add some horizontal padding so content isn't flush with screen edges */
-    box-sizing: border-box; /* Important if you have padding + width: 100% */
-}
-
-.title {
-    /* Global h1/h2 styles for font-family, weight. Specific color/size */
+  }
+  
+  
+  /* --- General Page Structure & Utility-like Styles (some might be global) --- */
+  /* These seem more like general layout styles than specific to QuoteBuilder sub-components.
+     If they are truly specific to QuoteBuilder structure, keep them.
+     If they are general app layout, they might belong in a more global CSS file or App.css.
+  */
+  
+  .title {
     color: var(--theme-primary-light-blue);
     text-align: center;
     margin-bottom: var(--space-xl);
-    font-size: 2em;
-}
-
-.topControls {
+    font-size: 2em; /* Consider using rem for accessibility */
+  }
+  
+  .topControls {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: var(--space-md);
     margin-bottom: var(--space-lg);
-    flex-wrap: wrap;
-}
-
-.quoteNameInput input[type="text"] {
-    /* Inherits global input styles */
-    padding: var(--space-sm) var(--space-md); /* Global default */
-    /* border-radius: var(--border-radius-md); from global */
+    flex-wrap: wrap; /* Good for responsiveness */
+  }
+  
+  /* Assuming this is for a specific input within topControls or similar context */
+  .quoteNameInput input[type="text"] {
+    padding: var(--space-sm) var(--space-md);
     min-width: 250px;
-}
-
-.mainLayout {
+    /* border-radius: var(--border-radius-md); /* Should come from global input styles ideally */
+  }
+  
+  .mainLayout {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Default to single column */
     gap: var(--space-lg);
     margin-bottom: var(--space-xl);
-}
-
-@media (min-width: 992px) {
+  }
+  
+  @media (min-width: 992px) {
     .mainLayout {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      /* This auto-fit is good for a flexible number of columns.
+         If you always want 2 or 3 columns, be more explicit e.g., 1fr 1fr or repeat(2, 1fr) */
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     }
-}
-
-.column {
+  }
+  
+  .column {
     background-color: var(--background-color-sections);
     padding: var(--space-md);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
-}
-
-.sectionTitle {
-    /* Could be h3 or h4 semantically */
-    font-size: 1.3em;
+  }
+  
+  .sectionTitle {
+    font-size: 1.3em; /* Consider rem */
     color: var(--theme-primary-light-blue);
     margin-bottom: var(--space-md);
     padding-bottom: var(--space-xs);
     border-bottom: 1px solid var(--border-color-light);
-}
-
-.summaryBox {
+  }
+  
+  /* --- Summary Box Styling --- */
+  .summaryBox {
     background-color: var(--background-color-sections);
     padding: var(--space-lg);
     border-radius: var(--border-radius-md);
     border: 1px solid var(--border-color);
     margin-top: var(--space-md);
-    color: var(--theme-primary-white);
-}
-
-.summaryItem, .summaryTotal {
+    color: var(--theme-primary-white); /* Ensure this has good contrast */
+  }
+  
+  .summaryItem, .summaryTotal {
     display: flex;
     justify-content: space-between;
     padding: var(--space-xs) 0;
-}
-
-.summaryTotal {
+  }
+  
+  .summaryTotal {
     font-weight: bold;
-    font-size: 1.2em;
+    font-size: 1.2em; /* Consider rem */
     margin-top: var(--space-xs);
     border-top: 1px solid var(--border-color-light);
     padding-top: var(--space-md);
-}
-
-.totalPrice {
+  }
+  
+  .totalPrice {
     color: var(--theme-accent-bright-blue);
-}
-
-.actionsContainer {
+  }
+  
+  /* --- Action Buttons Container --- */
+  .actionsContainer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-end; /* Aligns buttons to the right */
     gap: var(--space-md);
     margin-top: var(--space-lg);
     padding-top: var(--space-lg);
     border-top: 1px solid var(--border-color-light);
-}
-
-/* Base for buttons in actionsContainer */
-.buttonBase {
+  }
+  
+  /* Base for buttons - good use of composes if your setup supports it,
+     otherwise, apply these styles directly or use a global button class. */
+  .buttonBase {
     font-family: var(--font-primary);
     font-weight: 600;
     text-align: center;
@@ -197,37 +224,43 @@
     user-select: none;
     border: 1px solid transparent;
     padding: var(--space-sm) var(--space-lg);
-    font-size: 1em;
+    font-size: 1em; /* Consider rem */
     line-height: 1.5;
     border-radius: var(--border-radius-md);
-    transition: var(--transition-fast);
-}
-
-.actionButton, .saveQuoteButton, .exportQuoteButton {
-    composes: buttonBase;
+    transition: var(--transition-fast); /* Ensure --transition-fast is defined */
+  }
+  
+  /* Specific action buttons */
+  .actionButton, .saveQuoteButton, .exportQuoteButton {
+    composes: buttonBase; /* If CSS Modules `composes` is not working or not preferred, duplicate styles or use global classes */
     color: var(--theme-primary-white);
     background-color: var(--theme-primary-light-blue);
     border-color: var(--theme-primary-light-blue);
-}
-
-.actionButton:hover, .saveQuoteButton:hover, .exportQuoteButton:hover,
-.actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
+  }
+  
+  .actionButton:hover, .saveQuoteButton:hover, .exportQuoteButton:hover,
+  .actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
     background-color: var(--theme-accent-bright-blue);
     border-color: var(--theme-accent-bright-blue);
     color: var(--theme-primary-white);
-    outline: 0;
-}
-.actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5);
-}
-
-.placeholder {
+    outline: 0; /* Common practice for custom focus styles */
+  }
+  
+  .actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
+    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5); /* Ensure variables are defined */
+  }
+  
+  /* --- Placeholder Text --- */
+  .placeholder {
     color: var(--text-color-muted);
     text-align: center;
     padding: var(--space-xl);
     font-style: italic;
-}
-
-.taskSelectorContainer, .materialSelectorContainer, .areaSelectorContainer {
+  }
+  
+  /* --- Specific Component Wrappers (if needed for margin/layout) --- */
+  .taskSelectorContainer, 
+  .materialSelectorContainer, 
+  .areaSelectorContainer {
     margin-bottom: var(--space-md);
-}
+  }

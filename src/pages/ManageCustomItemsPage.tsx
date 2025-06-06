@@ -1,8 +1,9 @@
 // src/pages/ManageCustomItemsPage.tsx
 import { useState } from 'react';
+import { Link } from 'react-router-dom'; // Import Link for the back button
 import CustomTasksManager from '../components/CustomTasksManager';
-import CustomMaterialsManager from '../components/CustomMaterialsManager'; // <-- UNCOMMENT or ensure this import is correct
-import './ManageCustomItemsPage.css'; // Ensure this file exists and has styles
+import CustomMaterialsManager from '../components/CustomMaterialsManager';
+import styles from './ManageCustomItemsPage.module.css'; // Renamed import to use as a module
 
 type ActiveTab = 'tasks' | 'materials';
 
@@ -10,29 +11,30 @@ function ManageCustomItemsPage() {
     const [activeTab, setActiveTab] = useState<ActiveTab>('tasks');
 
     return (
-        <div className="manage-custom-items-page">
-            <h2>Manage My Custom Library</h2>
+        <div className={styles.pageContainer}>
+             <div className={styles.pageHeader}>
+                <h1 className={styles.pageTitle}>Manage My Library</h1>
+                <Link to="/dashboard" className={styles.backLink}>Back to Dashboard</Link>
+            </div>
 
-            <div className="tabs-container">
+            <div className={styles.tabNavigation}>
                 <button
-                    className={`tab-button ${activeTab === 'tasks' ? 'active' : ''}`}
+                    className={`${styles.tabButton} ${activeTab === 'tasks' ? styles.tabButtonActive : ''}`}
                     onClick={() => setActiveTab('tasks')}
                 >
                     Custom Tasks
                 </button>
                 <button
-                    className={`tab-button ${activeTab === 'materials' ? 'active' : ''}`}
+                    className={`${styles.tabButton} ${activeTab === 'materials' ? styles.tabButtonActive : ''}`}
                     onClick={() => setActiveTab('materials')}
-                    // disabled // <-- REMOVE the disabled attribute if it's here
                 >
                     Custom Materials
                 </button>
             </div>
 
-            <div className="tab-content">
+            <div className={styles.tabContent}>
                 {activeTab === 'tasks' && <CustomTasksManager />}
-                {activeTab === 'materials' && <CustomMaterialsManager />} {/* <-- UNCOMMENT and ensure this renders */}
-                {/* Remove any placeholder like "Custom Materials Management Coming Soon!" if it was here */}
+                {activeTab === 'materials' && <CustomMaterialsManager />}
             </div>
         </div>
     );
