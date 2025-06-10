@@ -1,0 +1,141 @@
+/* src/pages/MyClientsPage.module.css */
+
+/* --- Page & Header Layout --- */
+.pageContainer {
+    padding: var(--space-lg, 1.5rem);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl, 2rem);
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: var(--space-md);
+}
+
+.pageTitle {
+    margin: 0; /* Remove default h1 margin */
+}
+
+/* --- Client List Styles --- */
+.clientList {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--space-md, 1rem);
+}
+
+.clientItem {
+    background-color: var(--background-color-sections, #3a3a3a);
+    padding: var(--space-lg, 1.5rem);
+    border-radius: var(--border-radius-md, 6px);
+    border: 1px solid var(--border-color, #444);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md, 1rem);
+    transition: var(--transition-fast);
+}
+
+.clientItem:hover {
+    border-color: var(--border-color-light);
+}
+
+.clientDetails {
+    flex-grow: 1;
+    word-break: break-word; /* Prevent long emails from overflowing */
+}
+
+.clientDetails strong {
+    color: var(--text-color-main, #fff);
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.clientDetails span {
+    display: block;
+    font-size: 0.9em;
+    color: var(--text-color-muted, #ccc);
+    margin-top: var(--space-xxs, 0.25rem);
+}
+
+.clientActions {
+    display: flex;
+    gap: var(--space-sm, 0.75rem);
+    flex-shrink: 0;
+}
+
+/* --- Modal Styles (Self-contained within the page component now) --- */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-index-modal, 1050);
+  padding: var(--space-md, 1rem);
+  box-sizing: border-box;
+}
+
+.modalContent {
+  background: var(--theme-primary-deep-charcoal, #2c303a);
+  color: var(--theme-primary-white, #ecf0f1);
+  border-radius: var(--border-radius-lg, 8px);
+  border: 1px solid var(--border-color, #34495e);
+  box-shadow: var(--box-shadow-lg, 0 10px 25px rgba(0,0,0,0.2));
+  width: 100%;
+  max-width: 600px;
+  
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh; /* Constrains the overall modal height */
+}
+
+.modalHeader {
+  padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+  border-bottom: 1px solid var(--border-color-light, #4a6072);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.4em;
+  font-weight: 600;
+}
+
+.modalBody {
+  padding: var(--space-lg, 1.5rem);
+  flex-grow: 1;
+  overflow-y: auto; /* Adds a scrollbar if content overflows */
+}
+
+.modalFooter {
+  padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+  border-top: 1px solid var(--border-color-light, #4a6072);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md, 1rem);
+  background-color: rgba(52, 73, 94, 0.2);
+  flex-shrink: 0;
+}
+
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 1rem);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-md, 1rem);
+}

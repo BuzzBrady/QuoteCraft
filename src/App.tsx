@@ -26,6 +26,7 @@ import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import MainLayout from './components/MainLayout'; // Your layout component
 import MyClientsPage from './pages/MyClientsPage'; 
 import KitCreatorPage from './pages/KitCreatorPage'; // <-- IMPORT YOUR NEW KIT CREATOR PAGE
+import UserRateTemplatesPage from './pages/UserRateTemplatesPage';
 import './index.css'; // Global styles
 
 // --- Authentication Route Guards ---
@@ -71,6 +72,8 @@ function App() {
                             <Route path="/my-items" element={<ManageCustomItemsPage />} />
                             <Route path="/profile" element={<ProfileSettingsPage />} />
                             <Route path="/my-clients" element={<MyClientsPage />} />
+                            <Route path="/my-rates" element={<UserRateTemplatesPage />} />
+
                             
                             {/* --- NEW ROUTE FOR KIT CREATOR --- */}
                             <Route path="/kit-creator" element={<KitCreatorPage />} />

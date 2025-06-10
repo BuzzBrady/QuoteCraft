@@ -15,6 +15,8 @@ interface MaterialOptionSelectorProps {
     selectedMaterial: SelectableMaterial | null;
     onSelect: (option: MaterialOption | null) => void;
     currentOptionId?: string | null;
+    initialSelectedOptionId?: string | null; 
+
 }
 
 function MaterialOptionSelector({

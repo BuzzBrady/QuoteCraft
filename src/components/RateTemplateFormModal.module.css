@@ -1,0 +1,113 @@
+/* src/components/RateTemplateFormModal.module.css */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-index-modal, 1050);
+    padding: var(--space-md, 1rem);
+    box-sizing: border-box;
+  }
+  
+  .modalContent {
+    background: var(--theme-primary-deep-charcoal, #2c303a);
+    color: var(--theme-primary-white, #ecf0f1);
+    border-radius: var(--border-radius-lg, 8px);
+    border: 1px solid var(--border-color, #34495e);
+    box-shadow: var(--box-shadow-lg, 0 10px 25px rgba(0,0,0,0.2));
+    width: 100%;
+    max-width: 700px; /* Wider for more complex form */
+    
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+  }
+  
+  .modalHeader {
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    border-bottom: 1px solid var(--border-color-light, #4a6072);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  
+  .modalTitle {
+    margin: 0;
+    font-size: 1.4em;
+    font-weight: 600;
+  }
+  
+  .closeButton {
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--text-color-muted, #7f8c8d);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+  }
+  .closeButton:hover {
+    color: var(--theme-primary-white, #ecf0f1);
+  }
+  
+  .modalBody {
+    padding: var(--space-lg, 1.5rem);
+    flex-grow: 1;
+    overflow-y: auto;
+  }
+  
+  .modalFooter {
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    border-top: 1px solid var(--border-color-light, #4a6072);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-md, 1rem);
+    background-color: rgba(52, 73, 94, 0.2);
+    flex-shrink: 0;
+  }
+  
+  .formContainer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg, 1.5rem);
+  }
+  
+  .formDescription {
+    font-size: 0.9em;
+    color: var(--text-color-muted);
+    background-color: var(--background-color-light);
+    padding: var(--space-sm);
+    border-radius: var(--border-radius-sm);
+    margin: 0;
+    text-align: center;
+  }
+  
+  .formRow {
+    display: flex;
+    gap: var(--space-md, 1rem);
+  }
+  .formRow > .form-group {
+      flex: 1;
+  }
+  
+  .associationTitle {
+    font-size: 1.1em;
+    color: var(--theme-primary-light-blue);
+    margin: var(--space-md, 1rem) 0 var(--space-sm, 0.5rem) 0;
+    border-top: 1px solid var(--border-color-light);
+    padding-top: var(--space-lg, 1.5rem);
+  }
+  
+  .errorMessage {
+    color: var(--color-error, red);
+    font-size: 0.9em;
+    text-align: center;
+    font-weight: 500;
+  }

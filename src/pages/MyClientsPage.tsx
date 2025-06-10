@@ -1,14 +1,14 @@
 // src/pages/MyClientsPage.tsx
-// Page for managing user's clients (CRUD operations)
+import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, writeBatch, Timestamp } from 'firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../config/firebaseConfig';
+import { Client } from '../types';
+import styles from './MyClientsPage.module.css'; // Import the CSS Module
+import Papa from 'papaparse'; // For CSV Parsing
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom'; // For a back button or other navigation
-import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
-import { useAuth } from '../contexts/AuthContext'; // Adjust path
-import { db } from '../config/firebaseConfig'; // Adjust path
-import { Client } from '../types'; // Adjust path, ensure Client type is defined
-
-// Define the shape of the form data
+// Define the shape of the form data for the modal
 interface ClientFormData {
     clientName: string;
     clientContactPerson?: string;
@@ -37,10 +37,27 @@ function MyClientsPage() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Modal State
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [editingClient, setEditingClient] = useState<Client | null>(null); // Client being edited, or null for new
+    const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [formData, setFormData] = useState<ClientFormData>(initialFormData);
     const [isSaving, setIsSaving] = useState<boolean>(false);
+
+    // Ref for the hidden file input
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Effect to lock body scroll when modal is open
+    useEffect(() => {
+        const originalOverflow = document.body.style.overflow;
+        if (isModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = originalOverflow;
+        }
+        return () => {
+            document.body.style.overflow = originalOverflow;
+        };
+    }, [isModalOpen]);
 
     const fetchClients = useCallback(async () => {
         if (!userId) {
@@ -52,14 +69,14 @@ function MyClientsPage() {
         setError(null);
         try {
             const clientsRef = collection(db, `users/${userId}/clients`);
-            const q = query(clientsRef, orderBy('clientName', 'asc')); // Order by client name
+            const q = query(clientsRef, orderBy('clientName', 'asc'));
             const querySnapshot = await getDocs(q);
             const fetchedClients = querySnapshot.docs.map(docSnap => ({
                 id: docSnap.id,
                 ...docSnap.data()
             } as Client));
             setClients(fetchedClients);
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        } catch (err: any) {
             console.error("Error fetching clients:", err);
             setError("Failed to load clients. " + err.message);
         } finally {
@@ -127,162 +144,233 @@ function MyClientsPage() {
         };
 
         try {
-            if (editingClient) { // Update existing client
+            if (editingClient) {
                 const clientRef = doc(db, `users/${userId}/clients`, editingClient.id);
                 await updateDoc(clientRef, clientDataPayload);
-                alert("Client updated successfully!");
-            } else { // Add new client
+            } else {
                 const fullPayload = { ...clientDataPayload, createdAt: serverTimestamp() };
                 await addDoc(collection(db, `users/${userId}/clients`), fullPayload);
-                alert("Client added successfully!");
             }
             handleCloseModal();
             fetchClients(); // Refresh the list
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        } catch (err: any) {
             console.error("Error saving client:", err);
             setError("Failed to save client. " + err.message);
-            alert("Failed to save client. " + err.message);
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteClient = async (clientId: string) => {
-        if (!userId) return;
-        if (!window.confirm("Are you sure you want to delete this client? This action cannot be undone.")) {
-            return;
-        }
+        if (!userId || !window.confirm("Are you sure you want to delete this client?")) return;
         try {
             await deleteDoc(doc(db, `users/${userId}/clients`, clientId));
-            alert("Client deleted successfully.");
-            fetchClients(); // Refresh list
-        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            fetchClients();
+        } catch (err: any) {
             console.error("Error deleting client:", err);
-            alert("Failed to delete client. " + err.message);
+            setError("Failed to delete client. " + err.message);
         }
     };
 
-    if (isLoading) return <div style={pageStyles.container}><p>Loading clients...</p></div>;
-    if (error) return <div style={pageStyles.container}><p style={{ color: 'red' }}>Error: {error}</p></div>;
+    // --- Functions for Client Import ---
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        console.log("Starting to parse file:", file.name);
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            delimiter: ",",
+            
+            // --- ADD THIS BLOCK FOR DEBUGGING ---
+            transformHeader: (header) => {
+                console.log(`[Papaparse Header Debug] Saw header: "${header}"`);
+                return header.trim(); // Also good practice to trim whitespace
+            },
+            // ------------------------------------
+
+            complete: (results) => {
+                // Check for parsing errors reported by papaparse
+                if (results.errors.length > 0) {
+                    console.error("CSV parsing errors occurred:", results.errors);
+                    const errorSummary = results.errors.map(err => `Error on row ${err.row}: ${err.message}`).join('\n');
+                    setError(`Could not parse CSV file. Please check its format.\nDetails:\n${errorSummary}`);
+                    alert(`Could not parse CSV file. Please check console for details.`);
+                    return;
+                }
+
+                console.log("Parsed CSV data:", results.data);
+                handleImportClients(results.data);
+            },
+            error: (error: any) => {
+                console.error("A critical error occurred during parsing:", error);
+                setError("Failed to parse CSV file due to a critical error.");
+                alert("A critical error occurred while parsing the file.");
+            }
+        });
+
+        // Reset file input
+        if (event.target) {
+            event.target.value = '';
+        }
+    };
+
+    const handleImportClients = async (parsedClients: any[]) => {
+        if (!userId) return setError("You must be logged in to import.");
+        if (!parsedClients || parsedClients.length === 0) return alert("No valid client data found in the file.");
+        if (!window.confirm(`Found ${parsedClients.length} clients. Do you want to import them?`)) return;
+
+        setIsLoading(true);
+        const clientsRef = collection(db, `users/${userId}/clients`);
+        const batch = writeBatch(db);
+        let importCount = 0;
+
+        for (const client of parsedClients) {
+            const clientName = client['Client Name'] || client['Company'];
+            if (!clientName || !clientName.trim()) continue;
+
+            const newClientDocRef = doc(clientsRef);
+            batch.set(newClientDocRef, {
+                userId: userId,
+                clientName: clientName.trim(),
+                clientContactPerson: client['Contact Person']?.trim() || '',
+                clientEmail: client['Email']?.trim() || '',
+                clientPhone: client['Phone']?.trim() || '',
+                clientAddress: client['Address']?.trim() || '',
+                defaultClientTerms: client['Default Client Terms']?.trim() || '',
+                clientNotes: client['Internal Notes']?.trim() || '',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+            importCount++;
+        }
+
+        if (importCount === 0) {
+            alert("No clients with a valid name were found to import.");
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            await batch.commit();
+            alert(`${importCount} clients imported successfully!`);
+            fetchClients();
+        } catch (err: any) {
+            console.error("Error importing clients:", err);
+            setError("An error occurred during the import process.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleTriggerImport = () => {
+        fileInputRef.current?.click();
+    };
+
+    if (!currentUser) return <div className={styles.pageContainer}><p className="text-warning">Please log in to manage your clients.</p></div>;
+    if (isLoading) return <div className={styles.pageContainer}><p className={styles.loadingText}>Loading clients...</p></div>;
+    if (error) return <div className={styles.pageContainer}><p className={styles.errorText}>Error: {error}</p></div>;
 
     return (
-        <div style={pageStyles.container}>
-            <div style={pageStyles.header}>
-                <h1 style={pageStyles.heading}>My Clients</h1>
-                <button onClick={() => handleOpenModal()} style={pageStyles.addButton}>
-                    + Add New Client
-                </button>
+        <div className={styles.pageContainer}>
+            <div className={styles.pageHeader}>
+                <h1 className={styles.pageTitle}>My Clients</h1>
+                <div className={styles.headerActions}>
+                    <button onClick={handleTriggerImport} className="btn btn-secondary" disabled={isLoading}>
+                        Import Clients
+                    </button>
+                    <button onClick={() => handleOpenModal()} className="btn btn-primary" disabled={isLoading}>
+                        + Add New Client
+                    </button>
+                </div>
             </div>
+
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept=".csv"
+                onChange={handleFileChange}
+            />
 
             {clients.length === 0 ? (
                 <p>You haven't added any clients yet.</p>
             ) : (
-                <table style={pageStyles.table}>
-                    <thead style={pageStyles.thead}>
-                        <tr>
-                            <th style={pageStyles.th}>Client Name</th>
-                            <th style={pageStyles.th}>Contact Person</th>
-                            <th style={pageStyles.th}>Email</th>
-                            <th style={pageStyles.th}>Phone</th>
-                            <th style={pageStyles.th}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {clients.map(client => (
-                            <tr key={client.id} style={pageStyles.tr}>
-                                <td style={pageStyles.td}>{client.clientName}</td>
-                                <td style={pageStyles.td}>{client.clientContactPerson || '-'}</td>
-                                <td style={pageStyles.td}>{client.clientEmail || '-'}</td>
-                                <td style={pageStyles.td}>{client.clientPhone || '-'}</td>
-                                <td style={pageStyles.td}>
-                                    <button onClick={() => handleOpenModal(client)} style={pageStyles.actionButton}>Edit</button>
-                                    <button onClick={() => handleDeleteClient(client.id)} style={{...pageStyles.actionButton, ...pageStyles.deleteButton}}>Delete</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                <ul className={styles.clientList}>
+                    {clients.map(client => (
+                        <li key={client.id} className={styles.clientItem}>
+                            <div className={styles.clientDetails}>
+                                <strong>{client.clientName}</strong>
+                                <span>{client.clientContactPerson || 'No contact person'}</span>
+                                <span>{client.clientEmail || 'No email'}</span>
+                                <span>{client.clientPhone || 'No phone'}</span>
+                            </div>
+                            <div className={styles.clientActions}>
+                                <button onClick={() => handleOpenModal(client)} className="btn btn-secondary btn-sm">Edit</button>
+                                <button onClick={() => handleDeleteClient(client.id)} className="btn btn-danger btn-sm">Delete</button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
             )}
 
             <Link to="/dashboard" style={{ marginTop: '30px', display: 'inline-block' }}>
-                <button style={pageStyles.backButton}>Back to Dashboard</button>
+                <button className="btn btn-secondary">Back to Dashboard</button>
             </Link>
 
-            {/* Client Add/Edit Modal */}
             {isModalOpen && (
-                <div style={modalStyles.overlay}>
-                    <div style={modalStyles.modal}>
-                        <h2 style={modalStyles.modalTitle}>{editingClient ? 'Edit Client' : 'Add New Client'}</h2>
-                        <form onSubmit={handleSubmitClient}>
-                            <div style={modalStyles.formGroup}>
-                                <label htmlFor="clientName" style={modalStyles.label}>Client Name*:</label>
-                                <input type="text" name="clientName" id="clientName" value={formData.clientName} onChange={handleInputChange} required style={modalStyles.input} />
-                            </div>
-                            <div style={modalStyles.formGroup}>
-                                <label htmlFor="clientContactPerson" style={modalStyles.label}>Contact Person:</label>
-                                <input type="text" name="clientContactPerson" id="clientContactPerson" value={formData.clientContactPerson} onChange={handleInputChange} style={modalStyles.input} />
-                            </div>
-                            <div style={modalStyles.formGroup}>
-                                <label htmlFor="clientEmail" style={modalStyles.label}>Email:</label>
-                                <input type="email" name="clientEmail" id="clientEmail" value={formData.clientEmail} onChange={handleInputChange} style={modalStyles.input} />
-                            </div>
-                            <div style={modalStyles.formGroup}>
-                                <label htmlFor="clientPhone" style={modalStyles.label}>Phone:</label>
-                                <input type="tel" name="clientPhone" id="clientPhone" value={formData.clientPhone} onChange={handleInputChange} style={modalStyles.input} />
-                            </div>
-                            <div style={modalStyles.formGroup}>
-                                <label htmlFor="clientAddress" style={modalStyles.label}>Address:</label>
-                                <textarea name="clientAddress" id="clientAddress" value={formData.clientAddress} onChange={handleInputChange} rows={3} style={modalStyles.textarea}></textarea>
-                            </div>
-                            <div style={modalStyles.formGroup}>
-                                <label htmlFor="defaultClientTerms" style={modalStyles.label}>Default Terms for this Client:</label>
-                                <textarea name="defaultClientTerms" id="defaultClientTerms" value={formData.defaultClientTerms} onChange={handleInputChange} rows={3} style={modalStyles.textarea}></textarea>
-                            </div>
-                            <div style={modalStyles.formGroup}>
-                                <label htmlFor="clientNotes" style={modalStyles.label}>Internal Notes:</label>
-                                <textarea name="clientNotes" id="clientNotes" value={formData.clientNotes} onChange={handleInputChange} rows={2} style={modalStyles.textarea}></textarea>
-                            </div>
-                            <div style={modalStyles.buttonGroup}>
-                                <button type="submit" disabled={isSaving} style={modalStyles.saveButton}>
-                                    {isSaving ? 'Saving...' : (editingClient ? 'Update Client' : 'Add Client')}
-                                </button>
-                                <button type="button" onClick={handleCloseModal} style={modalStyles.cancelButton} disabled={isSaving}>Cancel</button>
-                            </div>
-                        </form>
+                <div className={styles.modalOverlay} onClick={handleCloseModal}>
+                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                             <h2 className={styles.modalTitle}>{editingClient ? 'Edit Client' : 'Add New Client'}</h2>
+                        </div>
+                        <div className={styles.modalBody}>
+                             <form onSubmit={handleSubmitClient} id="client-form" className={styles.formContainer}>
+                                <div className="form-group">
+                                    <label htmlFor="clientName">Client Name*:</label>
+                                    <input type="text" name="clientName" id="clientName" value={formData.clientName} onChange={handleInputChange} required />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="clientContactPerson">Contact Person:</label>
+                                    <input type="text" name="clientContactPerson" id="clientContactPerson" value={formData.clientContactPerson} onChange={handleInputChange} />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="clientEmail">Email:</label>
+                                    <input type="email" name="clientEmail" id="clientEmail" value={formData.clientEmail} onChange={handleInputChange} />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="clientPhone">Phone:</label>
+                                    <input type="tel" name="clientPhone" id="clientPhone" value={formData.clientPhone} onChange={handleInputChange} />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="clientAddress">Address:</label>
+                                    <textarea name="clientAddress" id="clientAddress" value={formData.clientAddress} onChange={handleInputChange} rows={3}></textarea>
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="defaultClientTerms">Default Terms for this Client:</label>
+                                    <textarea name="defaultClientTerms" id="defaultClientTerms" value={formData.defaultClientTerms} onChange={handleInputChange} rows={3}></textarea>
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="clientNotes">Internal Notes:</label>
+                                    <textarea name="clientNotes" id="clientNotes" value={formData.clientNotes} onChange={handleInputChange} rows={2}></textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div className={styles.modalFooter}>
+                            <button type="button" onClick={handleCloseModal} className="btn btn-secondary" disabled={isSaving}>Cancel</button>
+                            <button type="submit" form="client-form" disabled={isSaving} className="btn btn-accent">
+                                {isSaving ? 'Saving...' : (editingClient ? 'Update Client' : 'Add Client')}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
-// Basic Styles - Consider moving to CSS Modules later
-const pageStyles: { [key: string]: React.CSSProperties } = {
-    container: { padding: '2rem', maxWidth: '1000px', margin: '0 auto' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-    heading: { color: '#333' },
-    addButton: { padding: '10px 15px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '1em' },
-    table: { width: '100%', borderCollapse: 'collapse', marginTop: '1rem' },
-    thead: { backgroundColor: '#f8f8f8' },
-    th: { padding: '12px 10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' },
-    tr: { borderBottom: '1px solid #eee' },
-    td: { padding: '10px', verticalAlign: 'middle' },
-    actionButton: { marginRight: '8px', padding: '6px 10px', fontSize: '0.9em', cursor: 'pointer', borderRadius: '4px', border: '1px solid #ccc' },
-    deleteButton: { backgroundColor: '#dc3545', color: 'white', borderColor: '#dc3545' },
-    backButton: {padding: '8px 15px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer'}
-};
-
-const modalStyles: { [key: string]: React.CSSProperties } = {
-    overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-    modal: { backgroundColor: 'white', padding: '25px', borderRadius: '8px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' },
-    modalTitle: { marginTop: 0, marginBottom: '20px', color: '#333' },
-    formGroup: { marginBottom: '15px' },
-    label: { display: 'block', marginBottom: '5px', fontWeight: '500', color: '#444' },
-    input: { width: '100%', padding: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' },
-    textarea: { width: '100%', padding: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px', minHeight: '70px' },
-    buttonGroup: { marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' },
-    saveButton: { padding: '10px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' },
-    cancelButton: { padding: '10px 15px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' },
-};
 
 export default MyClientsPage;

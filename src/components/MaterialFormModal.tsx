@@ -1,14 +1,17 @@
 // src/components/MaterialFormModal.tsx
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react'; // Added React import for clarity
 import { CustomMaterial, MaterialOption } from '../types';
 import { db } from '../config/firebaseConfig';
 import {
-    doc, addDoc, updateDoc, collection, getDocs, writeBatch,
+    doc, addDoc, updateDoc, collection, getDocs, getDoc, writeBatch, // <-- 'getDoc' is now included here
     serverTimestamp, query, orderBy, Timestamp, deleteField
 } from 'firebase/firestore';
-import styles from './MaterialFormModal.module.css'; // This CSS will now style the full modal
+import styles from './MaterialFormModal.module.css';
 import { v4 as uuidv4 } from 'uuid';
 import { formatCurrency } from '../utils/utils';
+
+// Using a self-contained modal structure now, so GenericFormModal is not needed
+// import GenericFormModal from './GenericFormModal'; 
 
 const COMMON_UNITS = [
     "item", "each", "unit", "set",
@@ -57,7 +60,7 @@ function MaterialFormModal({
     const [formError, setFormError] = useState<string | null>(null);
     const [optionsError, setOptionsError] = useState<string | null>(null);
 
-    // --- FIX FOR BODY SCROLL ---
+    // Effect for locking body scroll
     useEffect(() => {
         const originalOverflow = document.body.style.overflow;
         if (isOpen) {
@@ -93,7 +96,7 @@ function MaterialFormModal({
                 setOptionsAvailable(initialData?.optionsAvailable || false);
                 setDefaultRate(initialData?.defaultRate?.toString() || '');
                 setDefaultUnit(initialData?.defaultUnit || 'item');
-                setOptions([]); // Always start with empty options for a new material
+                setOptions([]);
             }
             // Reset option input form
             setCurrentOptionName('');
@@ -101,7 +104,7 @@ function MaterialFormModal({
             setCurrentOptionRateModifier('');
             setEditingOptionId(null);
         }
-    }, [isOpen, mode, initialData]); // Removed userId, fetchOptions will get it from context
+    }, [isOpen, mode, initialData]);
 
     const fetchOptions = async (materialId: string) => {
         if (!userId) return;
@@ -229,7 +232,7 @@ function MaterialFormModal({
 
             await batch.commit();
 
-            const savedMaterialSnap = await getDoc(materialDocRef);
+            const savedMaterialSnap = await getDoc(materialDocRef); // The line that was causing the error
             const savedMaterialData = savedMaterialSnap.exists() ? { id: savedMaterialSnap.id, ...savedMaterialSnap.data() } as CustomMaterial : null;
 
             onSaveCallback(savedMaterialData);
@@ -254,20 +257,20 @@ function MaterialFormModal({
 
                 <div className={styles.modalBody}>
                     <form onSubmit={handleSubmit} id="material-form" className={styles.formContainer}>
-                        {/* Material Name, Description, etc. */}
+                        {/* Form content */}
                         <div className="form-group">
                             <label htmlFor="materialFormNameInput">Material Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
-                            <input type="text" id="materialFormNameInput" value={name} onChange={(e) => setName(e.target.value)} required autoFocus placeholder="e.g., Plasterboard Screws"/>
+                            <input type="text" id="materialFormNameInput" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
                         </div>
 
                         <div className={styles.formRow}>
                             <div className="form-group">
                                 <label htmlFor="materialFormDefaultRate">Default Rate ($):</label>
-                                <input type="number" id="materialFormDefaultRate" value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} placeholder="e.g., 15.50" step="0.01" />
+                                <input type="number" id="materialFormDefaultRate" value={defaultRate} onChange={(e) => setDefaultRate(e.target.value)} step="0.01" />
                             </div>
                             <div className="form-group">
                                 <label htmlFor="materialFormDefaultUnit">Default Unit:</label>
-                                <input type="text" id="materialFormDefaultUnit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="e.g., each, m, kg" list="common-material-units-datalist-modal" />
+                                <input type="text" id="materialFormDefaultUnit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} list="common-material-units-datalist-modal" />
                                 <datalist id="common-material-units-datalist-modal">
                                     {COMMON_UNITS.map(unit => (<option key={unit} value={unit} />))}
                                 </datalist>
@@ -277,7 +280,7 @@ function MaterialFormModal({
                         <div className="form-group">
                             <label className={styles.checkboxLabel}>
                                 <input type="checkbox" checked={optionsAvailable} onChange={e => setOptionsAvailable(e.target.checked)} />
-                                Has Options (e.g., sizes, colors with rate modifiers)
+                                Has Options
                             </label>
                         </div>
                         
@@ -289,21 +292,21 @@ function MaterialFormModal({
                         {optionsAvailable && (
                             <div className={styles.optionsSection}>
                                 <h4 className={styles.optionsTitle}>Manage Options</h4>
-                                {isLoadingOptions && <p className="text-muted text-center">Loading options...</p>}
+                                {isLoadingOptions && <p className="text-muted text-center">Loading...</p>}
                                 {optionsError && <p className="text-danger text-center mt-sm">{optionsError}</p>}
                                 
                                 <div className={styles.optionInputRow}>
                                     <div className="form-group">
                                         <label htmlFor="optionFormName">Option Name<span style={{color: 'var(--color-error)'}}>*</span>:</label>
-                                        <input type="text" id="optionFormName" placeholder="E.g., Large" value={currentOptionName} onChange={(e) => setCurrentOptionName(e.target.value)} />
+                                        <input type="text" id="optionFormName" value={currentOptionName} onChange={(e) => setCurrentOptionName(e.target.value)} />
                                     </div>
                                     <div className="form-group">
-                                        <label htmlFor="optionFormDescription">Option Description:</label>
-                                        <input type="text" id="optionFormDescription" placeholder="E.g., 1200x600mm" value={currentOptionDescription} onChange={(e) => setCurrentOptionDescription(e.target.value)} />
+                                        <label htmlFor="optionFormDescription">Desc:</label>
+                                        <input type="text" id="optionFormDescription" value={currentOptionDescription} onChange={(e) => setCurrentOptionDescription(e.target.value)} />
                                     </div>
                                      <div className="form-group">
-                                        <label htmlFor="optionFormRateModifier">Rate Modifier ($):</label>
-                                        <input type="number" id="optionFormRateModifier" placeholder="e.g., 5 or -2.50" value={currentOptionRateModifier} onChange={(e) => setCurrentOptionRateModifier(e.target.value)} step="any" />
+                                        <label htmlFor="optionFormRateModifier">Rate Mod ($):</label>
+                                        <input type="number" id="optionFormRateModifier" value={currentOptionRateModifier} onChange={(e) => setCurrentOptionRateModifier(e.target.value)} step="any" />
                                     </div>
                                     <div className={styles.optionAddButtonContainer}>
                                         <button type="button" className="btn btn-primary btn-sm" onClick={handleAddOrUpdateOption} disabled={isSaving || !currentOptionName.trim()}>

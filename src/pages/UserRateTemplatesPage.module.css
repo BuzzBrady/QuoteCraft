@@ -1,0 +1,92 @@
+/* src/pages/UserRateTemplatesPage.module.css */
+
+.pageContainer {
+    padding: var(--space-lg, 1.5rem);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl, 2rem);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.pageTitle {
+    margin: 0;
+}
+
+.contentArea {
+    /* No background needed if list items are cards */
+}
+
+/* --- Rate List Styles (similar to Kit/Client lists) --- */
+.rateList {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: var(--space-md, 1rem);
+}
+
+.rateItem {
+    background-color: var(--background-color-sections, #3a3a3a);
+    padding: var(--space-lg, 1.5rem);
+    border-radius: var(--border-radius-md, 6px);
+    border: 1px solid var(--border-color, #444);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md, 1rem);
+}
+
+.rateDetails {
+    flex-grow: 1;
+    word-break: break-word;
+}
+
+.rateDetails strong {
+    color: var(--text-color-main, #fff);
+    font-weight: 600;
+    font-size: 1.1em;
+    display: block;
+    margin-bottom: var(--space-xs, 0.5rem);
+}
+
+.rateDetails span {
+    display: block;
+    font-size: 0.9em;
+    color: var(--text-color-muted, #ccc);
+}
+
+.rateValue {
+    font-weight: 500;
+    color: var(--text-color-light, #ddd);
+}
+
+.rateAssociation {
+    font-style: italic;
+    opacity: 0.8;
+    margin-top: var(--space-xs, 0.5rem);
+}
+
+.rateActions {
+    display: flex;
+    gap: var(--space-sm, 0.75rem);
+    flex-shrink: 0;
+}
+
+/* Fallback loading/error text styles */
+.loadingText, .errorText {
+    text-align: center;
+    padding: var(--space-xl, 2rem);
+    font-style: italic;
+    color: var(--text-color-muted, #ccc);
+}
+.errorText {
+    color: var(--color-error, red);
+    font-style: normal;
+    font-weight: 500;
+}
