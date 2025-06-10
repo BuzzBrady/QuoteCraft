@@ -1,120 +1,177 @@
-# QuoteCraft Component Backend Workflow
+# QuoteCraftv6 - UI/UX Enhancement Plan
 
-This document provides a detailed breakdown of the data flow, state management, and backend interactions for the major components in the QuoteCraft application.
+**Last Updated:** June 4, 2025 *(Reflecting AI Logic migration and GSAP integration)*
 
-**Last Updated:** June 10, 2025
+## 1. Overall UI/UX Goals
 
----
+* **Primary Objective 1:** Modernize the visual appearance for a clean, professional, and trustworthy feel.
+* **Primary Objective 2:** Improve ease of use for key workflows, especially quote creation and management, to enhance user efficiency.
+* **Primary Objective 3:** Ensure a responsive and accessible experience across common devices (desktop, tablet, mobile).
+* **Target User Persona(s):** Tradespeople, estimators, small to medium-sized businesses requiring an efficient quoting tool.
+* **Desired Look & Feel:** Intuitive, professional, fast, modern, reliable, and polished.
 
-## 1. Page-Level Components
+## 2. Foundational UI/UX Enhancements (Phase 1 - Immediate Focus)
 
-These components are the primary views rendered by the router. They are responsible for orchestrating the data flow for an entire page or a major feature.
+### 2.1. Color Scheme & Typography
+* **Current State:** Basic styling, mix of inline styles and CSS Modules.
+* **Desired Enhancements:**
+    * [ ] Define a consistent color palette.
+    * [ ] Standardize typography.
+    * [ ] Apply globally via `src/index.css` or CSS Variables.
+* **Action Items/Notes:**
+    * In progress / To be defined.
 
-### 1.1. `MyClientsPage.tsx`
+### 2.2. Basic Element Styling Consistency
+* **Current State:** Varies per component/module.
+* **Desired Enhancements:**
+    * [ ] Create consistent base styles for buttons, form inputs, modals, tables.
+* **Action Items/Notes:**
+    * Implement based on chosen color scheme and typography.
 
-* **Purpose:** Provides a full interface for a user to manage their client list.
-* **Data Fetching (Read):**
-    * The `fetchClients` function queries the `users/{userId}/clients` collection in Firestore.
-    * It uses `orderBy('clientName', 'asc')` to sort the results alphabetically.
-    * The fetched documents are stored in the `clients: Client[]` state variable.
-    * Manages `isLoading` and `error` states for the fetch operation.
-* **State Management:**
-    * `clients: Client[]`: Holds the list of clients displayed in the UI.
-    * `isLoading: boolean`: Tracks the loading state for fetching and deleting.
-    * `isModalOpen: boolean`: Controls the visibility of the Add/Edit Client modal.
-    * `editingClient: Client | null`: Stores the client object when in "edit" mode to populate the modal.
-    * `formData: ClientFormData`: Holds the state for the input fields within the modal.
-* **Data Manipulation (Writes):**
-    * **Add Client:** The `handleSubmitClient` function calls `addDoc` to create a new document in `users/{userId}/clients` with the data from the form. It includes `createdAt` and `updatedAt` server timestamps.
-    * **Update Client:** If `editingClient` is not null, `handleSubmitClient` calls `updateDoc` on the specific client document (`users/{userId}/clients/{clientId}`) to save the changes.
-    * **Delete Client:** The `handleDeleteClient` function calls `deleteDoc` on a specific client document after a user confirmation (`window.confirm`).
-    * **CSV Import:**
-        * The `handleFileChange` function uses the `papaparse` library to parse a user-uploaded CSV file.
-        * The `handleImportClients` function takes the parsed data and creates a Firestore `writeBatch`. It iterates through the records, creates a new document reference for each, and stages a `set` operation in the batch. Finally, it commits the batch to add all clients in a single atomic operation.
-* **Data Flow (Outputs):**
-    * After any add, update, delete, or import operation, the component calls `fetchClients()` again to refresh its `clients` state and update the UI.
-    * The modal is self-contained within this component, so it doesn't emit events to a parent.
+### 2.3. Core Usability & Layout Review (High-Impact Areas)
+* **Current State:** Significant improvements to `QuoteBuilder.tsx`. Other areas pending.
+* **Desired Enhancements:**
+    * [x] Review and simplify the layout of `QuoteBuilder.tsx` for better workflow. *(Implemented multi-step wizard with client-side AI and GSAP animations).*
+    * [ ] Improve table readability and actions on `ExistingQuotesPage.tsx`.
+    * [ ] Standardize loading state indicators (e.g., simple spinner for now, dedicated states for AI generation).
+    * [ ] Replace browser `alert()` with a consistent, non-blocking notification/toast system.
+* **Action Items/Notes:**
+    * `QuoteBuilder.tsx` overhaul is a major step forward.
 
-### 1.2. `ManageCustomItemsPage.tsx`
+### 2.4. Responsiveness Basics
+* **Current State:** Varies. `MainLayout.tsx` improved.
+* **Desired Enhancements:**
+    * [x] Ensure `Header.tsx` and `MainLayout.tsx` are responsive.
+    * [ ] Basic checks for key pages like `QuoteBuilder.tsx` (wizard steps) and `ExistingQuotesPage.tsx` on smaller screens.
+* **Action Items/Notes:**
+    * Ongoing.
 
-* **Purpose:** Acts as a container with tabs to switch between managing custom tasks and custom materials.
-* **Data Fetching (Read):** This component itself does not fetch data. It delegates the data fetching to its child components (`CustomTasksManager` and `CustomMaterialsManager`) based on which tab is active.
-* **State Management:**
-    * `activeTab: 'tasks' | 'materials'`: A simple state to control which of the two child components is visible.
-* **Data Manipulation (Writes):** None. All write operations are handled by the child manager components.
+### 2.5. Accessibility Basics
+* **Current State:** Minimal explicit implementation.
+* **Desired Enhancements:**
+    * [ ] Ensure semantic HTML where possible.
+    * [ ] Basic keyboard navigation checks for interactive elements (wizard navigation).
+    * [ ] Check for sufficient color contrast once the palette is defined.
+* **Action Items/Notes:**
+    * Incorporate during component styling and layout reviews.
 
-### 1.3. `KitCreatorPage.tsx`
+## 3. Animation with GSAP (Phased Integration)
 
-* **Purpose:** A comprehensive page for creating, viewing, and editing "Kit Templates" (pre-defined bundles of line items).
-* **Data Fetching (Read):**
-    * **Kits:** `fetchUserKits` queries `users/{userId}/kitTemplates` to display in the "My Kits" tab.
-    * **Supporting Data:** A main `useEffect` hook fetches all global/custom tasks, global/custom materials, and user rate templates using `Promise.all()`. This data is required by the item form selectors and for rate calculations. It is stored in `allTasks`, `allMaterials`, and `userRates` state.
-* **State Management:**
-    * `userKits: KitTemplate[]`: The list of the user's saved kits.
-    * `kitName`, `kitDescription`, `kitTags`: State for the main kit details form.
-    * `kitLineItems: KitLineItemTemplate[]`: An array holding the line items that are currently part of the kit being built or edited.
-    * `itemFormData: KitItemFormData`: A complex object holding the state for the "Add New Item to Kit" sub-form, including the selected task/material/option objects.
-    * `showItemForm: boolean`: Toggles the visibility of the "Add New Item to Kit" form.
-* **Data Manipulation (Writes):**
-    * **Save/Update Kit:** The `handleSaveKit` function saves the entire kit.
-        * If editing, it calls `updateDoc` on `users/{userId}/kitTemplates/{kitId}`.
-        * If adding, it calls `addDoc` to create a new document in the same collection.
-        * The `lineItems` array from the state is saved as an array of objects within the kit document.
-    * **Delete Kit:** `handleDeleteKit` calls `deleteDoc` on a specific kit document.
-    * **Quick Add Items:** The page can trigger modals (`QuickAddMaterialModal`) or prompts (`handleCreateCustomTaskForItemForm`) to create new tasks/materials, which then write to the `customTasks` or `customMaterials` collections respectively.
+### 3.1. Phase 1: No GSAP (Focus on UI/UX Foundation)
+* **Status:** Moved to Phase 2.
 
----
+### 3.2. Phase 2: Subtle & Enhancing GSAP Animations
+* **Status:** In Progress / Initial Implementation.
+* **Rationale:** Establish solid structure, styling, and core usability before introducing animations.
+* **Implemented:**
+    * [x] Smooth step transitions for `QuoteBuilder` wizard using GSAP.
+    * [x] Direction-aware animations for forward/backward navigation in the wizard.
+    * [x] Performance optimized: Hardware-accelerated transforms using GSAP.
+    * [x] Animation state management to prevent conflicts during transitions.
+* **Potential GSAP Uses (Core & ScrollTrigger for simple entrances):**
+    * [ ] Micro-interactions for buttons, form elements on hover/focus/click.
+    * [ ] Smooth animations for modal dialogs (open/close).
+    * [ ] Smooth enter/exit animations for list items (e.g., quote lines, items in management pages).
+    * [ ] Simple ScrollTrigger effects: fade-in elements as they enter the viewport on longer pages.
+* **Action Items/Notes:**
+    * `wizardTransition(currentStep, nextStep, 'forward', onComplete);` example implemented.
+    * Fine-tune animation timing and easing.
 
-## 2. Data Manager Components
+### 3.3. Phase 3: Advanced & "Delightful" GSAP Animations
+* **Trigger:** After the application is robust, Phase 2 animations are well-integrated.
+* **Goals:** Create more engaging user experiences.
+* **Potential GSAP Uses:** SplitText, MorphSVG, Advanced ScrollTrigger, Complex Timelines.
+* **Action Items/Notes:**
+    * Future consideration.
 
-These components are rendered within pages and manage the CRUD operations for a specific data type.
+## 4. Page-Specific UI/UX Enhancements
 
-### 2.1. `CustomTasksManager.tsx` & `CustomMaterialsManager.tsx`
+* **`QuoteBuilder.tsx`:**
+    * **Status:** Significantly Overhauled.
+    * **Implemented:**
+        * Guided 3-step wizard interface (Step 1: Client & Job, Step 2: Build Line Items, Step 3: Review & Finalize/Notes).
+        * Client-side AI text generation using Firebase AI Logic for "Project Description," "Additional Details," and "General Notes" in Step 3.
+        * GSAP animations for smooth, direction-aware step transitions.
+        * Simplified Step 1 focusing on core inputs.
+    * **Future Considerations:**
+        * Real-time quote total updates.
+        * Drag-and-drop for line items.
+        * Enhanced Kit selection/preview.
+        * Dedicated loading states and improved error display for AI generation.
+* **`ExistingQuotesPage.tsx`:** (e.g., search, filter, pagination, card view)
+* **`ProfileSettingsPage.tsx`:** (e.g., organization via tabs, tooltips)
+* **Data Management Pages (Clients, Kits, Custom Items):** (e.g., consistent tables, streamlined forms, search)
+* **`DashboardPage.tsx`:** (e.g., metrics, charts, actionable summaries)
 
-*(Their workflows are nearly identical, so they are documented together)*
+## 5. UI/UX for Future Features / Architectural Changes
 
-* **Purpose:** To display a list of a user's custom tasks or materials and provide the UI to trigger add, edit, and delete operations via modals.
-* **Data Fetching (Read):**
-    * `fetchTasks` / `fetchMaterials` queries the relevant user subcollection (`users/{userId}/customTasks` or `users/{userId}/customMaterials`).
-    * The results are stored in local state (`tasks` or `materials`).
-* **State Management:**
-    * `tasks: CustomTask[]` or `materials: CustomMaterial[]`: Holds the list of items.
-    * `isModalOpen: boolean` & `modalMode: 'add' | 'edit'`: Manages the state for the corresponding form modal.
-    * `currentTask` / `currentMaterial`: Holds the data for the item currently being edited.
-* **Data Manipulation (Writes):**
-    * **Add/Edit:** These components render a form modal (`TaskFormModal` or `MaterialFormModal`). The save logic is contained *within the modal component itself*. This manager simply provides a callback (`handleSaveTask` / `handleSaveFromEditModal`) that gets called by the modal after a successful save to trigger a re-fetch of the data list.
-    * **Delete:** The delete handlers (`handleDeleteTask` / `handleDeleteMaterial`) call `deleteDoc` on the specific item document. `handleDeleteMaterial` also includes logic to perform a `writeBatch` to delete the `options` subcollection if it exists.
-* **Data Flow (Outputs):**
-    * Passes an `onSave` callback to its modal. When the modal saves successfully, it calls this function, which triggers `fetchTasks`/`fetchMaterials` to update the list displayed on the page.
+* **AI Content Generation (Client-Side with Firebase AI Logic):**
+    * **Status:** Implemented - Major Overhaul.
+    * **Details:**
+        * Migrated from a server-side Cloud Function (`generateQuoteText`) to direct client-side integration using `firebase/ai` (`getAI`, `getGenerativeModel` with `GoogleAIBackend` and "gemini-2.0-flash" model).
+        * **Removed:** `generateQuoteText` Cloud Function.
+        * **Benefits Achieved:** Faster AI responses, simplified backend architecture, reduced server load, potential cost optimization.
+        * **New Capabilities:** Smart project descriptions, intelligent additional details, client-friendly notes with cleaner output due to advanced prompt engineering.
+    * **Configuration:** Requires Firebase AI Logic enabled in the console and Gemini Developer API configured.
+    * **Immediate Next Steps:** Add loading states for AI generation, implement AI response caching.
+    * **Future:** AI-powered line item suggestions, smart quote templates.
 
----
+* **Cloud Functions:**
+    * **Streamlined:** Now focused solely on PDF generation (`generateQuotePdf`).
+    * **Optimized:** Reduced complexity and deployment size due to removal of AI logic.
 
-## 3. Modal & Form Components
+## 6. Tooling & Process
 
-These components are responsible for user input and data creation/updates.
+* **Design Tools (Optional):** Figma.
+* **Component Library/Framework Choice:** Continue with CSS Modules, CSS Variables.
+* **Key Dependencies Added/Updated:**
+    * `firebase`: "latest" (for Firebase AI Logic support).
+    * `gsap`: "^3.12.2" (for animations).
+* **Testing Strategy for UI/UX:** Manual testing, gather user feedback. Test AI generation and animations.
 
-### 3.1. `TaskFormModal.tsx` / `MaterialFormModal.tsx` / `RateTemplateFormModal.tsx`
+## 7. Prioritization & Roadmap (Simplified for Initial Focus)
 
-*(These all follow a similar pattern)*
+* **Phase 1 - Recently Completed/In Progress:**
+    * [x] **Major Overhaul of `QuoteBuilder.tsx`:** Implemented wizard flow, client-side AI, GSAP animations.
+    * [x] **AI Integration Overhaul:** Migrated AI to Firebase AI Logic (client-side).
+    * [x] **Cloud Function Cleanup:** Removed `generateQuoteText` function.
+    * [ ] Define and apply a new color scheme globally.
+    * [ ] Define and apply basic global typography.
+    * [ ] Implement a non-blocking notification system (toasts).
+    * [ ] Fine-tune animation timing and easing for wizard.
+    * [ ] Add loading states for AI generation.
+    * [ ] Implement AI response caching.
+* **Phase 2 - Next Steps:**
+    * [ ] Deeper UI/UX enhancements for `QuoteBuilder.tsx` (e.g., kit preview).
+    * [ ] UI/UX enhancements for `ExistingQuotesPage.tsx`.
+    * [ ] Comprehensive responsiveness pass.
+    * [ ] Add keyboard shortcuts for wizard navigation.
+* **Phase 3 - Future Polish:**
+    * [ ] Advanced GSAP animations.
+    * [ ] UI/UX enhancements for other pages.
+    * [ ] Deeper accessibility audit.
+    * [ ] AI-powered line item suggestions & smart quote templates.
 
-* **Purpose:** Provide a self-contained UI in a modal dialog for adding or editing a single data entity (a Task, Material, or Rate Template).
-* **Data Flow (Inputs):**
-    * `isOpen: boolean`: Controls visibility.
-    * `onClose: () => void`: A function from the parent to close the modal.
-    * `onSave: (data: any) => Promise<void>`: A callback function from the parent that is responsible for the actual Firestore write operation. The modal collects the data and passes it to this function.
-    * `initialData`: The object to edit, used to pre-populate the form fields when in 'edit' mode.
-    * `mode: 'add' | 'edit'`: Tells the modal which mode it's in.
-    * `allTasks`, `allMaterials` (for `RateTemplateFormModal`): Data passed from the parent to populate selectors, avoiding redundant fetches.
-* **Data Fetching (Read):**
-    * Generally, these modals **do not fetch their own data**. They receive it via props (`allTasks`, `allMaterials`, `initialData`).
-    * An exception is `MaterialFormModal`, which fetches the `options` subcollection for a material when in 'edit' mode.
-* **State Management:**
-    * Each modal has its own internal state for every form field (e.g., `useState` for `name`, `description`, `rate`, etc.).
-    * `isSaving`: A boolean to disable the save button during a Firestore operation.
-* **Data Manipulation (Writes):**
-    * The `handleSubmit` function in each modal gathers the data from its internal form state into a single object.
-    * It then calls the `onSave` prop, passing this data object up to the parent component (`CustomTasksManager`, `UserRateTemplatesPage`, etc.), which then performs the actual `addDoc` or `updateDoc` to Firestore.
-    * *Correction/Refinement:* In some of our final versions, we moved the save logic *inside* the modal's `handleSubmit` to make the component more self-contained. In this case, the `onSaveCallback` prop from the parent is just used to signal a successful save so the parent can refresh its data.
-* **UI/UX:**
-    * Each modal now contains a `useEffect` to set `document.body.style.overflow = 'hidden'` when it opens, preventing the page behind it from scrolling.
-    * Their corresponding CSS Modules are configured to allow the modal's internal content area (`.modalBody`) to scroll if it becomes too long.
+## 8. Documentation Updates (New Section)
+
+* **New Guides Added/To Be Added:**
+    * [x] Firebase AI Logic setup and configuration.
+    * [x] GSAP animation implementation patterns (`animations.ts`).
+    * [x] Quote wizard best practices.
+    * [x] AI prompt engineering guidelines (for client-side implementation).
+* **Developer Resources Updated:**
+    * [x] TypeScript patterns for Firebase AI Logic.
+    * [x] Animation performance optimization notes.
+    * [x] Error handling strategies for client-side AI features.
+    * [x] Testing approaches for animated components.
+
+## 9. Migration Notes (For this Update)
+
+* **If upgrading from a version pre-dating client-side AI & GSAP:**
+    * **Update Firebase SDK:** Run `npm install firebase@latest` (or yarn equivalent).
+    * **Enable Firebase AI Logic:** Configure in the Firebase console as per the new setup guide.
+    * **Remove Old Cloud Function:** The `generateQuoteText` Cloud Function is deprecated and should be removed from `functions/src/index.ts` and your Firebase project (`firebase functions:delete generateQuoteText --region your-region`).
+    * **Update Dependencies:** Add GSAP: `npm install gsap@latest` (or yarn).
+    * **Refactor `QuoteBuilder.tsx`:** Adapt to use the new client-side `firebase/ai` calls for text generation and integrate GSAP animation calls (e.g., `wizardTransition`).
+    * **Review `firebaseConfig.ts`:** Ensure it's compatible with latest Firebase SDK and AI Logic initialization.
+    
