@@ -1,119 +1,75 @@
 // src/components/Step1_QuoteClientDetails.tsx
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Client } from '../types'; //
-import styles from './QuoteBuilder.module.css'; //
 
-interface Step1Props {
-    jobTitle: string;
-    setJobTitle: (value: string) => void;
-    selectedClientId: string;
-    setSelectedClientId: (value: string) => void;
-    clients: Client[];
-    isLoadingClients: boolean;
-    validUntilDate: Date | null;
-    setValidUntilDate: (date: Date | null) => void;
+import React from 'react'; // FIX: Import React for forwardRef
+import { useQuoteBuilderStore } from '../stores/useQuoteBuilderStore';
+import { useUserCollection } from '../hooks/useUserCollection';
+import { Client } from '../types';
+import styles from './QuoteBuilder.module.css';
 
-    // Add these props to receive client details from QuoteBuilder
-    clientNameDisplay: string;
-    clientAddressDisplay: string;
-    clientEmailDisplay: string;
-    clientPhoneDisplay: string;
-}
+// FIX: Wrap the component in React.forwardRef
+const Step1_QuoteClientDetails = React.forwardRef<HTMLDivElement>((_props, ref) => {
+    const { quote, updateQuoteHeader } = useQuoteBuilderStore();
+    const { data: clients, isLoading: clientsLoading } = useUserCollection<Client>('clients', 'clientName');
 
-const Step1_QuoteClientDetails: React.FC<Step1Props> = ({
-    jobTitle, setJobTitle,
-    selectedClientId, setSelectedClientId,
-    clients, isLoadingClients,
-    validUntilDate, setValidUntilDate,
-    clientNameDisplay, clientAddressDisplay, clientEmailDisplay, clientPhoneDisplay, // Destructure new props
-}) => {
-    const navigate = useNavigate();
-
-    const handleAddNewClient = () => {
-        navigate('/my-clients'); // Navigates to the client management page
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        updateQuoteHeader({ [e.target.name]: e.target.value });
     };
 
-    const handleEditClient = () => {
-        if (selectedClientId) {
-            // Option 1: Navigate to MyClientsPage, user finds the client.
-            navigate('/my-clients');
-            // Option 2 (More advanced): Navigate to a specific edit route or pass state
-            // navigate(`/my-clients/edit/${selectedClientId}`); // Requires MyClientsPage to handle this
-            // Or, even better (but more complex), open an edit modal here.
+    const handleClientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedClient = clients.find(c => c.id === e.target.value);
+        if (selectedClient) {
+            updateQuoteHeader({
+                clientId: selectedClient.id,
+                clientName: selectedClient.clientName,
+                clientAddress: selectedClient.clientAddress,
+            });
+        } else {
+             updateQuoteHeader({ clientId: '', clientName: '', clientAddress: '' });
         }
     };
-
+    
+    // FIX: Attach the forwarded ref to the root div
     return (
-        <div className={styles.wizardStep}>
-            <h3 className="mb-md">Job & Client Selection</h3>
-            <div className={styles.headerSection}>
-                <div className={styles.headerInputGroup}>
-                    <label htmlFor="jobTitle">Job Title:*</label>
-                    <input id="jobTitle" type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} required />
+        <div ref={ref} className={styles.wizardStep}>
+            <div className={styles.wizardContent}>
+                            <h3>Client & Job Details</h3>
+            <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                    <label htmlFor="jobTitle">Job Title</label>
+                    <input id="jobTitle" type="text" name="jobTitle" value={quote.jobTitle || ''} onChange={handleFieldChange} />
                 </div>
 
-                <div className={styles.headerInputGroup}>
-                    <label htmlFor="clientSelector">Select Client:*</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <select
-                            id="clientSelector"
-                            value={selectedClientId}
-                            onChange={(e) => setSelectedClientId(e.target.value)}
-                            disabled={isLoadingClients}
-                            required
-                            style={{ flexGrow: 1 }}
-                        >
-                            <option value="">-- Select Existing Client --</option>
-                            {clients.map(client => (
-                                <option key={client.id} value={client.id}>
-                                    {client.clientName}{client.clientEmail ? ` (${client.clientEmail})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            type="button"
-                            onClick={handleAddNewClient}
-                            className="btn btn-secondary btn-sm"
-                            title="Go to My Clients page to add a new client"
-                        >
-                            + Add New Client
-                        </button>
-                    </div>
-                    {isLoadingClients && <small className="d-block mt-sm"> Loading clients...</small>}
-                    {!selectedClientId && <p className="text-warning text-sm mt-sm">Client selection is required.</p>}
+                <div className={styles.formGroup}>
+                    <label htmlFor="client-select">Select Existing Client</label>
+                    <select id="client-select" onChange={handleClientSelect} value={quote.clientId || ''} disabled={clientsLoading}>
+                        <option value="">-- New Client --</option>
+                        {clients.map(c => <option key={c.id} value={c.id}>{c.clientName}</option>)}
+                    </select>
+                </div>
+                
+                <div className={styles.formGroup}>
+                    <label htmlFor="clientName">Client Name</label>
+                    <input id="clientName" type="text" name="clientName" value={quote.clientName || ''} onChange={handleFieldChange} />
+                </div>
+                
+                <div className={styles.formGroup}>
+                    <label htmlFor="clientAddress">Client Address</label>
+                    <textarea id="clientAddress" name="clientAddress" value={quote.clientAddress || ''} onChange={handleFieldChange}></textarea>
                 </div>
 
-                {/* Display Selected Client Details */}
-                {selectedClientId && (
-                    <div className={styles.selectedClientDetailsContainer}> {/* New container for styling */}
-                        <div className={styles.clientDetailItem}><strong>Name:</strong> {clientNameDisplay || "N/A"}</div>
-                        <div className={styles.clientDetailItem}><strong>Email:</strong> {clientEmailDisplay || "N/A"}</div>
-                        <div className={styles.clientDetailItem}><strong>Phone:</strong> {clientPhoneDisplay || "N/A"}</div>
-                        <div className={`${styles.clientDetailItem} ${styles.clientDetailAddress}`}><strong>Address:</strong> {clientAddressDisplay || "N/A"}</div>
-                        <button
-                            type="button"
-                            onClick={handleEditClient}
-                            className={`btn btn-outline-secondary btn-sm ${styles.editClientButton}`} // btn-outline-secondary or similar
-                            title="Edit selected client details (opens My Clients page)"
-                        >
-                            Edit Client
-                        </button>
-                    </div>
-                )}
-
-                <div className={styles.headerInputGroup}>
-                    <label htmlFor="validUntilDate">Quote Valid Until:</label>
-                    <input
-                        id="validUntilDate"
-                        type="date"
-                        value={validUntilDate ? validUntilDate.toISOString().split('T')[0] : ''}
-                        onChange={(e) => setValidUntilDate(e.target.value ? new Date(e.target.value) : null)}
-                    />
+                <div className={styles.formGroup}>
+                    <label htmlFor="clientEmail">Client Email</label>
+                    <input id="clientEmail" type="email" name="clientEmail" value={quote.clientEmail || ''} onChange={handleFieldChange} />
                 </div>
+
+                <div className={styles.formGroup}>
+                    <label htmlFor="clientPhone">Client Phone</label>
+                    <input id="clientPhone" type="tel" name="clientPhone" value={quote.clientPhone || ''} onChange={handleFieldChange} />
+                </div>
+            </div>
             </div>
         </div>
     );
-};
+});
 
 export default Step1_QuoteClientDetails;

@@ -1,56 +1,57 @@
 // src/components/QuoteLineItemDisplay.tsx
-import React, { useRef } from 'react';
-import { useGSAP } from '@gsap/react';
-import { QuoteLine } from '../types';
-import { formatCurrency } from '../utils/utils';
-import styles from './QuoteLineItemDisplay.module.css'; // Assuming you have or will create this
-import { animateListItemIn, animateListItemOut } from '../utils/animations';
+
+import React, { useMemo } from 'react';
+import { useQuoteBuilderStore } from '../stores/useQuoteBuilderStore';
+import { groupLinesBySection, formatCurrency } from '../utils/utils';
+import styles from './QuoteLineItemDisplay.module.css';
 
 interface QuoteLineItemDisplayProps {
-    item: QuoteLine;
-    onDelete: (id: string) => void;
-    onEdit: (id: string) => void;
-    // isNewlyAdded?: boolean; // Optional: Could be used for more specific "add" animation triggers
+  readOnly?: boolean;
+  onEdit?: (lineId: string) => void; // Optional edit handler
 }
 
-const QuoteLineItemDisplay: React.FC<QuoteLineItemDisplayProps> = ({ item, onDelete, onEdit }) => {
-    const lineItemRef = useRef<HTMLLIElement>(null);
+const QuoteLineItemDisplay: React.FC<QuoteLineItemDisplayProps> = ({ readOnly = false, onEdit }) => {
+    const { lines, removeLine } = useQuoteBuilderStore();
 
-    // Animate in on mount
-    useGSAP(() => {
-        if (lineItemRef.current) {
-            animateListItemIn(lineItemRef.current);
-        }
-    }, { scope: lineItemRef }); // Scope to the item itself for cleanup
+    const groupedLines = useMemo(() => groupLinesBySection(lines), [lines]);
+    const sortedSectionNames = useMemo(() => Object.keys(groupedLines).sort(), [groupedLines]);
 
-    const handleDelete = () => {
-        if (lineItemRef.current) {
-            animateListItemOut(lineItemRef.current, () => onDelete(item.id));
-        } else {
-            onDelete(item.id); // Fallback
+    const handleDelete = (lineId: string) => {
+        if (window.confirm('Are you sure you want to remove this item?')) {
+            removeLine(lineId);
         }
     };
 
     return (
-        <li ref={lineItemRef} className={styles.quoteLineItem} style={{ opacity: 0 }}> {/* Start hidden */}
-            <div className={styles.itemDetails}>
-                <span className={styles.itemName}>{item.displayName}</span>
-                {item.description && <small className={styles.itemDescription}>{item.description}</small>}
-            </div>
-            <div className={styles.itemPricing}>
-                <span>
-                    {item.inputType === 'price'
-                        ? formatCurrency(item.price)
-                        : `${item.quantity || 1} x ${formatCurrency(item.referenceRate)}`}
-                    {item.unit && item.inputType === 'quantity' && ` / ${item.unit}`}
-                </span>
-                <strong className={styles.itemTotal}>{formatCurrency(item.lineTotal)}</strong>
-            </div>
-            <div className={styles.itemActions}>
-                <button onClick={() => onEdit(item.id)} className="btn btn-secondary btn-sm">Edit</button>
-                <button onClick={handleDelete} className="btn btn-danger btn-sm">Delete</button>
-            </div>
-        </li>
+        <div className={styles.lineItemDisplay}>
+            {sortedSectionNames.map(sectionName => (
+                <div key={sectionName} className={styles.section}>
+                    <h4 className={styles.sectionHeader}>{sectionName}</h4>
+                    {groupedLines[sectionName].map(line => (
+                        <div key={line.id} className={styles.lineItem}>
+                            <div className={styles.lineItemDetails}>
+                                <span className={styles.displayName}>{line.displayName}</span>
+                                {line.description && <p className={styles.description}>{line.description}</p>}
+                                <div className={styles.meta}>
+                                    {line.quantity && <span>Qty: {line.quantity}</span>}
+                                    {line.unit && <span>Unit: {line.unit}</span>}
+                                    {line.price && <span>Price: {formatCurrency(line.price)}</span>}
+                                </div>
+                            </div>
+                            <div className={styles.lineItemRight}>
+                                <span className={styles.lineTotal}>{formatCurrency(line.lineTotal)}</span>
+                                {!readOnly && (
+                                    <div className={styles.actions}>
+                                        {onEdit && <button onClick={() => onEdit(line.id)}>Edit</button>}
+                                        <button onClick={() => handleDelete(line.id)} className={styles.deleteButton}>X</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
     );
 };
 

@@ -1,116 +1,73 @@
-// src/App.tsx
-// -------------
-// Main application component with routing setup.
-// Uses MainLayout for protected routes to include the Header.
-// Added route for MyClientsPage and KitCreatorPage.
 
-import 'react';
-import {
-    BrowserRouter as Router,
-    Routes,
-    Route,
-    Navigate,
-    Outlet,
-    useParams,
-    Link
-} from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext'; // Adjust path if needed
+import React, { JSX } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-// Page & Component Imports (Ensure paths are correct)
-import LoginPage from './components/LoginPage'; // Assuming LoginPage is in components
+// Import Pages and Components
+import LoginPage from './components/LoginPage';
+import MainLayout from './components/MainLayout';
 import DashboardPage from './pages/DashboardPage';
-import QuoteBuilder from './components/QuoteBuilder'; // Assuming QuoteBuilder is in components
-import ExistingQuotesPage from './pages/ExistingQuotesPage';
+import MyClientsPage from './pages/MyClientsPage';
 import ManageCustomItemsPage from './pages/ManageCustomItemsPage';
+import KitCreatorPage from './pages/KitCreatorPage';
+import ExistingQuotesPage from './pages/ExistingQuotesPage';
+import QuoteBuilder from './components/QuoteBuilder';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
-import MainLayout from './components/MainLayout'; // Your layout component
-import MyClientsPage from './pages/MyClientsPage'; 
-import KitCreatorPage from './pages/KitCreatorPage'; // <-- IMPORT YOUR NEW KIT CREATOR PAGE
 import UserRateTemplatesPage from './pages/UserRateTemplatesPage';
-import './index.css'; // Global styles
 
-// --- Authentication Route Guards ---
+// A wrapper to protect routes that require authentication
+const RequireAuth: React.FC<{ children: JSX.Element }> = ({ children }) => {
+  const { currentUser, loadingAuthState } = useAuth();
 
-// Protected Route Component: Requires login
-function ProtectedRoute() {
-    const { currentUser, loadingAuthState } = useAuth(); 
-    if (loadingAuthState) {
-        return <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.2em' }}>Authenticating...</div>;
-    }
-    return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
-}
+  if (loadingAuthState) {
+    return <div>Loading session...</div>; // Or a splash screen
+  }
 
-// Public Route Component: For login/signup, redirects if already logged in
-function PublicRoute() {
-     const { currentUser, loadingAuthState } = useAuth(); 
-     if (loadingAuthState) {
-        return <div style={{ padding: '2rem', textAlign: 'center', fontSize: '1.2em' }}>Authenticating...</div>;
-     }
-     return !currentUser ? <Outlet /> : <Navigate to="/dashboard" replace />;
-}
+  if (!currentUser) {
+    // Redirect them to the /login page, but save the current location they were
+    // trying to go to. This allows us to send them back there after they log in.
+    return <Navigate to="/login" replace />;
+  }
 
-// --- Main App Component ---
+  return children;
+};
+
 function App() {
-    return (
-        <Router>
-            <AuthProvider> {/* AuthProvider wraps all routes */}
-                <Routes>
-                    {/* Public routes */}
-                    <Route element={<PublicRoute />}>
-                        <Route path="/login" element={<LoginPage />} />
-                        {/* Add your SignUpPage route here if you have one */}
-                        {/* <Route path="/signup" element={<SignUpPage />} /> */}
-                    </Route>
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Route */}
+          <Route path="/login" element={<LoginPage />} />
 
-                    {/* Protected routes (rendered within MainLayout) */}
-                    <Route element={<ProtectedRoute />}>
-                        <Route element={<MainLayout />}>
-                            <Route path="/dashboard" element={<DashboardPage />} />
-                            <Route path="/existing-quotes" element={<ExistingQuotesPage />} />
-                            <Route path="/quote-builder" element={<QuoteBuilder />} />
-                            <Route path="/quote-builder/:quoteId" element={<QuoteBuilderWrapper />} />
-                            <Route path="/my-items" element={<ManageCustomItemsPage />} />
-                            <Route path="/profile" element={<ProfileSettingsPage />} />
-                            <Route path="/my-clients" element={<MyClientsPage />} />
-                            <Route path="/my-rates" element={<UserRateTemplatesPage />} />
-
-                            
-                            {/* --- NEW ROUTE FOR KIT CREATOR --- */}
-                            <Route path="/kit-creator" element={<KitCreatorPage />} />
-                            {/* --- END NEW ROUTE --- */}
-
-                            {/* Default protected route */}
-                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        </Route>
-                    </Route>
-
-                    {/* Catch-all 404 Not Found route */}
-                    <Route path="*" element={<Error404Page />} />
-                </Routes>
-            </AuthProvider>
-        </Router>
-    );
-}
-
-// Helper component for 404 page to safely use useAuth
-function Error404Page() {
-    const { currentUser } = useAuth(); 
-    return (
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <h2>404 - Page Not Found</h2>
-            <p>Sorry, the page you requested does not exist.</p>
-            <Link to={currentUser ? "/dashboard" : "/login"}>
-                {currentUser ? "Go to Dashboard" : "Go to Login"}
-            </Link>
-        </div>
-    );
-}
-
-// --- Wrapper Component for QuoteBuilder Edit Route ---
-// This allows passing the quoteId param to your QuoteBuilder component
-function QuoteBuilderWrapper() {
-    const { quoteId } = useParams<{ quoteId: string }>();
-    return <QuoteBuilder existingQuoteId={quoteId} />;
+          {/* Protected Routes Layout */}
+          <Route 
+            path="/" 
+            element={
+              <RequireAuth>
+                <MainLayout />
+              </RequireAuth>
+            }
+          >
+            {/* Nested routes will render inside MainLayout's <Outlet /> */}
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="quotes" element={<ExistingQuotesPage />} />
+            <Route path="quotes/new" element={<QuoteBuilder />} />
+            <Route path="quotes/edit/:quoteId" element={<QuoteBuilder />} />
+            <Route path="clients" element={<MyClientsPage />} />
+            <Route path="library/custom" element={<ManageCustomItemsPage />} />
+            <Route path="library/kits" element={<KitCreatorPage />} />
+            <Route path="library/rates" element={<UserRateTemplatesPage />} />
+            <Route path="settings/profile" element={<ProfileSettingsPage />} />
+            
+            {/* Add a catch-all for any other nested routes, or a 404 component */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
 }
 
 export default App;

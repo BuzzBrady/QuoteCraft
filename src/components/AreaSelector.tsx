@@ -1,32 +1,31 @@
 // src/components/AreaSelector.tsx
-// -------------
 // Component using react-select/creatable to allow selecting a single predefined area
-import styles from './AreaSelector.module.css';
 // or creating a new custom section name.
 
-import React from 'react'; // React is needed for JSX even if not explicitly used
+import { useMemo } from 'react';
+import { Area } from '../types';
 import CreatableSelect from 'react-select/creatable';
-import { ActionMeta, OnChangeValue, StylesConfig } from 'react-select'; // Added StylesConfig
-import { Area } from '../types'; // Import the Area type
+import { OnChangeValue, StylesConfig } from 'react-select';
+import { useDataStore } from '../stores/useDataStore';
+import styles from './AreaSelector.module.css';
 
 // Define the structure for react-select options
-interface OptionType {
-  label: string; // Text displayed to the user (Area name)
-  value: string; // Internal value (Area name)
-  __isNew__?: boolean; // Flag added by CreatableSelect for new options
+interface AreaOptionType {
+  label: string;
+  value: string;
+  originalArea?: Area; // Make originalArea optional for newly created options
 }
 
 // Define the props the component accepts
 interface AreaSelectorProps {
-  globalAreas: Area[]; // The list of predefined areas fetched from Firestore
-  activeSection: string; // The currently active section name (string)
-  onChange: (selectedSectionName: string) => void; // Callback to update the parent state
+  activeSection: string;
+  onChange: (selectedSectionName: string) => void;
   placeholder?: string;
-  isLoading?: boolean; // Optional loading state from parent
+  className?: string; // Allow parent to pass a custom class
 }
 
-// Custom styles for react-select using CSS variables from index.css
-const customStyles: StylesConfig<OptionType, false> = {
+// FIX 1: Use the correctly defined 'AreaOptionType' in the StylesConfig generic.
+const customStyles: StylesConfig<AreaOptionType, false> = {
   control: (base, state) => ({
     ...base,
     backgroundColor: 'var(--background-color-sections)',
@@ -65,80 +64,49 @@ const customStyles: StylesConfig<OptionType, false> = {
       color: 'var(--theme-accent-bright-blue)',
     },
   }),
-  // SingleValue style for the selected item in the control
-  singleValue: (base) => ({
-    ...base,
-    color: 'var(--text-color-main)',
-    marginLeft: '2px', // Default values, adjust as needed
-    marginRight: '2px',
-  }),
-  placeholder: (base) => ({
-    ...base,
-    color: 'var(--text-color-muted)',
-    marginLeft: '2px',
-    marginRight: '2px',
-  }),
-  input: (base) => ({
-    ...base,
-    color: 'var(--text-color-main)',
-    margin: '0px',
-    paddingTop: '0px',
-    paddingBottom: '0px',
-  }),
-  indicatorSeparator: (base) => ({
-    ...base,
-    backgroundColor: 'var(--border-color-input)',
-    marginTop: 'var(--space-xs)',
-    marginBottom: 'var(--space-xs)',
-  }),
-  dropdownIndicator: (base) => ({
-    ...base,
-    padding: 'var(--space-xs)',
-    color: 'var(--text-color-muted)',
-    '&:hover': {
-      color: 'var(--theme-primary-light-blue)',
-    }
-  }),
-  clearIndicator: (base) => ({
-    ...base,
-    color: 'var(--text-color-muted)',
-    padding: 'var(--space-xs)',
-    '&:hover': {
-      color: 'var(--theme-accent-bright-blue)',
-    }
-  }),
-  // Add styles for createable input part if needed, though often covered by input and control
+  singleValue: (base) => ({ ...base, color: 'var(--text-color-main)' }),
+  placeholder: (base) => ({ ...base, color: 'var(--text-color-muted)' }),
+  input: (base) => ({ ...base, color: 'var(--text-color-main)', margin: '0px' }),
+  indicatorSeparator: (base) => ({ ...base, backgroundColor: 'var(--border-color-input)', marginTop: 'var(--space-xs)', marginBottom: 'var(--space-xs)' }),
+  dropdownIndicator: (base) => ({ ...base, padding: 'var(--space-xs)', color: 'var(--text-color-muted)', '&:hover': { color: 'var(--theme-primary-light-blue)' } }),
+  clearIndicator: (base) => ({ ...base, padding: 'var(--space-xs)', color: 'var(--text-color-muted)', '&:hover': { color: 'var(--theme-accent-bright-blue)' } }),
 }; 
 
 function AreaSelector({
-  globalAreas,
   activeSection,
   onChange,
   placeholder = "Select or type Section/Area...",
-  isLoading = false
+  className = ''
 }: AreaSelectorProps) {
-
-  const areaOptions: OptionType[] = globalAreas.map(area => ({
-    label: area.name,
-    value: area.name,
+  const { allAreas, isLoading } = useDataStore((state) => ({
+    allAreas: state.allAreas,
+    isLoading: state.isLoading,
   }));
 
-  const currentValue: OptionType | null = activeSection
-    ? { label: activeSection, value: activeSection }
-    : null;
+  const areaOptions: AreaOptionType[] = useMemo(() => {
+    return (allAreas || []).map(area => ({
+      label: area.name,
+      value: area.name,
+      originalArea: area
+    }));
+  }, [allAreas]);
 
-  const handleChange = (
-    newValue: OnChangeValue<OptionType, false>
-  ) => {
-    if (newValue) {
-        onChange(newValue.value);
-    } else {
-        onChange(''); 
-    }
+  // FIX 2: Find the full option object from our list instead of creating an incomplete one.
+  // This ensures the value passed to the Select component is a valid AreaOptionType.
+  const currentValue = areaOptions.find(opt => opt.value === activeSection) || null;
+
+  // FIX 3: Use the correctly defined 'AreaOptionType' in the OnChangeValue generic.
+  const handleChange = (newValue: OnChangeValue<AreaOptionType, false>) => {
+    // If the user selects the "Create..." option, newValue will have a __isNew__ property.
+    // If they select an existing option, it will be a full AreaOptionType.
+    // In either case, we just want to pass the string value up to the parent.
+    onChange(newValue ? newValue.value : '');
   };
 
+  const containerClasses = `${styles.areaSelectorContainer} ${className}`.trim();
+
   return (
-    <div className={styles.areaSelectorContainer}> {/* Updated className */}
+    <div className={containerClasses}>
       <CreatableSelect
         isClearable
         options={areaOptions}
@@ -148,8 +116,7 @@ function AreaSelector({
         isDisabled={isLoading}
         isLoading={isLoading}
         formatCreateLabel={(inputValue) => `Use custom section: "${inputValue}"`}
-        styles={customStyles} // Added styles prop
-        // classNamePrefix removed
+        styles={customStyles}
       />
     </div>
   );

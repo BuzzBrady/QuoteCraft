@@ -1,41 +1,31 @@
 // src/components/StickyQuoteProgressBar.tsx
 import React from 'react';
-import styles from './StickyQuoteProgressBar.module.css'; // Create this CSS module
-import { formatCurrency } from '../utils/utils'; //
+import styles from './StickyQuoteProgressBar.module.css';
+import { formatCurrency } from '../utils/utils';
+import { useQuoteBuilderStore } from '../stores/useQuoteBuilderStore'; // 1. Import the store
 
 interface StickyQuoteProgressBarProps {
+    // 2. The props list is now much smaller
     currentStep: number;
     totalSteps: number;
-    activeSection?: string; // Optional, most relevant for step 2
-    quoteTotal: number;
     onNext: () => void;
     onPrevious: () => void;
     onSave: () => void;
     isSaveDisabled: boolean;
-    isLoading: boolean;
-    // To show item being configured (relevant for step 2)
-    configuredItemPreview?: {
-        taskName?: string | null;
-        materialName?: string | null;
-        optionName?: string | null;
-        quantity?: number | null;
-        rate?: number | null;
-        unit?: string | null;
-    } | null;
 }
 
 const StickyQuoteProgressBar: React.FC<StickyQuoteProgressBarProps> = ({
     currentStep,
     totalSteps,
-    activeSection,
-    quoteTotal,
     onNext,
     onPrevious,
     onSave,
     isSaveDisabled,
-    isLoading,
-    configuredItemPreview
 }) => {
+    // 3. Get all the data it needs to display directly from the store
+    const { quote, activeSection, selectedTask, selectedMaterial, status } = useQuoteBuilderStore();
+    const isLoading = status === 'saving';
+    
     const getStepName = (step: number) => {
         if (step === 1) return "Client & Job";
         if (step === 2) return "Build Items";
@@ -46,44 +36,35 @@ const StickyQuoteProgressBar: React.FC<StickyQuoteProgressBarProps> = ({
     return (
         <div className={styles.stickyBar}>
             <div className={styles.progressInfo}>
-                Step {currentStep}/{totalSteps}: {getStepName(currentStep)}
-                {/* You could add a more visual progress indicator here later */}
+                Step {currentStep}/{totalSteps}: <strong>{getStepName(currentStep)}</strong>
             </div>
 
             <div className={styles.contextualInfo}>
+                {/* This info now comes directly from the store's state */}
                 {currentStep === 2 && activeSection && (
-                    <span className={styles.activeSection}>
-                        Area: {activeSection}
-                    </span>
+                    <span className={styles.activeSection}>Area: <strong>{activeSection}</strong></span>
                 )}
-                {currentStep === 2 && configuredItemPreview && (
-                    <span className={styles.configuredItem}>
-                        {configuredItemPreview.taskName && `T: ${configuredItemPreview.taskName} `}
-                        {configuredItemPreview.materialName && `M: ${configuredItemPreview.materialName} `}
-                        {configuredItemPreview.optionName && `Opt: ${configuredItemPreview.optionName} `}
-                        {typeof configuredItemPreview.quantity === 'number' && `Qty: ${configuredItemPreview.quantity} `}
-                        {typeof configuredItemPreview.rate === 'number' && `Rate: ${formatCurrency(configuredItemPreview.rate)} `}
-                    </span>
+                {currentStep === 2 && (selectedTask || selectedMaterial) && (
+                     <span className={styles.configuredItem}>
+                        Editing: <strong>{selectedTask?.name || selectedMaterial?.name}</strong>
+                     </span>
                 )}
-                 {(currentStep === 2 || currentStep === 3) && (
+                {(currentStep === 2 || currentStep === 3) && (
                     <span className={styles.quoteTotal}>
-                        Total: {formatCurrency(quoteTotal)}
+                        Total: <strong>{formatCurrency(quote.totalAmount || 0)}</strong>
                     </span>
                 )}
             </div>
 
             <div className={styles.actions}>
-                {currentStep > 1 && (
-                    <button onClick={onPrevious} disabled={isLoading} className="btn btn-secondary">
-                        Previous
-                    </button>
-                )}
-                {currentStep < totalSteps && (
+                <button onClick={onPrevious} disabled={isLoading || currentStep <= 1} className="btn btn-secondary">
+                    Previous
+                </button>
+                {currentStep < totalSteps ? (
                     <button onClick={onNext} disabled={isLoading} className="btn btn-primary">
                         Next
                     </button>
-                )}
-                {currentStep === totalSteps && (
+                ) : (
                     <button onClick={onSave} disabled={isSaveDisabled || isLoading} className="btn btn-success btn-lg">
                         {isLoading ? 'Saving...' : 'Save Quote'}
                     </button>

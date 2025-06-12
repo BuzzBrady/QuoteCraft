@@ -2,7 +2,7 @@
 // -------------
 // Component to display the calculated summary/total of the quote lines.
 
-import React, { useMemo } from 'react'; // Ensured React is imported
+import { useMemo } from 'react'; // Ensured React is imported
 import { QuoteLine } from '../types';
 
 // Define the props the component accepts

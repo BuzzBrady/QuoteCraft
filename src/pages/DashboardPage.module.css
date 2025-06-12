@@ -1,131 +1,206 @@
 /* src/pages/DashboardPage.module.css */
 
-.container {
+.dashboardContainer {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: var(--font-family-sans-serif);
+}
+
+.header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    color: #02bcef;
+    margin: 0;
+}
+
+.header p {
+    font-size: 1.2rem;
+    color: #e6e6e6;
+}
+
+/* Stats Grid */
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.statCard {
+    background-color: #ffffff00;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #02bcef;
+}
+
+.statCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.08);
+}
+
+.statTitle {
+    font-size: 1rem;
+    color: #ffffff;
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+}
+
+.statValue {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #02bcef;
+}
+
+
+/* Actions Grid */
+.actionsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.actionCard {
+    background-color: #ffffff00;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    text-decoration: none;
+    color: #ffffff;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--space-xl) var(--space-lg);
-    gap: var(--space-xl);
-    min-height: calc(90vh - 4rem);
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.heading {
-  font-size: 2.4em;
-  margin-bottom: var(--space-xs);
-  color: var(--theme-primary-light-blue);
-  text-align: center;
-}
-
-.subheading {
-  font-size: 1.15em;
-  color: var(--theme-secondary-steel-gray);
-  margin-bottom: var(--space-xl);
-  text-align: center;
-  max-width: 600px;
-}
-
-/* Styles for the main sections/grids if needed beyond utility classes */
-.statsContainer {
-    /* Add any specific container styling here if needed */
-    /* Example: width, text-align, margin, padding */
-    width: 100%;
-    max-width: 800px; /* Example max-width */
-    margin-bottom: var(--space-xl);
-    padding: var(--space-lg);
-    background-color: var(--background-color-sections);
-    border-radius: var(--border-radius-lg);
-    border: 1px solid var(--border-color);
-}
-
-.statsContainer h4 {
+    justify-content: center;
     text-align: center;
-    margin-bottom: var(--space-md);
-    color: var(--theme-primary-light-blue);
+    border: 1px solid #02bcef;
+    transition: all 0.2s ease-in-out;
 }
 
-.statsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: var(--space-md);
-    text-align: center;
+.actionCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.1);
+    background-color: #ffffff36;
+    border-color: var(--primary-color);
 }
 
-.statsGrid span {
-    padding: var(--space-xs);
-    background-color: var(--background-color-light);
-    border-radius: var(--border-radius-sm);
+.actionIcon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
 }
 
-.actionsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-md);
-    width: 100%;
-    max-width: 800px; /* Consistent max-width for action sections */
-    margin-bottom: var(--space-xl);
+.actionText {
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
-.manageSection {
-    width: 100%;
-    max-width: 800px; /* Consistent max-width */
-    margin-bottom: var(--space-xl);
-    padding: var(--space-lg);
-    background-color: var(--background-color-sections);
-    border-radius: var(--border-radius-lg);
-    border: 1px solid var(--border-color);
+
+/* Recent Activity Section */
+.recentActivity {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-.manageHeading {
-    text-align: center;
-    margin-bottom: var(--space-md);
-    color: var(--theme-primary-light-blue);
-    font-size: 1.5em; /* Adjust as needed */
+.recentActivity h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
 }
 
-.linkAsWrapper {
-    /* If the Link component needs specific layout styling not covered by button width */
-    /* For example, if it needs margin or padding itself */
-    /* display: block; */ /* This could be useful */
+.quoteList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-.errorText {
-    /* text-danger class handles color, this can be for additional spacing/font-weight */
-    font-weight: bold;
-    margin-bottom: var(--space-md);
-    text-align: center;
+.quoteItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    border-left: 5px solid var(--primary-color-light);
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
 }
 
-.errorTextSmall {
-    /* text-danger class handles color */
-    font-size: 0.9em;
-    margin-top: var(--space-xs);
+.quoteItem:hover {
+    background-color: #f1f1f100;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.07);
 }
 
-.logoutContainer {
-    width: 100%;
-    max-width: 300px; /* Max width for the logout button container */
-     /* mt-lg utility class handles top margin */
+.quoteInfo {
+    display: flex;
+    flex-direction: column;
 }
 
-/* Removed .card, .cardAction, .cardGrid, .bottomActions, .settingsLink, .logoutButton 
-   as they were either too generic, replaced by global button styles, or specific layout was moved.
-   The new structure uses .statsContainer, .actionsGrid, .manageSection for layout.
-   If .card styling is needed for other contexts, it should be defined more specifically or globally. 
-*/
+.quoteJobTitle {
+    font-weight: 600;
+    color: #333;
+}
 
-@media (max-width: 600px) {
-    .heading {
-        font-size: 2em;
-    }
-    .subheading {
-        font-size: 1em;
-    }
-    .actionsGrid {
-        grid-template-columns: 1fr; /* Single column for buttons on small screens */
-    }
-    .statsGrid {
-        grid-template-columns: 1fr; /* Single column for stats on small screens */
-    }
+.quoteClientName {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.quoteDetails {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.quoteDate {
+    color: #555;
+}
+.quoteTotal {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #000;
+}
+
+/* Global Status Badge Styles */
+:global(.status-badge) {
+    padding: 0.3em 0.7em;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+}
+
+:global(.status-draft) {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    color: #495057;
+}
+
+:global(.status-sent) {
+    background-color: #e0f3ff;
+    border-color: #007bff;
+    color: #004085;
+}
+
+:global(.status-accepted) {
+    background-color: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+:global(.status-rejected) {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
 }

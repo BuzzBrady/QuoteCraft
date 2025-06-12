@@ -51,7 +51,7 @@ function ProfileSettingsPage() {
                     setCompanyEmail(data.companyEmail || currentUser.email || '');
                     setAbnOrTaxId(data.abnOrTaxId || '');
                     setLogoUrl(data.logoUrl || '');
-                    setDefaultQuoteTerms(data.defaultQuoteTerms || '');
+                    setDefaultQuoteTerms(data.defaultTerms || '');
                     setQuotePrefix(data.quotePrefix || 'QT-');
                     setNextQuoteSequence(data.nextQuoteSequence || 1);
                     setQuoteNumberPadding((data.quoteNumberPadding || 0).toString());
@@ -102,7 +102,7 @@ function ProfileSettingsPage() {
             companyEmail: companyEmail.trim(),
             abnOrTaxId: abnOrTaxId.trim(),
             logoUrl: logoUrl.trim(),
-            defaultQuoteTerms: defaultQuoteTerms.trim(),
+            defaultTerms: defaultQuoteTerms.trim(),
             quotePrefix: quotePrefix.trim(),
             nextQuoteSequence: profileData.nextQuoteSequence || nextQuoteSequence,
             quoteNumberPadding: isNaN(paddingValue) ? 0 : paddingValue,

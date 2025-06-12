@@ -1,13 +1,5 @@
 /* src/components/CustomTasksManager.module.css */
-.managerContainer {
-    /* This can be a simple container or have padding/background if not handled by the parent page */
-    /* For example:
-    padding: var(--space-lg);
-    background-color: var(--background-color-sections);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    */
-}
+
 
 /* Updated to match the style of .kitList from KitCreatorPage */
 .itemList {

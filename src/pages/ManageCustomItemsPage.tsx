@@ -1,43 +1,29 @@
 // src/pages/ManageCustomItemsPage.tsx
-import { useState } from 'react';
-import { Link } from 'react-router-dom'; // Import Link for the back button
+
+import React from 'react';
 import CustomTasksManager from '../components/CustomTasksManager';
 import CustomMaterialsManager from '../components/CustomMaterialsManager';
-import styles from './ManageCustomItemsPage.module.css'; // Renamed import to use as a module
+import styles from './ManageCustomItemsPage.module.css';
 
-type ActiveTab = 'tasks' | 'materials';
+const ManageCustomItemsPage: React.FC = () => {
+  return (
+    <div className={styles.container}>
+      <h1>Manage Custom Library</h1>
+      <p>Add or edit custom tasks and materials that are unique to your business.</p>
 
-function ManageCustomItemsPage() {
-    const [activeTab, setActiveTab] = useState<ActiveTab>('tasks');
-
-    return (
-        <div className={styles.pageContainer}>
-             <div className={styles.pageHeader}>
-                <h1 className={styles.pageTitle}>Manage My Library</h1>
-                <Link to="/dashboard" className={styles.backLink}>Back to Dashboard</Link>
-            </div>
-
-            <div className={styles.tabNavigation}>
-                <button
-                    className={`${styles.tabButton} ${activeTab === 'tasks' ? styles.tabButtonActive : ''}`}
-                    onClick={() => setActiveTab('tasks')}
-                >
-                    Custom Tasks
-                </button>
-                <button
-                    className={`${styles.tabButton} ${activeTab === 'materials' ? styles.tabButtonActive : ''}`}
-                    onClick={() => setActiveTab('materials')}
-                >
-                    Custom Materials
-                </button>
-            </div>
-
-            <div className={styles.tabContent}>
-                {activeTab === 'tasks' && <CustomTasksManager />}
-                {activeTab === 'materials' && <CustomMaterialsManager />}
-            </div>
+      <div className={styles.managersContainer}>
+        <div className={styles.managerWrapper}>
+          <h2>Custom Tasks</h2>
+          <CustomTasksManager />
         </div>
-    );
-}
+
+        <div className={styles.managerWrapper}>
+          <h2>Custom Materials</h2>
+          <CustomMaterialsManager />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default ManageCustomItemsPage;

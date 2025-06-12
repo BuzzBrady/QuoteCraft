@@ -1,89 +1,105 @@
-// Header.tsx (root)
-import { useState, useEffect } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from './src/contexts/AuthContext'; // Ensure this path is correct for your project
-import './Header.css'; // Make sure you have this CSS file created
+// Header.tsx
+
+import { useState, useEffect, useRef } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from './src/contexts/AuthContext';
+import './Header.css'; 
 
 function Header() {
     const { currentUser, logout } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
-
+    
+    // State for mobile menu
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-    useEffect(() => {
-        // Close mobile menu on navigation
-        setIsMobileMenuOpen(false);
-    }, [location]);
+    
+    // FIX: State for a robust library dropdown menu
+    const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+    const libraryRef = useRef<HTMLDivElement>(null);
 
     const handleLogout = async () => {
         try {
-            if (logout) { // Check if logout function exists
-                await logout();
-                navigate('/login');
-            } else {
-                console.error("Logout function not available on auth context.");
-            }
+            await logout();
+            navigate('/login');
         } catch (error) {
-            console.error("Failed to log out:", error);
-            alert("Failed to log out. Please try again.");
+            console.error("Failed to log out", error);
         }
     };
+    
+    // Effect to close dropdown if clicking outside of it
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (libraryRef.current && !libraryRef.current.contains(event.target as Node)) {
+                setIsLibraryOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [libraryRef]);
 
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
+
+    const renderNavLinks = (isMobile = false) => {
+        const closeMenus = () => {
+            if (isMobile) setIsMobileMenuOpen(false);
+            setIsLibraryOpen(false);
+        };
+        
+        return (
+            <>
+                <NavLink to="/dashboard" className="nav-link" onClick={closeMenus}>Dashboard</NavLink>
+                <NavLink to="/quotes/new" className="nav-link" onClick={closeMenus}>Create Quote</NavLink>
+                <NavLink to="/quotes" className="nav-link" onClick={closeMenus}>View Quotes</NavLink>
+                <div className="nav-dropdown" ref={libraryRef}>
+                    <button className="nav-link dropdown-toggle" onClick={() => setIsLibraryOpen(!isLibraryOpen)}>
+                        Library {isLibraryOpen ? '▲' : '▼'}
+                    </button>
+                    {isLibraryOpen && (
+                        <div className="dropdown-content">
+                            <NavLink to="/library/custom" onClick={closeMenus}>Custom Items</NavLink>
+                            <NavLink to="/library/kits" onClick={closeMenus}>Kits</NavLink>
+                            <NavLink to="/library/rates" onClick={closeMenus}>Rate Templates</NavLink>
+                        </div>
+                    )}
+                </div>
+            </>
+        );
     };
 
-    const renderNavLinks = () => (
-        <>
-            <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Dashboard</NavLink>
-            <NavLink to="/quote-builder" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>New Quote</NavLink>
-            <NavLink to="/existing-quotes" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>Quotes</NavLink>
-            <NavLink to="/my-items" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>My Library</NavLink>
-        </>
-    );
-
     return (
-        <header className="app-header">
+        <header className="main-header">
             <div className="header-content">
-                <Link to="/dashboard" className="header-brand">
-                    QuoteCraft
-                </Link>
-
-                <nav className="header-nav header-nav--desktop">
+                <NavLink to="/dashboard" className="header-brand">QuoteCraft</NavLink>
+                
+                <nav className="main-nav">
                     {renderNavLinks()}
                 </nav>
 
-                <div className="header-user-info">
-                    {currentUser && (
+                <div className="user-info">
+                    {currentUser ? (
                         <>
-                            <span className="user-email">{currentUser.email}</span>
-                            {logout && <button onClick={handleLogout} className="btn btn-secondary">Logout</button>} {/* Updated class */}
+                            <NavLink to="/settings/profile" className="nav-link settings-link">⚙️ Settings</NavLink>
+                            <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
                         </>
+                    ) : (
+                        <NavLink to="/login" className="btn btn-primary">Login</NavLink>
                     )}
                 </div>
 
-                <button className="hamburger-button" onClick={toggleMobileMenu} aria-label="Toggle menu" aria-expanded={isMobileMenuOpen}>
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                <button className="hamburger-button" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle menu">
+                    <span></span><span></span><span></span>
                 </button>
             </div>
-
-            <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
-                 <button className="mobile-menu__close-button" onClick={toggleMobileMenu} aria-label="Close menu">&times;</button>
-                 <nav className="mobile-menu__nav">
-                     {renderNavLinks()}
-                 </nav>
-                 {currentUser && logout && (
-                     <button onClick={handleLogout} className="btn btn-secondary mobile-menu__logout-button"> {/* Updated class */} 
-                         Logout
-                     </button>
-                 )}
-            </div>
-            {isMobileMenuOpen && <div className="mobile-menu__overlay" onClick={toggleMobileMenu}></div>}
+            
+            {isMobileMenuOpen && (
+                 <div className="mobile-menu open">
+                     <nav className="mobile-menu__nav">
+                         {renderNavLinks(true)}
+                         <NavLink to="/settings/profile" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>Settings</NavLink>
+                         <button onClick={handleLogout} className="btn btn-secondary mobile-menu__logout-button">Logout</button>
+                     </nav>
+                 </div>
+            )}
         </header>
     );
-}
+};
 
 export default Header;

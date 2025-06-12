@@ -1,7 +1,5 @@
 /* src/components/CustomMaterialsManager.module.css */
-.managerContainer {
-    /* This can be a simple container or have padding/background if not handled by the parent page */
-}
+
 
 /* Updated to match the style of .kitList from KitCreatorPage */
 .itemList {

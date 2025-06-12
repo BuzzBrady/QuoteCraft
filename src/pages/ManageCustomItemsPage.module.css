@@ -14,13 +14,6 @@
     margin-bottom: var(--space-xl, 2rem);
 }
 
-.pageTitle {
-    /* Uses global h1 styles */
-}
-
-.backLink {
-    /* Uses global 'a' link styles */
-}
 
 .tabNavigation {
     display: flex;
@@ -52,16 +45,10 @@
     font-weight: 600;
 }
 
-.tabContent {
-    /* No extra styles needed, content is styled by its own sections */
-}
-
 /* --- Container for the Manager components --- */
 /* This can wrap the CustomTasksManager and CustomMaterialsManager if needed,
    or the styles can be applied directly within those components' root divs. */
-.managerContainer {
-    /* Styles for the content within a tab */
-}
+
 
 /* Fallback loading/error text styles */
 .loadingText, .errorText {

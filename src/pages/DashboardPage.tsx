@@ -1,121 +1,94 @@
 // src/pages/DashboardPage.tsx
-// Refactored to use CSS Modules for styling.
-// Includes links to Kit Creator and My Clients pages.
 
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext'; // Adjust path if needed
-import { auth } from '../config/firebaseConfig'; // Adjust path if needed
-import { signOut } from 'firebase/auth';
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useUserCollection } from '../hooks/useUserCollection';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { Quote, Client } from '../types';
+import { formatCurrency, formatFirestoreTimestamp } from '../utils/utils';
+import styles from './DashboardPage.module.css';
 
-import styles from './DashboardPage.module.css'; // Import CSS Module
+const DashboardPage: React.FC = () => {
+    const navigate = useNavigate();
+    const { profile, loading: profileLoading } = useUserProfile();
+    const { data: recentQuotes, isLoading: quotesLoading } = useUserCollection<Quote>('quotes', 'updatedAt', 'desc', 5);
+    const { data: clients, isLoading: clientsLoading } = useUserCollection<Client>('clients');
 
-interface QuoteCounts {
-    draft: number;
-    sent: number;
-    accepted: number;
-    rejected: number;
-    total: number;
-}
+    const isLoading = quotesLoading || clientsLoading || profileLoading;
 
-function DashboardPage() {
-    console.log("DEBUG: DashboardPage rendering with CSS Modules...");
-
-    const { currentUser } = useAuth();
-    const [logoutError, setLogoutError] = useState<string | null>(null);
-    const [quoteCounts, setQuoteCounts] = useState<QuoteCounts | null>(null);
-    const [isLoadingCounts, setIsLoadingCounts] = useState<boolean>(false);
-    const [errorCounts, setErrorCounts] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!currentUser?.uid) {
-            setQuoteCounts(null);
-            return;
-        };
-        // Placeholder for fetching quote counts
-        const fetchQuoteCounts = async () => {
-            setIsLoadingCounts(true);
-            setErrorCounts(null);
-            console.log("DEBUG: Placeholder - Fetching quote counts...");
-            setTimeout(() => {
-                setQuoteCounts({ draft: 1, sent: 2, accepted: 3, rejected: 0, total: 6 });
-                setIsLoadingCounts(false);
-            }, 1000);
-        };
-        // fetchQuoteCounts(); // Uncomment when ready to implement actual stats fetching
-    }, [currentUser?.uid]);
-
-    const handleLogout = async () => {
-        setLogoutError(null);
-        try {
-            await signOut(auth);
-        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-             console.error("Logout Failed:", error);
-             setLogoutError("Failed to log out.");
-        }
-    };
+    const QuickStat = ({ title, value, loading }: { title: string; value: string | number; loading: boolean }) => (
+        <div className={styles.statCard}>
+            <h3 className={styles.statTitle}>{title}</h3>
+            {loading ? <div className={styles.statValue}>...</div> : <div className={styles.statValue}>{value}</div>}
+        </div>
+    );
 
     return (
-        <div className={styles.container}>
-            <h1 className={styles.heading}>Welcome{currentUser?.displayName || currentUser?.email ? `, ${currentUser.displayName || currentUser.email}` : ''}!</h1>
-            <p className={styles.subheading}>QuoteCraft Dashboard</p>
+        <div className={styles.dashboardContainer}>
+            <header className={styles.header}>
+                <h1>Welcome, {profile?.businessName || profile?.displayName || 'User'}!</h1>
+                <p>Here's a quick overview of your business.</p>
+            </header>
 
-            {logoutError && <p className={`text-danger ${styles.errorText}`}>{logoutError}</p>} {/* Added text-danger */}
-
-            <div className={styles.statsContainer}>
-                <h4>Quick Stats</h4> {/* Consider using utility class for text alignment if needed */}
-                {isLoadingCounts && <p>Loading stats...</p>}
-                {errorCounts && <p className={`text-danger ${styles.errorTextSmall}`}>{errorCounts}</p>} {/* Added text-danger */}
-                {quoteCounts && !isLoadingCounts && !errorCounts && (
-                    <div className={styles.statsGrid}>
-                        <span>Drafts: {quoteCounts.draft}</span>
-                        <span>Sent: {quoteCounts.sent}</span>
-                        <span>Accepted: {quoteCounts.accepted}</span>
-                        <span>Total: {quoteCounts.total}</span>
-                    </div>
-                )}
-                {!quoteCounts && !isLoadingCounts && !errorCounts && <p><i>(Quote statistics feature coming soon)</i></p>}
+            <div className={styles.statsGrid}>
+                <QuickStat title="Total Clients" value={clients.length} loading={clientsLoading} />
+                <QuickStat title="Quotes to Follow Up" value={recentQuotes.filter(q => q.status === 'Sent').length} loading={quotesLoading} />
+                <QuickStat title="Active Projects" value={recentQuotes.filter(q => q.status === 'Accepted').length} loading={quotesLoading} />
             </div>
-
-            {/* --- Core Actions --- */}
+            
+            {/* FIX: Add the Quick Actions grid */}
             <div className={styles.actionsGrid}>
-                <Link to="/quote-builder" className={styles.linkAsWrapper}> {/* Renamed if .link was purely for button styling */}
-                    <button className="btn btn-primary w-100"> Create New Quote </button> {/* Added w-100 */}
+                <Link to="/quotes/new" className={styles.actionCard}>
+                    <div className={styles.actionIcon}>➕</div>
+                    <div className={styles.actionText}>Create a Quote</div>
                 </Link>
-                <Link to="/existing-quotes" className={styles.linkAsWrapper}>
-                    <button className="btn btn-primary w-100"> View Existing Quotes </button> {/* Added w-100 */}
+                <Link to="/quotes" className={styles.actionCard}>
+                    <div className={styles.actionIcon}>📄</div>
+                    <div className={styles.actionText}>View Quotes</div>
                 </Link>
-                <Link to="/kit-creator" className={styles.linkAsWrapper}>
-                    <button className="btn btn-primary w-100"> Create & Edit Kits </button> {/* Added w-100 */}
+                <Link to="/library/kits" className={styles.actionCard}>
+                    <div className={styles.actionIcon}>📦</div>
+                    <div className={styles.actionText}>Create & Edit Kits</div>
+                </Link>
+                <Link to="/clients" className={styles.actionCard}>
+                    <div className={styles.actionIcon}>👥</div>
+                    <div className={styles.actionText}>My Clients</div>
+                </Link>
+                 <Link to="/library/rates" className={styles.actionCard}>
+                    <div className={styles.actionIcon}>💲</div>
+                    <div className={styles.actionText}>My Rates</div>
+                </Link>
+                 <Link to="/settings/profile" className={styles.actionCard}>
+                    <div className={styles.actionIcon}>⚙️</div>
+                    <div className={styles.actionText}>Profile & Settings</div>
                 </Link>
             </div>
 
-            {/* --- Management Links --- */}
-            <div className={styles.manageSection}>
-                <h4 className={styles.manageHeading}>Manage Your Data</h4>
-                <div className={styles.actionsGrid}>
-                    <Link to="/my-clients" className={styles.linkAsWrapper}>
-                        <button className="btn btn-secondary w-100"> My Clients </button> {/* Added w-100 */}
-                    </Link>
-                    <Link to="/my-rates" className={styles.linkAsWrapper}>
-                        <button className="btn btn-secondary w-100"> My Rates </button> {/* Added w-100 */}
-                    </Link>
-                    <Link to="/my-items" className={styles.linkAsWrapper}>
-                        <button className="btn btn-secondary w-100"> My Custom Items </button> {/* Added w-100 */}
-                    </Link>
-                    <Link to="/profile" className={styles.linkAsWrapper}>
-                        <button className="btn btn-secondary w-100"> Profile & Settings </button> {/* Added w-100 */}
-                    </Link>
+            <div className={styles.recentActivity}>
+                <h2>Recent Quotes</h2>
+                <div className={styles.quoteList}>
+                    {isLoading && <p>Loading recent quotes...</p>}
+                    {!isLoading && recentQuotes.length === 0 && (
+                        <p>No recent quotes found. <Link to="/quotes/new">Create one now!</Link></p>
+                    )}
+                    
+                    {recentQuotes.map(quote => (
+                        <div key={quote.id} className={styles.quoteItem} onClick={() => navigate(`/quotes/edit/${quote.id}`)}>
+                            <div className={styles.quoteInfo}>
+                                <span className={styles.quoteJobTitle}>{quote.jobTitle}</span>
+                                <span className={styles.quoteClientName}>{quote.clientName || 'N/A'}</span>
+                            </div>
+                            <div className={styles.quoteDetails}>
+                                <span className={styles.quoteDate}>{formatFirestoreTimestamp(quote.updatedAt, 'medium')}</span>
+                                <span className={`status-badge status-${quote.status?.toLowerCase()}`}>{quote.status}</span>
+                                <span className={styles.quoteTotal}>{formatCurrency(quote.totalAmount)}</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-            </div>
-
-            <div className={`mt-lg ${styles.logoutContainer}`}> {/* Added mt-lg utility class */}
-                <button onClick={handleLogout} className="btn btn-secondary w-100"> {/* Changed to btn-secondary, added w-100 */}
-                    Log Out
-                </button>
             </div>
         </div>
     );
-}
+};
 
 export default DashboardPage;

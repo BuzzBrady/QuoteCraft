@@ -1,32 +1,44 @@
 // src/components/RateTemplateFormModal.tsx
-import React, { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useMemo } from 'react';
 import styles from './RateTemplateFormModal.module.css';
-import { UserRateTemplate, CombinedTask, CombinedMaterial, MaterialOption } from '../types';
+import { UserRateTemplate, CombinedTask, CombinedMaterial, MaterialOption, Task, Material } from '../types';
+
+// 1. Import the necessary hooks and stores
+import { useDataStore } from '../stores/useDataStore';
+import { useUserCollection } from '../hooks/useUserCollection';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth to get currentUser
 
 // Import your selector components
 import TaskSelector from './TaskSelector';
 import MaterialSelector from './MaterialSelector';
 import MaterialOptionSelector from './MaterialOptionSelector';
 
+// 2. Simplify the props interface - remove allTasks and allMaterials
 interface RateTemplateFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (rateData: any) => Promise<void>;
+    onSave: (rateData: Omit<UserRateTemplate, 'id' | 'userId'>) => Promise<void>;
     initialData?: UserRateTemplate | null;
     mode: 'add' | 'edit';
-    allTasks: CombinedTask[];
-    allMaterials: CombinedMaterial[];
 }
 
-function RateTemplateFormModal({ 
-    isOpen, 
-    onClose, 
-    onSave, 
-    initialData, 
+function RateTemplateFormModal({
+    isOpen,
+    onClose,
+    onSave,
+    initialData,
     mode,
-    allTasks,
-    allMaterials
 }: RateTemplateFormModalProps) {
+
+    // 3. Fetch all required data using our hooks
+    const { currentUser } = useAuth();
+    const { allTasks: globalTasks, allMaterials: globalMaterials } = useDataStore();
+    const { data: customTasks, isLoading: isLoadingTasks } = useUserCollection<Task>('customTasks');
+    const { data: customMaterials, isLoading: isLoadingMaterials } = useUserCollection<Material>('customMaterials');
+
+    // 4. Combine global and custom data for the selectors
+    const combinedTasks = useMemo(() => [...globalTasks, ...customTasks], [globalTasks, customTasks]);
+    const combinedMaterials = useMemo(() => [...globalMaterials, ...customMaterials], [globalMaterials, customMaterials]);
 
     // Form State
     const [displayName, setDisplayName] = useState('');
@@ -58,10 +70,10 @@ function RateTemplateFormModal({
                 setDisplayName(initialData.displayName || '');
                 setReferenceRate(initialData.referenceRate?.toString() || '');
                 setUnit(initialData.unit || 'item');
-                // Pre-select task, material, and option based on IDs using the props
-                setSelectedTask(allTasks.find(t => t.id === initialData.taskId) || null);
-                setSelectedMaterial(allMaterials.find(m => m.id === initialData.materialId) || null);
-                // The MaterialOptionSelector will handle pre-selecting the option via its prop
+                // Use the internally fetched combined lists to find the initial data
+                setSelectedTask(combinedTasks.find(t => t.id === initialData.taskId) || null);
+                setSelectedMaterial(combinedMaterials.find(m => m.id === initialData.materialId) || null);
+                // MaterialOptionSelector will handle its own pre-selection
             } else { // Reset form for 'add' mode
                 setDisplayName('');
                 setReferenceRate('');
@@ -71,7 +83,7 @@ function RateTemplateFormModal({
                 setSelectedOption(null);
             }
         }
-    }, [isOpen, mode, initialData, allTasks, allMaterials]);
+    }, [isOpen, mode, initialData, combinedTasks, combinedMaterials]);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -93,32 +105,29 @@ function RateTemplateFormModal({
             referenceRate: parseFloat(referenceRate) || 0,
             unit: unit.trim() || 'item',
             taskId: selectedTask?.id || null,
-            taskName: selectedTask?.name || null,
             materialId: selectedMaterial?.id || null,
-            materialName: selectedMaterial?.name || null,
             materialOptionId: selectedOption?.id || null,
-            materialOptionName: selectedOption?.name || null,
             inputType: 'quantity', // This can be a form field if you need more types
         };
-        
+
         try {
-            await onSave(rateData);
+            // The `as any` is a temporary bridge if the onSave prop type is slightly different.
+            // The parent component `UserRateTemplatesPage` will handle the final object structure.
+            await onSave(rateData as any);
         } catch (error) {
             console.error("onSave callback failed", error);
-            // Parent component's error handling will be triggered
         } finally {
             setIsSaving(false);
         }
     };
 
-    // Placeholder handlers to satisfy the selector props
     const handleCreateCustomTask = (): Promise<CombinedTask | null> => {
-        alert(`To add a new task, please go to the "Manage My Library" page.`);
+        alert(`To add a new task, please go to the "Manage Custom Library" page.`);
         return Promise.resolve(null);
     };
 
     const handleCreateCustomMaterial = (): Promise<CombinedMaterial | null> => {
-        alert(`To add a new material, please go to the "Manage My Library" page.`);
+        alert(`To add a new material, please go to the "Manage Custom Library" page.`);
         return Promise.resolve(null);
     };
 
@@ -150,21 +159,16 @@ function RateTemplateFormModal({
                         <p className={styles.associationHelp}>Associate this rate with a specific task and/or material (optional).</p>
                         <div className="form-group">
                             <label>Associated Task:</label>
+                            {/* 5. Selector components no longer need data props */}
                             <TaskSelector
-                                allTasks={allTasks}
                                 onSelect={setSelectedTask}
-                                isLoading={false} // Loading is handled by the parent page
-                                userId={currentUser?.uid || ""}
                                 onCreateCustomTask={handleCreateCustomTask}
                             />
                         </div>
                         <div className="form-group">
                             <label>Associated Material:</label>
                             <MaterialSelector
-                                allMaterials={allMaterials}
                                 onSelect={setSelectedMaterial}
-                                isLoading={false} // Loading is handled by the parent page
-                                userId={currentUser?.uid || ""}
                                 onCreateCustomMaterial={handleCreateCustomMaterial}
                             />
                         </div>
@@ -174,8 +178,7 @@ function RateTemplateFormModal({
                                 <MaterialOptionSelector
                                     selectedMaterial={selectedMaterial}
                                     onSelect={setSelectedOption}
-                                    initialSelectedOptionId={initialData?.materialOptionId || null}
-                                />
+                                    selectedOption={selectedOption}                                />
                             </div>
                         )}
                         {formError && <p className={styles.errorMessage}>{formError}</p>}

@@ -1,694 +1,183 @@
 // src/pages/KitCreatorPage.tsx
-// Page for creating, viewing, and managing Kit Templates.
-// Includes item selection, cost calculation, "Quick Add", and corrected MaterialOptionSelector usage.
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { collection, query, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp, deleteField, writeBatch } from 'firebase/firestore';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from 'react';
 import { db } from '../config/firebaseConfig';
-import { 
-    KitTemplate, 
-    KitLineItemTemplate, 
-    Task, 
-    CustomTask, 
-    Material, 
-    CustomMaterial, 
-    MaterialOption, 
-    UserRateTemplate,
-    CombinedTask,
-    CombinedMaterial
-} from '../types';
-import { v4 as uuidv4 } from 'uuid';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
+import { useUserCollection } from '../hooks/useUserCollection';
+import { KitTemplate, CombinedTask, CombinedMaterial } from '../types';
 
 import TaskSelector from '../components/TaskSelector';
 import MaterialSelector from '../components/MaterialSelector';
-import MaterialOptionSelector from '../components/MaterialOptionSelector';
-import QuickAddMaterialModal from '../components/QuickAddMaterialModal';
-
+import AreaMultiSelector from '../components/AreaMultiSelector'; // Assuming this component is set up for multi-selection
 import styles from './KitCreatorPage.module.css';
 
-// Utility functions
-const findMatchingRate = (
-    rates: UserRateTemplate[],
-    taskId: string | null,
-    materialId: string | null,
-    optionId: string | null
-): UserRateTemplate | undefined => {
-    let match = rates.find(rate =>
-        rate.taskId === taskId &&
-        rate.materialId === materialId &&
-        rate.materialOptionId === optionId
-    );
-    if (match) return match;
-    if (materialId && !match) {
-        match = rates.find(rate =>
-            rate.taskId === taskId &&
-            rate.materialId === materialId &&
-            (rate.materialOptionId === null || rate.materialOptionId === undefined)
-        );
-        if (match) return match;
-    }
-    if (taskId && !materialId && !match) {
-        match = rates.find(rate =>
-            rate.taskId === taskId &&
-            (rate.materialId === null || rate.materialId === undefined) &&
-            (rate.materialOptionId === null || rate.materialOptionId === undefined)
-        );
-        if (match) return match;
-    }
-    return undefined;
-};
-
-const formatCurrency = (amount: number | null | undefined): string => {
-  if (amount === null || amount === undefined) return '$0.00';
-  return `$${Number(amount).toFixed(2)}`;
-};
-
-type ActiveTab = 'myKits' | 'kitBuilder';
-
-interface KitItemFormData {
-    id: string;
-    selectedTaskObj: CombinedTask | null;
-    selectedMaterialObj: CombinedMaterial | null;
-    selectedMaterialOptionObj: MaterialOption | null;
-    displayName: string;
-    baseQuantity: number;
-    unit: string;
-    inputType: 'quantity' | 'price' | 'checkbox';
-    description?: string;
-    overrideRateForKit: string;
-    calculatedRate: number;
-    finalRateForKitItem: number;
-    calculatedTotal: number;
-}
-
-const initialKitItemFormData: KitItemFormData = {
-    id: '', selectedTaskObj: null, selectedMaterialObj: null, selectedMaterialOptionObj: null,
-    displayName: '', baseQuantity: 1, unit: 'item', inputType: 'quantity', description: '',
-    overrideRateForKit: '',
-    calculatedRate: 0, finalRateForKitItem: 0, calculatedTotal: 0,
-};
-
-function KitCreatorPage() {
+const KitCreatorPage: React.FC = () => {
     const { currentUser } = useAuth();
-    const userId = currentUser?.uid;
+    const { data: userKits, isLoading: kitsLoading, refetch: refetchKits } = useUserCollection<KitTemplate>('kits', 'name');
 
-    const [activeTab, setActiveTab] = useState<ActiveTab>('myKits');
-    const [userKits, setUserKits] = useState<KitTemplate[]>([]);
-    const [isLoadingKits, setIsLoadingKits] = useState<boolean>(true);
-    const [errorKits, setErrorKits] = useState<string | null>(null);
-
-    const [currentKitId, setCurrentKitId] = useState<string | null>(null);
+    // State for the kit being built
     const [kitName, setKitName] = useState('');
     const [kitDescription, setKitDescription] = useState('');
-    const [kitTags, setKitTags] = useState('');
-    const [kitLineItems, setKitLineItems] = useState<KitLineItemTemplate[]>([]);
+    const [kitTasks, setKitTasks] = useState<CombinedTask[]>([]);
+    const [kitMaterials, setKitMaterials] = useState<CombinedMaterial[]>([]);
+    const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
     
-    const [isSavingKit, setIsSavingKit] = useState<boolean>(false);
-    const [kitBuilderError, setKitBuilderError] = useState<string | null>(null);
+    // State for the current selections from dropdowns
+    const [currentTask, setCurrentTask] = useState<CombinedTask | null>(null);
+    const [currentMaterial, setCurrentMaterial] = useState<CombinedMaterial | null>(null);
 
-    const [showItemForm, setShowItemForm] = useState<boolean>(false);
-    const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
-    const [itemFormData, setItemFormData] = useState<KitItemFormData>(initialKitItemFormData);
+    const resetForm = () => {
+        setKitName('');
+        setKitDescription('');
+        setKitTasks([]);
+        setKitMaterials([]);
+        setSelectedAreaIds([]);
+        setCurrentTask(null);
+        setCurrentMaterial(null);
+    };
 
-    const [allTasks, setAllTasks] = useState<CombinedTask[]>([]);
-    const [allMaterials, setAllMaterials] = useState<CombinedMaterial[]>([]);
-    const [userRates, setUserRates] = useState<UserRateTemplate[]>([]);
-    const [isLoadingGlobalData, setIsLoadingGlobalData] = useState(false);
-
-    const [isKitItemQuickAddMaterialModalOpen, setIsKitItemQuickAddMaterialModalOpen] = useState(false);
-    const [kitItemQuickAddMaterialInitialName, setKitItemQuickAddMaterialInitialName] = useState('');
-    const kitItemCreateMaterialPromiseRef = useRef<{ resolve: (value: CombinedMaterial | null) => void; reject: (reason?: any) => void; } | null>(null);
-
-    const fetchUserKits = useCallback(async () => {
-        if (!userId) { setUserKits([]); setIsLoadingKits(false); return; }
-        setIsLoadingKits(true); setErrorKits(null);
-        try {
-            const kitsRef = collection(db, `users/${userId}/kitTemplates`);
-            const q = query(kitsRef, orderBy('name_lowercase', 'asc'));
-            const snapshot = await getDocs(q);
-            setUserKits(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as KitTemplate)));
-        } catch (err: any) { console.error("Error fetching kits:", err); setErrorKits(`Failed to load kits: ${err.message}`); }
-        finally { setIsLoadingKits(false); }
-    }, [userId]);
-
-    useEffect(() => { if (activeTab === 'myKits') fetchUserKits(); }, [userId, activeTab, fetchUserKits]);
-
-    useEffect(() => {
-        if (!userId) return;
-        setIsLoadingGlobalData(true);
-        const fetchData = async () => {
-            try {
-                const [tasksSnap, customTasksSnap, materialsSnap, customMaterialsSnap, ratesSnap] = await Promise.all([
-                    getDocs(query(collection(db, 'tasks'))),
-                    getDocs(query(collection(db, `users/${userId}/customTasks`))),
-                    getDocs(query(collection(db, 'materials'))),
-                    getDocs(query(collection(db, `users/${userId}/customMaterials`))),
-                    getDocs(query(collection(db, `users/${userId}/rateTemplates`)))
-                ]);
-
-                const globalTasks = tasksSnap.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedTask));
-                const userTasks = customTasksSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true, name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedTask));
-                setAllTasks([...globalTasks, ...userTasks].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
-
-                const globalMtls = materialsSnap.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedMaterial));
-                const userMtls = customMaterialsSnap.docs.map(d => ({ id: d.id, ...d.data(), isCustom: true, name: d.data().name || '', name_lowercase: (d.data().name_lowercase || d.data().name?.toLowerCase() || '') } as CombinedMaterial));
-                setAllMaterials([...globalMtls, ...userMtls].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
-                
-                setUserRates(ratesSnap.docs.map(d => ({ id: d.id, ...d.data() } as UserRateTemplate)));
-
-            } catch (error) {
-                console.error("Error fetching global data for Kit Creator:", error);
-                setKitBuilderError("Failed to load necessary data (tasks, materials, rates).");
-            } finally {
-                setIsLoadingGlobalData(false);
-            }
-        };
-        fetchData();
-    }, [userId]);
-
-    useEffect(() => {
-        const task = itemFormData.selectedTaskObj;
-        const material = itemFormData.selectedMaterialObj;
-        const option = itemFormData.selectedMaterialOptionObj;
-        let initialRate = task?.taskRate || 0; // Start with taskRate if it exists
-        let unit = itemFormData.unit || material?.defaultUnit || task?.defaultUnit || 'item';
-        let suggestedDisplayName = '';
-
-        if (task) suggestedDisplayName += task.name;
-        if (material) suggestedDisplayName += (suggestedDisplayName ? ' - ' : '') + material.name;
-        if (option) suggestedDisplayName += ` (${option.name})`;
-        
-        const matchingRate = findMatchingRate(userRates, task?.id || null, material?.id || null, option?.id || null);
-
-        if (matchingRate) {
-            initialRate = matchingRate.referenceRate;
-            unit = matchingRate.unit || unit;
-        } else if (material) {
-            initialRate = (task?.taskRate || 0) + (material.defaultRate || 0); // Combine task and material rate if no specific rate found
-            if (option && typeof option.rateModifier === 'number') {
-                initialRate += option.rateModifier;
-            }
-            unit = material.defaultUnit || unit;
+    const handleAddTask = () => {
+        if (currentTask && !kitTasks.find(t => t.id === currentTask.id)) {
+            setKitTasks([...kitTasks, currentTask]);
         }
-        
-        const overrideRateNum = parseFloat(itemFormData.overrideRateForKit);
-        const finalRate = !isNaN(overrideRateNum) && itemFormData.overrideRateForKit.trim() !== '' ? overrideRateNum : initialRate;
-        const total = itemFormData.inputType === 'price' ? finalRate : (Number(itemFormData.baseQuantity) * finalRate);
-
-        setItemFormData(prev => ({
-            ...prev, unit, calculatedRate: isNaN(initialRate) ? 0 : initialRate, 
-            finalRateForKitItem: isNaN(finalRate) ? 0 : finalRate, 
-            calculatedTotal: isNaN(total) ? 0 : total,
-            displayName: prev.displayName || suggestedDisplayName || 'New Kit Item',
-        }));
-    }, [
-        itemFormData.selectedTaskObj, itemFormData.selectedMaterialObj, itemFormData.selectedMaterialOptionObj, 
-        itemFormData.baseQuantity, itemFormData.inputType, itemFormData.overrideRateForKit, 
-        userRates
-    ]);
-
-    const resetKitBuilderForm = useCallback(() => {
-        setCurrentKitId(null); setKitName(''); setKitDescription(''); setKitTags('');
-        setKitLineItems([]); setShowItemForm(false); setEditingItemIndex(null);
-        setItemFormData(initialKitItemFormData); setKitBuilderError(null);
-    }, []);
-
-    const handleCreateNewKit = useCallback(() => {
-        resetKitBuilderForm();
-        setActiveTab('kitBuilder');
-    }, [resetKitBuilderForm]);
-
-    const handleEditKit = useCallback((kit: KitTemplate) => {
-        setCurrentKitId(kit.id);
-        setKitName(kit.name);
-        setKitDescription(kit.description || '');
-        setKitTags(kit.tags?.join(', ') || '');
-        setKitLineItems(kit.lineItems ? JSON.parse(JSON.stringify(kit.lineItems)) : []);
-        setShowItemForm(false); setEditingItemIndex(null); setItemFormData(initialKitItemFormData);
-        setActiveTab('kitBuilder');
-    }, []);
-
-    const handleDeleteKit = useCallback(async (kitId: string) => {
-        if (!userId || !kitId || !window.confirm("Delete this kit? This action cannot be undone.")) return;
-        try {
-            await deleteDoc(doc(db, `users/${userId}/kitTemplates`, kitId));
-            alert("Kit deleted.");
-            fetchUserKits(); 
-            if (currentKitId === kitId) { resetKitBuilderForm(); setActiveTab('myKits'); }
-        } catch (err: any) { console.error("Error deleting kit:", err); alert(`Failed to delete kit: ${err.message}`);}
-       }, [userId, currentKitId, fetchUserKits, resetKitBuilderForm]);
-    
-    const handleItemFormInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        const isNumericQuantity = name === 'baseQuantity';
-        setItemFormData(prev => ({ 
-            ...prev, 
-            [name]: isNumericQuantity ? parseFloat(value) || 0 : value 
-        }));
+        setCurrentTask(null); // Reset selector after adding
     };
-    
-    const handleCreateCustomTaskForItemForm = useCallback(async (taskName: string): Promise<CombinedTask | null> => {
-        if (!userId) { alert("Login required."); return null; }
-        if (!taskName?.trim()) { alert("Task name empty."); return null; }
-        const defaultUnit = prompt(`Default unit for new task "${taskName}":`, 'item') || 'item';
-        const newTaskData = { 
-            userId, 
-            name: taskName.trim(), 
-            name_lowercase: taskName.trim().toLowerCase(), 
-            defaultUnit, 
-            description: "", 
-            createdAt: serverTimestamp(), 
-            updatedAt: serverTimestamp() 
-        };
-        try {
-            const docRef = await addDoc(collection(db, `users/${userId}/customTasks`), newTaskData);
-            const createdTask: CombinedTask = { 
-                id: docRef.id, 
-                ...newTaskData, 
-                isCustom: true, 
-                name: newTaskData.name,
-                name_lowercase: newTaskData.name_lowercase,
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now()
-            } as CombinedTask;
-            setAllTasks(prev => [...prev, createdTask].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
-            setItemFormData(prev => ({...prev, selectedTaskObj: createdTask, displayName: createdTask.name, unit: createdTask.defaultUnit || 'item' }));
-            return createdTask;
-        } catch (error) { console.error("Error saving custom task for kit item:", error); alert(`Failed to save task "${taskName}".`); return null; }
-    }, [userId]);
 
-    const initiateCreateCustomMaterialForItemForm = useCallback((materialName: string): Promise<CombinedMaterial | null> => {
-        return new Promise((resolve, reject) => {
-            if (!userId) { 
-                alert("Login required."); 
-                return reject(new Error("User not logged in")); 
-            }
-            setKitItemQuickAddMaterialInitialName(materialName.trim());
-            setIsKitItemQuickAddMaterialModalOpen(true);
-            kitItemCreateMaterialPromiseRef.current = { resolve, reject };
-        });
-    }, [userId]);
-
-    const handleSaveKitItemQuickAddMaterial = async (data: {
-        name: string;
-        description: string;
-        optionsAvailable: boolean;
-        defaultRate?: number;
-        defaultUnit?: string;
-        options: MaterialOption[];
-    }) => {
-        if (!userId || !kitItemCreateMaterialPromiseRef.current) {
-            if (kitItemCreateMaterialPromiseRef.current) kitItemCreateMaterialPromiseRef.current.reject(new Error("Save conditions unmet."));
-            kitItemCreateMaterialPromiseRef.current = null; setIsKitItemQuickAddMaterialModalOpen(false); return;
+    const handleAddMaterial = () => {
+        if (currentMaterial && !kitMaterials.find(m => m.id === currentMaterial.id)) {
+            setKitMaterials([...kitMaterials, currentMaterial]);
         }
-        const { resolve, reject } = kitItemCreateMaterialPromiseRef.current;
-        const newMatData = { 
-            userId, 
-            name: data.name, 
-            name_lowercase: data.name.toLowerCase(), 
-            description: data.description, 
-            optionsAvailable: data.optionsAvailable, 
-            defaultRate: data.defaultRate, 
-            defaultUnit: data.defaultUnit || 'item', 
-            searchKeywords: [data.name.toLowerCase()], 
-            createdAt: serverTimestamp(), 
-            updatedAt: serverTimestamp() 
-        };
-        try {
-            const materialDocRef = await addDoc(collection(db, `users/${userId}/customMaterials`), newMatData);
-            if (data.optionsAvailable && data.options.length > 0) {
-                const optionsRef = collection(materialDocRef, 'options');
-                const batch = writeBatch(db);
-                data.options.forEach(option => {
-                    const newOptionRef = doc(optionsRef);
-                    batch.set(newOptionRef, {
-                        name: option.name,
-                        name_lowercase: option.name_lowercase,
-                        description: option.description,
-                        rateModifier: option.rateModifier,
-                    });
-                });
-                await batch.commit();
-            }
-
-            const createdMat: CombinedMaterial = { 
-                id: materialDocRef.id, 
-                ...newMatData, 
-                isCustom: true, 
-                name: newMatData.name,
-                name_lowercase: newMatData.name_lowercase,
-                createdAt: Timestamp.now(), 
-                updatedAt: Timestamp.now(),
-                options: data.options, // Include options in the local object
-            };
-            setAllMaterials(prev => [...prev, createdMat].sort((a,b) => a.name_lowercase.localeCompare(b.name_lowercase)));
-            setItemFormData(prev => ({...prev, selectedMaterialObj: createdMat, selectedMaterialOptionObj: null, displayName: createdMat.name, unit: createdMat.defaultUnit || 'item'}));
-            resolve(createdMat);
-        } catch (error) { console.error("Error saving material for kit item:", error); reject(error); }
-        finally { setIsKitItemQuickAddMaterialModalOpen(false); kitItemCreateMaterialPromiseRef.current = null; }
+        setCurrentMaterial(null); // Reset selector after adding
     };
-
-    const handleCloseKitItemQuickAddMaterialModal = () => {
-        setIsKitItemQuickAddMaterialModalOpen(false);
-        if (kitItemCreateMaterialPromiseRef.current) { kitItemCreateMaterialPromiseRef.current.resolve(null); kitItemCreateMaterialPromiseRef.current = null; }
-    };
-
-    // --- CORRECTED STATE HANDLERS ---
-    const handleTaskSelectForItemForm = (task: CombinedTask | null) => {
-        setItemFormData(prev => {
-            const newDisplayName = task ? (prev.selectedMaterialObj ? `${task.name} - ${prev.selectedMaterialObj.name}` : task.name) : (prev.selectedMaterialObj?.name || '');
-            return {
-                ...prev,
-                selectedTaskObj: task,
-                displayName: newDisplayName || 'New Kit Item',
-                unit: prev.unit || task?.defaultUnit || 'item',
-            };
-        });
-    };
-
-    const handleMaterialSelectForItemForm = (material: CombinedMaterial | null) => {
-        setItemFormData(prev => {
-            const newDisplayName = material ? (prev.selectedTaskObj ? `${prev.selectedTaskObj.name} - ${material.name}` : material.name) : (prev.selectedTaskObj?.name || '');
-            return {
-                ...prev,
-                selectedMaterialObj: material,
-                selectedMaterialOptionObj: null,
-                displayName: newDisplayName || 'New Kit Item',
-                unit: material?.defaultUnit || prev.unit || 'item',
-            };
-        });
-    };
-    
-    const handleOptionSelectForItemForm = (option: MaterialOption | null) => {
-        setItemFormData(prev => {
-            let newDisplayName = '';
-            if (prev.selectedTaskObj) newDisplayName += prev.selectedTaskObj.name;
-            if (prev.selectedMaterialObj) newDisplayName += (newDisplayName ? ' - ' : '') + prev.selectedMaterialObj.name;
-            if (option) newDisplayName += ` (${option.name})`;
-
-            return { 
-                ...prev, 
-                selectedMaterialOptionObj: option,
-                displayName: newDisplayName || 'New Kit Item'
-            };
-        });
-    };
-
-    const handleAddItemToKit = () => {
-        if (!itemFormData.displayName.trim()) { alert("Item display name is required."); return; }
-        if (!itemFormData.selectedTaskObj && !itemFormData.selectedMaterialObj) { alert("Please select a task or a material for the kit item."); return; }
-        if (itemFormData.selectedMaterialObj?.optionsAvailable && !itemFormData.selectedMaterialOptionObj) { alert("Please select an option for the chosen material."); return; }
-
-        const newItemForKit: KitLineItemTemplate = {
-            taskId: itemFormData.selectedTaskObj?.id || null,
-            materialId: itemFormData.selectedMaterialObj?.id || null,
-            materialOptionId: itemFormData.selectedMaterialOptionObj?.id || null,
-            materialOptionName: itemFormData.selectedMaterialOptionObj?.name || null,
-            displayName: itemFormData.displayName.trim(),
-            baseQuantity: Number(itemFormData.baseQuantity) || 1,
-            unit: itemFormData.unit,
-            inputType: itemFormData.inputType,
-            description: itemFormData.description?.trim() || undefined,
-            // rateForKit is removed; rates are calculated on-the-fly when kit is used
-        };
-
-        if (editingItemIndex !== null) {
-            const updatedItems = [...kitLineItems];
-            updatedItems[editingItemIndex] = newItemForKit;
-            setKitLineItems(updatedItems);
-        } else {
-            setKitLineItems(prev => [...prev, newItemForKit]);
-        }
-        setItemFormData({...initialKitItemFormData, id: uuidv4()});
-        setEditingItemIndex(null);
-        setShowItemForm(false); 
-    };
-    
-    const handleEditKitItem = (itemToEdit: KitLineItemTemplate, index: number) => {
-        const task = itemToEdit.taskId ? allTasks.find(t => t.id === itemToEdit.taskId) || null : null;
-        const material = itemToEdit.materialId ? allMaterials.find(m => m.id === itemToEdit.materialId) || null : null;
-        let option: MaterialOption | null = null;
-        // This relies on MaterialOptionSelector to fetch options for the selected material
-        if (material && material.optionsAvailable && itemToEdit.materialOptionId) {
-             option = {
-                 id: itemToEdit.materialOptionId, 
-                 name: itemToEdit.materialOptionName || '',
-                 // Other option properties like rateModifier would be re-calculated by the useEffect
-             } as MaterialOption;
-        }
-        setItemFormData({
-            id: uuidv4(), 
-            selectedTaskObj: task, 
-            selectedMaterialObj: material, 
-            selectedMaterialOptionObj: option,
-            displayName: itemToEdit.displayName, 
-            baseQuantity: itemToEdit.baseQuantity,
-            unit: itemToEdit.unit, 
-            inputType: itemToEdit.inputType,
-            description: itemToEdit.description || '',
-            overrideRateForKit: '', 
-            calculatedRate: 0, finalRateForKitItem: 0, calculatedTotal: 0, 
-        });
-        setEditingItemIndex(index); 
-        setShowItemForm(true);
-    };
-
-    const handleRemoveKitItem = (indexToRemove: number) => { setKitLineItems(prev => prev.filter((_, index) => index !== indexToRemove)); };
 
     const handleSaveKit = async () => {
-        if (!userId || !kitName.trim() || kitLineItems.length === 0) {
-            setKitBuilderError("User, Kit Name, and at least one item are required."); return;
+        if (!kitName.trim() || !currentUser) {
+            alert('Please provide a kit name.');
+            return;
         }
-        setIsSavingKit(true); setKitBuilderError(null);
-        const kitDataToSave: Omit<KitTemplate, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: any, updatedAt: any } = {
-            userId, name: kitName.trim(), name_lowercase: kitName.trim().toLowerCase(),
-            description: kitDescription.trim() || undefined,
-            tags: kitTags.split(',').map(tag => tag.trim()).filter(Boolean),
-            lineItems: kitLineItems.map(item => ({ 
-                taskId: item.taskId, materialId: item.materialId, materialOptionId: item.materialOptionId,
-                materialOptionName: item.materialOptionName, displayName: item.displayName,
-                baseQuantity: item.baseQuantity, unit: item.unit, inputType: item.inputType,
-                description: item.description,
-            })),
-            isGlobal: false, 
+
+        const newKit = {
+            name: kitName.trim(),
+            description: kitDescription.trim(),
+            taskIds: kitTasks.map(t => t.id),
+            materialIds: kitMaterials.map(m => m.id),
+            areaIds: selectedAreaIds,
+            userId: currentUser.uid,
+            createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };
+
         try {
-            if (currentKitId) {
-                await updateDoc(doc(db, `users/${userId}/kitTemplates`, currentKitId), kitDataToSave);
-            } else {
-                const docRef = await addDoc(collection(db, `users/${userId}/kitTemplates`), { ...kitDataToSave, createdAt: serverTimestamp() });
-                setCurrentKitId(docRef.id); 
-            }
-            alert("Kit saved successfully!"); 
-            fetchUserKits(); 
-            setActiveTab('myKits');
-        } catch (err: any) { console.error("Error saving kit:", err); setKitBuilderError(`Failed: ${err.message}`); alert(`Failed: ${err.message}`);}
-        finally { setIsSavingKit(false); }
+            await addDoc(collection(db, 'users', currentUser.uid, 'kits'), newKit);
+            alert('Kit saved successfully!');
+            refetchKits();
+            resetForm();
+        } catch (error) {
+            console.error("Error saving kit: ", error);
+            alert('Failed to save kit.');
+        }
     };
-    
-    const kitBuilderItemForm = showItemForm && (
-        <div className={styles.itemFormSection}> {/* Use the correct class and REMOVE the inline style */}
-        <h4 className={styles.formSectionTitle}>{editingItemIndex !== null ? 'Edit Item in Kit' : 'Add New Item to Kit'}</h4>
-            
-            <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Task:</label>
-                <TaskSelector
-                    userId={userId}
-                    onSelect={handleTaskSelectForItemForm}
-                    onCreateCustomTask={handleCreateCustomTaskForItemForm}
-                    isLoading={isLoadingGlobalData}
-                    allTasks={allTasks}
-                />
-            </div>
-            <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Material:</label>
-                <MaterialSelector
-                    userId={userId}
-                    onSelect={handleMaterialSelectForItemForm}
-                    onCreateCustomMaterial={initiateCreateCustomMaterialForItemForm}
-                    isLoading={isLoadingGlobalData}
-                    allMaterials={allMaterials}
-                />
-            </div>
 
-            {itemFormData.selectedMaterialObj?.optionsAvailable && (
-                <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Material Option:</label>
-                    <MaterialOptionSelector
-                        selectedMaterial={itemFormData.selectedMaterialObj} 
-                        onSelect={handleOptionSelectForItemForm}
-                    />
-                </div>
-            )}
+    // Dummy handlers for custom item creation, as they are required by the selectors
+    const handleCreateCustomTask = async (name: string) => {
+      alert(`Creating custom items from here is not implemented yet. Please create "${name}" from the Library page.`);
+      return null;
+    };
+    const handleCreateCustomMaterial = async (name: string) => {
+      alert(`Creating custom items from here is not implemented yet. Please create "${name}" from the Library page.`);
+      return null;
+    };
 
-            <div className={styles.formGroup}>
-                <label htmlFor={`kitItemDisplayName-${itemFormData.id}`} className={styles.formLabel}>Display Name (for this kit)*:</label>
-                <input type="text" id={`kitItemDisplayName-${itemFormData.id}`} name="displayName" value={itemFormData.displayName} onChange={handleItemFormInputChange} className={styles.formInput} required />
-            </div>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem'}}>
-                <div className={styles.formGroup}>
-                    <label htmlFor={`kitItemBaseQuantity-${itemFormData.id}`} className={styles.formLabel}>Base Quantity*:</label>
-                    <input type="number" id={`kitItemBaseQuantity-${itemFormData.id}`} name="baseQuantity" value={itemFormData.baseQuantity} onChange={handleItemFormInputChange} className={styles.formInput} min="0.01" step="any" required />
-                </div>
-                <div className={styles.formGroup}>
-                    <label htmlFor={`kitItemUnit-${itemFormData.id}`} className={styles.formLabel}>Unit*:</label>
-                    <input type="text" id={`kitItemUnit-${itemFormData.id}`} name="unit" value={itemFormData.unit} onChange={handleItemFormInputChange} className={styles.formInput} required />
-                </div>
-                <div className={styles.formGroup}>
-                    <label htmlFor={`kitItemInputType-${itemFormData.id}`} className={styles.formLabel}>Input Type*:</label>
-                    <select id={`kitItemInputType-${itemFormData.id}`} name="inputType" value={itemFormData.inputType} onChange={handleItemFormInputChange} className={styles.formSelect}>
-                        <option value="quantity">Quantity-based Price</option>
-                        <option value="price">Fixed Price</option>
-                        <option value="checkbox">Checkbox (Informational)</option> 
-                    </select>
-                </div>
-            </div>
-
-            {(itemFormData.inputType === 'quantity' || itemFormData.inputType === 'price') && (
-                 <div className={styles.formGroup}>
-                    <label htmlFor={`kitItemOverrideRate-${itemFormData.id}`} className={styles.formLabel}>
-                        {itemFormData.inputType === 'quantity' ? 'Override Rate for this Kit ($):' : 'Price for this Kit ($):'}
-                    </label>
-                    <input 
-                        type="number" 
-                        id={`kitItemOverrideRate-${itemFormData.id}`} 
-                        name="overrideRateForKit" 
-                        value={itemFormData.overrideRateForKit} 
-                        onChange={handleItemFormInputChange} 
-                        className={styles.formInput} 
-                        placeholder={`Auto: ${formatCurrency(itemFormData.calculatedRate)}`}
-                        step="any"
-                    />
-                    {itemFormData.inputType === 'quantity' && <small>Leave blank to use calculated rate.</small>}
-                </div>
-            )}
-
-             <div className={styles.formGroup}>
-                <p style={{fontWeight: '500'}}>
-                    {itemFormData.overrideRateForKit.trim() !== '' ? 'Using Overridden Rate: ' : 'Calculated Rate: '} 
-                    {formatCurrency(itemFormData.finalRateForKitItem)} / {itemFormData.unit}
-                </p>
-                <p style={{fontWeight: 'bold'}}>Final Total for Item: {formatCurrency(itemFormData.calculatedTotal)}</p>
-            </div>
-            <div className={styles.formGroup}>
-                <label htmlFor={`kitItemDescription-${itemFormData.id}`} className={styles.formLabel}>Description (for this item in kit):</label>
-                <textarea id={`kitItemDescription-${itemFormData.id}`} name="description" value={itemFormData.description || ''} onChange={handleItemFormInputChange} className={styles.formTextarea} rows={2}></textarea>
-            </div>
-
-            <button type="button" onClick={handleAddItemToKit} className={styles.createKitButton} style={{marginRight: '10px'}}>
-                {editingItemIndex !== null ? 'Update Item in Kit' : 'Add This Item to Kit'}
-            </button>
-            <button type="button" onClick={() => {setShowItemForm(false); setEditingItemIndex(null); setItemFormData(initialKitItemFormData);}} className={styles.cancelButton}>
-                Cancel Item
-            </button>
-        </div>
-    );
 
     return (
-        <div className={styles.pageContainer}>
-             <div className={styles.pageHeader}>
-                <h1 className={styles.pageTitle}>Manage Kits</h1>
-                <Link to="/dashboard" className={styles.backLink}>Back to Dashboard</Link>
-            </div>
+        <div className={styles.container}>
+            <header className={styles.header}>
+                <h1>Create a New Kit</h1>
+                <button onClick={handleSaveKit} className="button-primary">Save Kit</button>
+            </header>
 
-            <div className={styles.tabNavigation}>
-                <button className={`${styles.tabButton} ${activeTab === 'myKits' ? styles.tabButtonActive : ''}`} onClick={() => setActiveTab('myKits')}>My Kits</button>
-                <button className={`${styles.tabButton} ${activeTab === 'kitBuilder' ? styles.tabButtonActive : ''}`}
-                    onClick={() => { if (!currentKitId) handleCreateNewKit(); else setActiveTab('kitBuilder'); }}>
-                    {currentKitId ? 'Edit Kit Details' : 'Create New Kit'}
-                </button>
-            </div>
-
-            <div className={styles.tabContent}>
-                {activeTab === 'myKits' && (
+            <div className={styles.formGrid}>
+                {/* Kit Details */}
+                <div className={styles.kitDetailsSection}>
+                    <input
+                        type="text"
+                        value={kitName}
+                        onChange={(e) => setKitName(e.target.value)}
+                        placeholder="Kit Name (e.g., 'Standard Bathroom Fit-out')"
+                        className={styles.inputField}
+                    />
+                    <textarea
+                        value={kitDescription}
+                        onChange={(e) => setKitDescription(e.target.value)}
+                        placeholder="A brief description of what this kit includes."
+                        className={styles.textareaField}
+                    />
                     <div>
-                        <button onClick={handleCreateNewKit} className={styles.createKitButton}>+ Create New Kit</button>
-                        {isLoadingKits && <p className={styles.loadingText}>Loading your kits...</p>}
-                        {errorKits && <p className={styles.errorText}>{errorKits}</p>}
-                        {!isLoadingKits && !errorKits && userKits.length === 0 && <p>You haven't created any kits yet.</p>}
-                        {!isLoadingKits && !errorKits && userKits.length > 0 && (
-                            <ul className={styles.kitList}>
-                                {userKits.map(kit => (
-                                    <li key={kit.id} className={styles.kitListItem}>
-                                        <div className={styles.kitListItemInfo}>
-                                            <h3>{kit.name}</h3>
-                                            <p>{kit.description || 'No description.'}</p>
-                                            <p><small>Items: {kit.lineItems?.length || 0} | Tags: {kit.tags?.join(', ') || 'None'}</small></p>
-                                        </div>
-                                        <div className={styles.kitListItemActions}>
-                                            <button onClick={() => handleEditKit(kit)} className={styles.editButton}>Edit</button>
-                                            <button onClick={() => handleDeleteKit(kit.id)} className={styles.deleteButton}>Delete</button>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        <label>Applicable Areas (Optional)</label>
+                        <AreaMultiSelector onSelectionChange={setSelectedAreaIds} />
                     </div>
-                )}
-                {activeTab === 'kitBuilder' && (
-                    <div className={styles.kitBuilderForm}>
-                        <h2>{currentKitId ? `Edit Kit: ${kitName}` : 'Create New Kit'}</h2>
-                        {kitBuilderError && <p className={styles.errorText}>{kitBuilderError}</p>}
-                        {isLoadingGlobalData && <p className={styles.loadingText}>Loading item data...</p>}
-                        
-                        <div className={styles.formSection}>
-                            <h3 className={styles.formSectionTitle}>Kit Details</h3>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="kitName" className={styles.formLabel}>Kit Name*:</label>
-                                <input type="text" id="kitName" value={kitName} onChange={(e) => setKitName(e.target.value)} className={styles.formInput} required />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="kitDescription" className={styles.formLabel}>Description:</label>
-                                <textarea id="kitDescription" value={kitDescription} onChange={(e) => setKitDescription(e.target.value)} className={styles.formTextarea} rows={3}></textarea>
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="kitTags" className={styles.formLabel}>Tags (comma-separated):</label>
-                                <input type="text" id="kitTags" value={kitTags} onChange={(e) => setKitTags(e.target.value)} className={styles.formInput} />
-                            </div>
-                        </div>
+                </div>
 
-                        <div className={styles.formSection}>
-                            <h3 className={styles.formSectionTitle}>Kit Items ({kitLineItems.length})</h3>
-                            {kitLineItems.length > 0 && (
-                                <ul className={styles.kitItemsList}>
-                                    {kitLineItems.map((item, index) => (
-                                        <li key={index} className={styles.kitItem}>
-                                            <span>{item.displayName} (Qty: {item.baseQuantity} {item.unit})</span>
-                                            <div className={styles.kitItemActions}>
-                                                <button onClick={() => handleEditKitItem(item, index)} className={styles.editButton} style={{fontSize:'0.8em', padding: '4px 8px'}}>Edit</button>
-                                                <button onClick={() => handleRemoveKitItem(index)} className={styles.deleteButton} style={{fontSize:'0.8em', padding: '4px 8px'}}>Remove</button>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                             <button type="button" onClick={() => { setItemFormData({...initialKitItemFormData, id: uuidv4()}); setEditingItemIndex(null); setShowItemForm(true);}} style={{marginTop: '1rem'}}>
-                                {showItemForm ? (editingItemIndex !== null ? '+ Add Another Item' : 'Cancel Item Form') : '+ Add Item to Kit'}
-                            </button>
-                        </div>
-                        {kitBuilderItemForm}
-                        <div className={styles.kitBuilderActions}>
-                            <button onClick={handleSaveKit} disabled={isSavingKit} className={`${styles.saveKitButton} ${isSavingKit ? styles.saveKitButtonDisabled : ''}`}>
-                                {isSavingKit ? 'Saving...' : (currentKitId ? 'Update Kit' : 'Save New Kit')}
-                            </button>
-                            <button onClick={() => { resetKitBuilderForm(); setActiveTab('myKits');}} className={styles.cancelButton} disabled={isSavingKit}>
-                                Cancel
-                            </button>
-                        </div>
+                {/* Item Selection */}
+                <div className={styles.itemSelectionSection}>
+                    <div className={styles.selectorGroup}>
+                        <TaskSelector
+                            onSelect={setCurrentTask}
+                            onCreateCustomTask={handleCreateCustomTask}
+                        />
+                        <button onClick={handleAddTask} disabled={!currentTask}>Add Task</button>
                     </div>
+
+                    <div className={styles.selectorGroup}>
+                        <MaterialSelector
+                            onSelect={setCurrentMaterial}
+                            onCreateCustomMaterial={handleCreateCustomMaterial}
+                        />
+                        <button onClick={handleAddMaterial} disabled={!currentMaterial}>Add Material</button>
+                    </div>
+                </div>
+
+                {/* Kit Contents Preview */}
+                <div className={styles.kitContentsSection}>
+                    <h4>Kit Contents</h4>
+                    <div className={styles.contentsList}>
+                        <h5>Tasks</h5>
+                        <ul>
+                            {kitTasks.map(task => (
+                                <li key={task.id}>
+                                    {task.name}
+                                    <button onClick={() => setKitTasks(kitTasks.filter(t => t.id !== task.id))} className={styles.removeButton}>X</button>
+                                </li>
+                            ))}
+                            {kitTasks.length === 0 && <p className={styles.emptyListText}>No tasks added.</p>}
+                        </ul>
+                    </div>
+                    <div className={styles.contentsList}>
+                        <h5>Materials</h5>
+                        <ul>
+                            {kitMaterials.map(material => (
+                                <li key={material.id}>
+                                    {material.name}
+                                    <button onClick={() => setKitMaterials(kitMaterials.filter(m => m.id !== material.id))} className={styles.removeButton}>X</button>
+                                </li>
+                            ))}
+                            {kitMaterials.length === 0 && <p className={styles.emptyListText}>No materials added.</p>}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div className={styles.existingKits}>
+                <h2>Existing Kits</h2>
+                {kitsLoading ? <p>Loading your kits...</p> : (
+                    <ul className={styles.kitList}>
+                        {userKits.map(kit => <li key={kit.id} className={styles.kitListItem}>{kit.name}</li>)}
+                    </ul>
                 )}
             </div>
-            <QuickAddMaterialModal
-                isOpen={isKitItemQuickAddMaterialModalOpen}
-                onClose={handleCloseKitItemQuickAddMaterialModal}
-                onSave={handleSaveKitItemQuickAddMaterial}
-                initialName={kitItemQuickAddMaterialInitialName}
-            />
         </div>
     );
-}
+};
 
 export default KitCreatorPage;

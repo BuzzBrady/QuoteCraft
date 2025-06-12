@@ -1,7 +1,7 @@
 // src/components/TaskFormModal.tsx
-import React, { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import styles from './TaskFormModal.module.css'; // This will now style the entire modal
-import { CustomTask } from '../types';
+import { Task } from '../types';
 
 // Common units for the datalist helper
 const COMMON_TASK_UNITS = [
@@ -13,7 +13,7 @@ interface TaskFormModalProps {
     onClose: () => void;
     // The onSave prop now includes the optional taskRate
     onSave: (taskData: { name: string; defaultUnit: string; description: string; taskRate?: number }) => Promise<void> | void;
-    initialData?: Partial<CustomTask> | null;
+    initialData?: Partial<Task> | null;
     mode: 'add' | 'edit';
 }
 

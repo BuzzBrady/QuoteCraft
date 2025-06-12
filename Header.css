@@ -1,81 +1,134 @@
-/* Header.css (root) */
+/* Header.css */
 
-.app-header {
-    background-color: var(--background-color-dark); /* Darker than main for distinction */
-    color: var(--theme-primary-white);
+.main-header {
+    background-color: var(--background-color-dark);
     padding: 0 var(--space-lg);
-    box-shadow: var(--box-shadow-sm);
+    border-bottom: 1px solid var(--border-color);
+    height: 65px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     position: sticky;
     top: 0;
-    z-index: var(--z-index-modal); /* High enough to be above most content */
+    z-index: var(--z-index-modal);
 }
 
 .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1200px; /* Or a variable if you define layout widths */
-    margin: 0 auto;
-    height: 60px; /* Fixed height, adjust if needed */
+    width: 100%;
+    max-width: 1200px;
 }
 
 .header-brand {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: var(--theme-primary-light-blue); /* Use light blue for brand */
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--theme-primary-light-blue);
     text-decoration: none;
-    margin-right: auto;
-    transition: var(--transition-fast);
+    transition: color 0.2s ease;
 }
-.header-brand:hover { color: var(--theme-accent-bright-blue); }
+.header-brand:hover {
+    color: var(--theme-accent-bright-blue);
+}
 
-/* --- Desktop Navigation Styles --- */
-.header-nav--desktop {
-    display: flex;
-    gap: var(--space-lg);
-    margin: 0 var(--space-lg);
+.main-nav {
+    display: none; /* Hide on mobile by default */
+}
+
+@media (min-width: 992px) {
+    .main-nav {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        flex-grow: 1;
+        justify-content: center;
+    }
 }
 
 .nav-link {
     color: var(--text-color-muted);
     text-decoration: none;
-    padding: var(--space-xs) 0;
-    border-bottom: 2px solid transparent;
-    transition: var(--transition-fast);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--border-radius-md);
+    transition: all 0.2s ease;
+    font-weight: 500;
 }
+
 .nav-link:hover, .nav-link:focus {
     color: var(--theme-primary-white);
-    text-decoration: none;
+    background-color: var(--background-color-light);
     outline: none;
 }
-.nav-link.active {
-    color: var(--theme-accent-bright-blue); /* Use accent for active link */
-    font-weight: 600; /* Consistent with .btn */
-    border-bottom-color: var(--theme-accent-bright-blue);
+
+a.nav-link.active {
+    color: var(--theme-primary-white);
+    background-color: var(--theme-primary-light-blue);
+    font-weight: 600;
 }
 
-/* --- User Info Styles --- */
-.header-user-info {
+.settings-link {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
-}
-.user-email { 
-    font-size: 0.9em; 
-    color: var(--text-color-muted);
+    gap: var(--space-xs);
 }
 
-/* .logout-button class is removed as styling is now via .btn .btn-secondary in Header.tsx */
+/* --- Dropdown Styles --- */
+.nav-dropdown {
+    position: relative;
+}
 
-/* --- Hamburger Button Styles --- */
+.dropdown-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.dropdown-content {
+    position: absolute;
+    top: calc(100% + var(--space-xs));
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--background-color-sections);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--box-shadow-md);
+    padding: var(--space-xs);
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    z-index: calc(var(--z-index-modal) + 5);
+}
+
+.dropdown-content a {
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+.user-info {
+    display: none; /* Hide on mobile by default */
+}
+
+@media (min-width: 992px) {
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+    }
+}
+
+/* --- Hamburger & Mobile Menu Styles --- */
 .hamburger-button {
-    display: none;
+    display: block;
     background: none;
     border: none;
     cursor: pointer;
     padding: var(--space-sm);
-    margin-left: var(--space-md);
-    z-index: calc(var(--z-index-modal) + 20); /* Above mobile menu overlay */
+    z-index: calc(var(--z-index-modal) + 20);
 }
 .hamburger-button span {
     display: block;
@@ -85,83 +138,39 @@
     margin: 5px 0;
     transition: var(--transition-smooth);
 }
-.hamburger-button:hover span {
-    background-color: var(--text-color-muted);
+
+@media (min-width: 992px) {
+    .hamburger-button {
+        display: none;
+    }
 }
 
-/* --- Mobile Menu Styles --- */
 .mobile-menu {
     position: fixed;
     top: 0;
-    left: 0;
+    left: -100%; /* Start off-screen */
     width: 280px;
     height: 100%;
-    background-color: var(--background-color-light);
-    box-shadow: var(--box-shadow-md);
-    padding: 60px var(--space-lg) var(--space-lg) var(--space-lg);
-    transform: translateX(-100%);
-    transition: var(--transition-smooth);
-    z-index: calc(var(--z-index-modal) + 10); /* Above header, below hamburger when closing */
+    background-color: var(--background-color-dark);
+    box-shadow: var(--box-shadow-lg);
+    padding: var(--space-xxxl) var(--space-lg) var(--space-lg);
+    transition: left 0.3s ease-in-out;
+    z-index: calc(var(--z-index-modal) + 10);
     overflow-y: auto;
 }
 .mobile-menu.open {
-    transform: translateX(0);
+    left: 0;
 }
-
 .mobile-menu__nav {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
 }
 .mobile-menu__nav .nav-link {
-    color: var(--text-color-light);
-    font-size: 1.1em;
-    padding: var(--space-sm) 0;
-    border-bottom: none;
+    font-size: 1.2rem;
+    text-align: left;
 }
-.mobile-menu__nav .nav-link.active {
-    color: var(--theme-accent-bright-blue);
-    font-weight: bold;
-}
-
-.mobile-menu__close-button {
-    position: absolute;
-    top: var(--space-md);
-    right: var(--space-lg);
-    background: none;
-    border: none;
-    color: var(--theme-primary-white);
-    font-size: 2.5em;
-    line-height: 1;
-    padding: 0;
-    cursor: pointer;
-}
-
-/* Class for mobile logout button if specific styling is needed beyond .btn .btn-secondary */
 .mobile-menu__logout-button {
-    margin-top: var(--space-lg);
-    /* width: 100%; */ /* Optional: if you want it full width */
-}
-
-.mobile-menu__overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: var(--z-index-modal); /* Below menu, same as app-header to cover it */
-    display: none;
-}
-.mobile-menu.open + .mobile-menu__overlay {
-    display: block;
-}
-
-@media (max-width: 850px) {
-    .header-nav--desktop {
-        display: none;
-    }
-    .hamburger-button {
-        display: block;
-    }
+    margin-top: var(--space-xl);
+    width: 100%;
 }

@@ -1,266 +1,43 @@
-/* src/components/QuoteBuilder.module.css */
+/* QuoteBuilder.module.css */
 
-/* --- Main Container for the Entire Quote Builder Page --- */
 .quoteBuilderContainer {
-    width: 100%; /* Ensure it tries to take full width of its parent */
-    padding: 20px 15px; /* Add some horizontal padding */
-    box-sizing: border-box; /* Important for padding + width: 100% */
-    /* overflow: hidden; /* Generally not needed here unless specific child overflows */
-    /* position: relative; /* Only if children are absolutely positioned relative to this */
-  }
-  
-  /* --- Container Specifically for the Wizard Steps --- */
-  .stepsContainer {
-    position: relative; /* Good for positioning steps within it if needed, or for scope */
-    /*
-      TEMPORARY DEBUG STYLES - REMOVE OR ADJUST THESE ONCE VISIBILITY IS CONFIRMED
-      border: 2px solid red;
-      min-height: 400px;
-      background-color: rgba(0, 100, 255, 0.1);
-    */
-    /* overflow: hidden; /* Usually not needed here, can hide animations if steps move outside bounds */
-  }
-  
-  /* --- Individual Wizard Step Styling --- */
-  .wizardStep {
-    /* Initial state for GSAP's autoAlpha: 0 (invisible and not in layout flow) */
+    padding: var(--space-lg);
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.stepsContainer {
+    position: relative; /* This is key for stacking the steps */
+    min-height: 400px; /* Give it a minimum height to avoid layout shifts */
+    margin-bottom: var(--space-lg);
+}
+
+.wizardStep {
+    /* All steps are absolutely positioned to stack on top of each other */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* Start all steps as invisible. GSAP will control this. */
     opacity: 0;
     visibility: hidden;
-  
-    /* Layout and Appearance (once made visible by GSAP) */
-    width: 100%;
-    max-width: 960px; /* Adjust to your desired content width */
-    margin-left: auto;
-    margin-right: auto;
-    padding: 20px;
-    border: 1px solid #eeeeee1f; /* Consider using a CSS variable */
-    border-radius: 8px;       /* Consider using a CSS variable */
-    background-color: #8382821b; /* Consider using a CSS variable */
-    margin-bottom: 70px; /* Space above sticky footer */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-  
-    /* min-height: 400px; /* Only if you want to enforce a minimum height for empty steps */
-  }
-  
-  /* This class is NOT NEEDED if GSAP is controlling autoAlpha.
-     GSAP applies inline styles (opacity: 1, visibility: visible).
-     Keeping it can cause conflicts or override GSAP if specificity is higher.
-  .wizard-step.gsap-animated {
-    opacity: 1;
-  }
-  */
-  
-  /* --- Content Area within a Wizard Step --- */
-  .wizardContent {
-    width: 100%; /* Usually fine, content will flow within .wizardStep padding */
-  }
-  
-  .wizardStep h3 { /* More specific selector for h3 within a step */
-    margin-top: 0;
-    color: var(--primary-color); /* Ensure --primary-color is defined */
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-  }
-  
-  /* --- Selected Client Details Styling --- */
-  .selectedClientDetailsContainer {
+}
+
+.wizardContent {
     background-color: var(--background-color-light);
-    padding: var(--space-md);
-    border-radius: var(--border-radius-md);
-    margin-top: var(--space-md);
-    margin-bottom: var(--space-md);
-    border: 1px solid var(--border-color-light);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns */
-    gap: var(--space-sm) var(--space-md); /* Row and column gap */
-    align-items: center; /* Vertically align items in grid cells if they have different heights */
-  }
-  
-  .clientDetailItem {
-    font-size: 0.9em; /* Consider using relative units like rem or em consistently */
-    color: var(--text-color-light);
-    word-break: break-word; /* Good for preventing overflow */
-  }
-  
-  .clientDetailItem strong {
-    color: var(--text-color-main);
-    margin-right: var(--space-xs);
-  }
-  
-  .clientDetailAddress {
-    /* This might not always span 2 columns if there are more than 2 items
-       and auto-fit creates more columns. Consider a fixed grid-template-columns
-       if specific spanning is always desired. */
-    grid-column: span 2;
-  }
-  
-  .editClientButton {
-    justify-self: flex-start; /* Aligns button to the start of its grid cell */
-    /* max-width: 150px; /* Optional: to constrain width */
-  }
-  
-  /* Responsive adjustments for Selected Client Details */
-  @media (max-width: 576px) {
-    .selectedClientDetailsContainer {
-      grid-template-columns: 1fr; /* Stack everything */
-    }
-    .clientDetailAddress {
-      grid-column: span 1; /* Reset span for single column layout */
-    }
-    .editClientButton {
-      margin-top: var(--space-sm);
-      width: 100%; /* Make button full width */
-      justify-self: stretch; /* If you want it to fill the grid cell */
-    }
-  }
-  
-  
-  /* --- General Page Structure & Utility-like Styles (some might be global) --- */
-  /* These seem more like general layout styles than specific to QuoteBuilder sub-components.
-     If they are truly specific to QuoteBuilder structure, keep them.
-     If they are general app layout, they might belong in a more global CSS file or App.css.
-  */
-  
-  .title {
-    color: var(--theme-primary-light-blue);
-    text-align: center;
-    margin-bottom: var(--space-xl);
-    font-size: 2em; /* Consider using rem for accessibility */
-  }
-  
-  .topControls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-md);
-    margin-bottom: var(--space-lg);
-    flex-wrap: wrap; /* Good for responsiveness */
-  }
-  
-  /* Assuming this is for a specific input within topControls or similar context */
-  .quoteNameInput input[type="text"] {
-    padding: var(--space-sm) var(--space-md);
-    min-width: 250px;
-    /* border-radius: var(--border-radius-md); /* Should come from global input styles ideally */
-  }
-  
-  .mainLayout {
-    display: grid;
-    grid-template-columns: 1fr; /* Default to single column */
-    gap: var(--space-lg);
-    margin-bottom: var(--space-xl);
-  }
-  
-  @media (min-width: 992px) {
-    .mainLayout {
-      /* This auto-fit is good for a flexible number of columns.
-         If you always want 2 or 3 columns, be more explicit e.g., 1fr 1fr or repeat(2, 1fr) */
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-  }
-  
-  .column {
-    background-color: var(--background-color-sections);
-    padding: var(--space-md);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-md);
-  }
-  
-  .sectionTitle {
-    font-size: 1.3em; /* Consider rem */
-    color: var(--theme-primary-light-blue);
-    margin-bottom: var(--space-md);
-    padding-bottom: var(--space-xs);
-    border-bottom: 1px solid var(--border-color-light);
-  }
-  
-  /* --- Summary Box Styling --- */
-  .summaryBox {
-    background-color: var(--background-color-sections);
-    padding: var(--space-lg);
-    border-radius: var(--border-radius-md);
-    border: 1px solid var(--border-color);
-    margin-top: var(--space-md);
-    color: var(--theme-primary-white); /* Ensure this has good contrast */
-  }
-  
-  .summaryItem, .summaryTotal {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--space-xs) 0;
-  }
-  
-  .summaryTotal {
-    font-weight: bold;
-    font-size: 1.2em; /* Consider rem */
-    margin-top: var(--space-xs);
-    border-top: 1px solid var(--border-color-light);
-    padding-top: var(--space-md);
-  }
-  
-  .totalPrice {
-    color: var(--theme-accent-bright-blue);
-  }
-  
-  /* --- Action Buttons Container --- */
-  .actionsContainer {
-    display: flex;
-    justify-content: flex-end; /* Aligns buttons to the right */
-    gap: var(--space-md);
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--border-color-light);
-  }
-  
-  /* Base for buttons - good use of composes if your setup supports it,
-     otherwise, apply these styles directly or use a global button class. */
-  .buttonBase {
-    font-family: var(--font-primary);
-    font-weight: 600;
-    text-align: center;
-    vertical-align: middle;
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid transparent;
-    padding: var(--space-sm) var(--space-lg);
-    font-size: 1em; /* Consider rem */
-    line-height: 1.5;
-    border-radius: var(--border-radius-md);
-    transition: var(--transition-fast); /* Ensure --transition-fast is defined */
-  }
-  
-  /* Specific action buttons */
-  .actionButton, .saveQuoteButton, .exportQuoteButton {
-    composes: buttonBase; /* If CSS Modules `composes` is not working or not preferred, duplicate styles or use global classes */
-    color: var(--theme-primary-white);
-    background-color: var(--theme-primary-light-blue);
-    border-color: var(--theme-primary-light-blue);
-  }
-  
-  .actionButton:hover, .saveQuoteButton:hover, .exportQuoteButton:hover,
-  .actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
-    background-color: var(--theme-accent-bright-blue);
-    border-color: var(--theme-accent-bright-blue);
-    color: var(--theme-primary-white);
-    outline: 0; /* Common practice for custom focus styles */
-  }
-  
-  .actionButton:focus, .saveQuoteButton:focus, .exportQuoteButton:focus {
-    box-shadow: var(--focus-ring-shadow) rgba(var(--theme-primary-light-blue-rgb), 0.5); /* Ensure variables are defined */
-  }
-  
-  /* --- Placeholder Text --- */
-  .placeholder {
-    color: var(--text-color-muted);
-    text-align: center;
+    border-radius: var(--border-radius-lg);
     padding: var(--space-xl);
-    font-style: italic;
-  }
-  
-  /* --- Specific Component Wrappers (if needed for margin/layout) --- */
-  .taskSelectorContainer, 
-  .materialSelectorContainer, 
-  .areaSelectorContainer {
-    margin-bottom: var(--space-md);
-  }
+    border: 1px solid var(--border-color);
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}

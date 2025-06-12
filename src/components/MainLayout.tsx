@@ -1,47 +1,49 @@
 // src/components/MainLayout.tsx
-import React, { useRef, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import Header from '../../Header'; //
-import { useGSAP } from '@gsap/react';
-import { fadeIn } from '../utils/animations'; //
-import styles from './MainLayout.module.css'; // Import the CSS Module
 
-function MainLayout() {
-    const mainContentRef = useRef<HTMLElement>(null);
-    const location = useLocation(); // To trigger animation on route change
+import { useEffect } from 'react';
+import { Outlet } from 'react-router-dom'; // <-- 1. Import Outlet
+import Header from '../../Header';
+import styles from './MainLayout.module.css';
+import { useDataStore } from '../stores/useDataStore';
 
-    useGSAP(() => {
-        if (mainContentRef.current) {
-            // GSAP's fadeIn utility or your custom one
-            // If your fadeIn directly manipulates opacity, ensure the initial opacity
-            // is set correctly (e.g., via CSS or GSAP from an opacity of 0)
-            fadeIn(mainContentRef.current, 0.5); // Fade in over 0.5 seconds
-        }
-    }, { scope: mainContentRef, dependencies: [location.pathname] }); // Rerun animation when pathname changes
+// 2. Remove the children prop from the function definition
+const MainLayout = () => {
+  const fetchInitialData = useDataStore((state) => state.fetchInitialData);
+  const isLoading = useDataStore((state) => state.isLoading);
+  const error = useDataStore((state) => state.error);
 
-    // If fadeIn sets opacity to 1, you might not need to clear the inline style manually,
-    // but it's good practice if GSAP doesn't auto-clear it or if you want CSS to take over.
-    useEffect(() => {
-        if (mainContentRef.current && mainContentRef.current.style.opacity === '0') {
-             // This ensures that if GSAP runs and sets opacity, a very fast route change
-             // doesn't leave opacity at 0 if GSAP is interrupted.
-             // Or, handle initial state purely with GSAP's .from() tween.
-             // For simplicity with your current fadeIn, the CSS initial opacity is fine.
-        }
-    }, [location.pathname]);
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
+  if (isLoading) {
     return (
-        <div className={styles.appContainer}> {/* Use styles from CSS Module */}
-            <Header />
-            <main
-                ref={mainContentRef}
-                className={styles.mainContent} // Use styles from CSS Module
-                // Inline style for maxWidth is removed as it's in CSS module.
-                // Initial opacity is now handled by the CSS module.
-            >
-                <Outlet />
-            </main>
-        </div>
+      <div className={styles.container}>
+        <div className={styles.centered}>Loading essential data...</div>
+      </div>
     );
-}
-export default MainLayout; 
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div className={`${styles.centered} ${styles.error}`}>
+          <h2>A critical error occurred:</h2>
+          <p>{error}</p>
+          <p>Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.mainLayout}>
+      <Header />
+      <main className={styles.content}>
+        <Outlet /> {/* <-- 3. Render the nested route's content here */}
+      </main>
+    </div>
+  );
+};
+
+export default MainLayout;
